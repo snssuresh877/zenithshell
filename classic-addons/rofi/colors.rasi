@@ -1,0 +1,12 @@
+* {
+    bg:            @background;
+    bg-alt:        @background;
+
+    fg:            @foreground;
+
+    accent:    @selected-normal-background;
+    accent-bg: @selected-normal-background;
+
+
+    border:        @border-color;
+}

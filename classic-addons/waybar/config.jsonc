@@ -1,0 +1,250 @@
+{
+  // ==========================================================
+  // WAYBAR — EXECUTIVE GLASS MODE
+  // ==========================================================
+
+  "layer": "top",
+  "position": "top",
+
+  "height": 28,
+  "spacing": 4,
+
+  "margin-top": 4,
+  "margin-left": 8,
+  "margin-right": 8,
+
+
+  // ==========================================================
+  // MODULE PLACEMENT
+  // ==========================================================
+
+  "modules-left": [
+    "hyprland/workspaces"
+  ],
+
+  "modules-center": [
+    "clock"
+  ],
+
+  "modules-right": [
+    "mpris",
+    "cpu",
+    "memory",
+    "network",
+    "pulseaudio",
+    "battery",
+    "custom/notification",
+    "group/drawer",
+    "custom/power"
+  ],
+
+
+  // ==========================================================
+  // WORKSPACES
+  // ==========================================================
+
+  "hyprland/workspaces": {
+    "active-only": false,
+    "all-outputs": true,
+    "disable-scroll": false,
+    "on-click": "activate",
+    "on-scroll-up": "hyprctl dispatch workspace e+1",
+    "on-scroll-down": "hyprctl dispatch workspace e-1",
+    "format": "{icon}",
+    "persistent-workspaces": {
+      "*": 5
+    },
+    "format-icons": {
+      "active": "󰮯",
+      "occupied": "󰊠",
+      "default": "󰧞",
+      "urgent": "󰀨"
+    }
+  },
+
+
+  // ==========================================================
+  // CLOCK
+  // ==========================================================
+
+  "clock": {
+    "format": "󰃰 {:%a %d %b   %H:%M}",
+    "tooltip-format": "{:%A, %d %B %Y}"
+  },
+
+
+  // ==========================================================
+  // MPRIS MEDIA PLAYER
+  // ==========================================================
+
+  "mpris": {
+    "format": "󰎈 {player_icon} {title}",
+    "format-paused": "󰏤 {title}",
+    "player-icons": {
+      "default": "▶"
+    },
+    "status-icons": {
+      "paused": "⏸"
+    },
+    "max-length": 25,
+    "tooltip": false
+  },
+
+
+  // ==========================================================
+  // CPU
+  // ==========================================================
+
+  "cpu": {
+    "format": " {usage}%",
+    "interval": 10,
+    "on-click": "foot --app-id=btop_float -e btop",
+    "tooltip": false
+  },
+
+
+  // ==========================================================
+  // MEMORY
+  // ==========================================================
+
+  "memory": {
+    "format": " {percentage}%",
+    "interval": 10,
+    "on-click": "foot --app-id=btop_float -e btop",
+    "tooltip": false
+  },
+
+
+  // ==========================================================
+  // NETWORK
+  // ==========================================================
+
+  "network": {
+    "format-wifi": " {signalStrength}%",
+    "format-ethernet": "󰈀",
+    "format-disconnected": "󰖪",
+    "on-click": "$HOME/.config/hypr/scripts/ui/rofi_network.sh",
+    "tooltip-format": "{essid} ({signalStrength}%)"
+  },
+
+
+  // ==========================================================
+  // AUDIO
+  // ==========================================================
+
+  "pulseaudio": {
+    "format": " {volume}%",
+    "format-muted": "󰖁",
+    "scroll-step": 5,
+    "on-click": "pavucontrol",
+    "tooltip": false
+  },
+
+
+  // ==========================================================
+  // BATTERY
+  // ==========================================================
+
+  "battery": {
+    "states": {
+      "warning": 30,
+      "critical": 15
+    },
+    "format": "{icon} {capacity}%",
+    "format-charging": " {capacity}%",
+    "format-plugged": " {capacity}%",
+    "format-icons": [
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    "interval": 15,
+    "tooltip": false
+  },
+
+
+  // ==========================================================
+  // SWAYNC NOTIFICATION INDICATOR
+  // ==========================================================
+
+  "custom/notification": {
+    "tooltip": false,
+    "format": "{icon} {text}",
+    "format-icons": {
+      "notification": "󱅫",
+      "none": "󰂚",
+      "dnd-notification": "󰂛",
+      "dnd-none": "󰂛",
+      "inhibited-notification": "󱅫",
+      "inhibited-none": "󰂚",
+      "dnd-inhibited-notification": "󰂛",
+      "dnd-inhibited-none": "󰂛"
+    },
+    "return-type": "json",
+    "exec-if": "which swaync-client",
+    "exec": "swaync-client -swb",
+    "on-click": "swaync-client -t -sw",
+    "on-click-right": "swaync-client -d -sw",
+    "escape": true
+  },
+
+
+  // ==========================================================
+  // COLLAPSIBLE TRAY DRAWER
+  // ==========================================================
+
+  "group/drawer": {
+    "orientation": "horizontal",
+    "drawer": {
+      "transition-duration": 300,
+      "children-class": "drawer-child",
+      "transition-left-to-right": false
+    },
+    "modules": [
+      "custom/drawer_icon",
+      "tray"
+    ]
+  },
+
+  "custom/drawer_icon": {
+    "format": "󰅂",
+    "tooltip": false
+  },
+
+
+  // ==========================================================
+  // SYSTEM UPDATES
+  // ==========================================================
+
+  "custom/updates": {
+    "exec": "$HOME/.config/waybar/scripts/updates.sh",
+    "interval": 1800,
+    "format": "{}",
+    "tooltip": true,
+    "tooltip-format": "System Updates",
+    "on-click": "foot -e $HOME/.config/waybar/scripts/updates.sh run"
+  },
+
+
+  // ==========================================================
+  // SYSTEM TRAY
+  // ==========================================================
+
+  "tray": {
+    "icon-size": 14,
+    "spacing": 6
+  },
+
+
+  // ==========================================================
+  // POWER
+  // ==========================================================
+
+  "custom/power": {
+    "format": "",
+    "tooltip": false,
+    "on-click": "~/.config/hypr/scripts/ui/powermenu.sh"
+  }
+}
