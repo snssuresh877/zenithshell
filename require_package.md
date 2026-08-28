@@ -17,6 +17,7 @@ This document provides the complete list of system packages, development headers
 | **Wallpaper & Theming** | `awww` (or `swww`), `python-pywal` | Animated wallpaper transitions & dynamic color extraction |
 | **Clipboard & Extras** | `cliphist`, `wl-clipboard`, `hyprshade` | Clipboard search/paste & blue light filter |
 | **Icons & Typography** | `ttf-jetbrains-mono-nerd` / `nerd-fonts` | UI icons (󰍉, 󰖟, 󰎈, 󰅩, 󰏘, 󰏫, 󰒋, 󰒓, 󰉋, , 󰍹, 󰌵, 🎨) |
+| **Pro Workstation Tools** | `yazi`, `cosmic-files`, `fd`, `ripgrep`, `jq`, `fzf`, `zoxide`, `eza`, `bat`, `zip`, `unzip`, `p7zip` | High-end terminal, file management, and instant directory navigation |
 
 ---
 
@@ -38,7 +39,7 @@ sudo pacman -S --needed \
     glib2 \
     nlohmann-json
 
-# Runtime utilities, audio, network, and theming
+# Runtime utilities, audio, network, theming, and workstation tools
 sudo pacman -S --needed \
     pipewire \
     wireplumber \
@@ -50,11 +51,26 @@ sudo pacman -S --needed \
     cliphist \
     wl-clipboard \
     hyprshade \
+    yazi \
+    fd \
+    ripgrep \
+    jq \
+    fzf \
+    zoxide \
+    eza \
+    bat \
+    zip \
+    unzip \
+    p7zip \
+    imagemagick \
+    ffmpegthumbnailer \
+    poppler \
+    chafa \
     ttf-jetbrains-mono-nerd \
     papirus-icon-theme
 
-# Wallpaper daemon (AUR if using awww or swww)
-# yay -S awww-git # or yay -S swww
+# Modern GUI File Manager (Cosmic Files or Dolphin)
+# sudo pacman -S cosmic-files # or dolphin
 ```
 
 ---

@@ -41,16 +41,24 @@ hl.bind(MOD .. " + I", hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/ui/open_netwo
 
 -- APPLICATIONS
 
-hl.bind(MOD .. " + RETURN", hl.dsp.exec_cmd(Apps.terminal), {
-	description = "Terminal",
+hl.bind(MOD .. " + RETURN", hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/ui/open_terminal_here.sh foot"), {
+	description = "Terminal in Current Directory",
+})
+
+hl.bind(MOD .. " + SHIFT + RETURN", hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/ui/open_terminal_here.sh kitty"), {
+	description = "Kitty Terminal in Current Directory",
 })
 
 hl.bind(MOD .. " + Q", hl.dsp.exec_cmd(Apps.secondTerminal), {
 	description = "Second terminal",
 })
 
-hl.bind(MOD .. " + E", hl.dsp.exec_cmd(Apps.fileManager), {
-	description = "File manager",
+hl.bind(MOD .. " + E", hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/ui/open_filemanager.sh gui"), {
+	description = "Cosmic / GUI File Manager",
+})
+
+hl.bind(MOD .. " + SHIFT + E", hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/ui/open_filemanager.sh yazi"), {
+	description = "Yazi TUI File Manager",
 })
 
 hl.bind(MOD .. " + B", hl.dsp.exec_cmd(Apps.browser), {

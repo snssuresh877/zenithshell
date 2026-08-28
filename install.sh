@@ -65,6 +65,7 @@ install_dependencies() {
                         gtk3 gtk-layer-shell cairo pango glib2 nlohmann-json \
                         pipewire wireplumber networkmanager bluez bluez-utils \
                         brightnessctl python-pywal cliphist wl-clipboard \
+                        yazi fd ripgrep jq fzf zoxide eza bat zip unzip p7zip \
                         ttf-jetbrains-mono-nerd papirus-icon-theme
                     ;;
                 fedora|rhel)
