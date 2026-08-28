@@ -25,6 +25,8 @@ Press **`SUPER + ALT + U`** or run:
 
 ```text
 classic-addons/
+├── fish/                      # Pro Fish shell environment with universal PATHs & Pywal sync
+│   └── config.fish            # Cargo, Mason, Flatpak, Android paths, Zoxide, Starship, Zenith aliases
 ├── kitty/                     # Pro-grade Kitty terminal configuration (Pywal dynamic theme sync)
 │   └── kitty.conf             # JetBrainsMono Nerd Font, powerline tabs, smart clipboard
 ├── foot/                      # Ultra-fast lightweight Wayland native terminal configuration
@@ -84,6 +86,7 @@ The following scripts support both the classic stack and modular Hyprland deskto
 
 ### To Keep and Install:
 ```bash
+cp -r classic-addons/fish ~/.config/
 cp -r classic-addons/kitty ~/.config/
 cp -r classic-addons/foot ~/.config/
 cp -r classic-addons/rofi ~/.config/
