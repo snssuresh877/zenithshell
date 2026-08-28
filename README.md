@@ -326,23 +326,32 @@ systemctl --user enable --now zenithshell
 
 ## 🛠️ Build & Installation
 
-### ⚡ Method 1: Automated One-Line Installer (Recommended)
+### 🚀 Option 1: Modular Workstation Wizard (Full Desktop & Dotfiles)
 
-Simply clone and run the interactive installation script:
+For an interactive setup where you choose exactly which components to install (ZenithShell, Hyprland dotfiles, Fish shell, Foot & Kitty, Yazi, LibreOffice setup):
 
 ```bash
 git clone https://github.com/snssuresh877/zenithshell.git ~/Projects/zenithshell
 cd ~/Projects/zenithshell
-chmod +x install.sh
+./setup-workstation.sh
+```
+
+---
+
+### ⚡ Option 2: Core ZenithShell Installer (Shell & Themes Only)
+
+If you only want the standalone C++20 desktop shell, 23 themes, and 260+ wallpapers:
+
+```bash
 ./install.sh
 ```
 
 The installer will automatically:
 - Detect your Linux distribution (Arch, Fedora, Ubuntu, Debian, Pop!_OS).
 - Check and install all necessary dependencies.
-- Compile ZenithShell with CMake and Ninja in `Release` mode.
+- Compile ZenithShell with CMake and Ninja with security hardening in `Release` mode.
 - Install the executable to `~/.local/bin/zenithshell`.
-- Deploy `config.json` and `style.css` to `~/.config/zenithshell/`.
+- Deploy desktop entry and configurations to `~/.config/zenithshell/`.
 
 ---
 
