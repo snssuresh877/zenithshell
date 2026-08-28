@@ -1,10 +1,10 @@
 # 📦 Classic Addons: Waybar, Rofi & SwayNC (Optional Alternative Stack)
 
-> [!NOTE]
-> **Disclaimer & Purpose**
-> - **ZenithShell** is an all-in-one, ultra-low memory (~26MB RAM) native C++20 desktop shell featuring a built-in TopBar, Spotlight Launcher, Control Center, Notifications, Reminders, and Clipboard Manager.
-> - This directory (`classic-addons/`) provides an **optional, traditional modular stack** consisting of **Waybar**, **Rofi**, and **SwayNC**.
-> - **You can keep this directory or completely delete it.** ZenithShell has zero runtime dependencies on Waybar, Rofi, or SwayNC.
+> [!WARNING]
+> **⚠️ Performance Notice: Do NOT Run Alongside ZenithShell**
+> - **ZenithShell** is an ultra-low memory (~26MB RAM) native C++20 shell that already integrates a Status Bar, Spotlight Launcher, Notification Daemon, Control Center, Reminders, and Clipboard Manager.
+> - **Running Waybar, Rofi, or SwayNC at the same time as ZenithShell is strongly NOT recommended.** Doing so creates duplicate D-Bus listeners and adds unnecessary system overhead and CPU load.
+> - This directory (`classic-addons/`) is provided **only for users who want a fallback modular stack when ZenithShell is stopped**, or you can safely **delete this folder**.
 
 ---
 

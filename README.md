@@ -4,6 +4,12 @@ An ultra-low-footprint, pro-grade desktop shell and widget suite written nativel
 
 Designed as a high-performance, aesthetically refined replacement for heavy web/QML-based desktop bars, ZenithShell delivers a sub-**30MB RAM** footprint, **0.0% idle CPU** load, and instant sub-40ms startup while providing deep dynamic theming and native Wayland integration.
 
+> [!IMPORTANT]
+> **🚀 Performance Recommendation: Use as Standalone (No Waybar / Rofi / SwayNC Needed)**
+> **ZenithShell is designed as an all-in-one desktop suite.** It natively handles your Status Bar, Spotlight Launcher, Notification Daemon (`org.freedesktop.Notifications`), Control Center, Reminders, and Clipboard History in a single unified **~26MB C++20 process**.
+> 
+> 🚫 **We strongly recommend NOT running Waybar, Rofi, or SwayNC alongside ZenithShell.** Running external status bars or duplicate notification daemons is unnecessary and only adds extra memory, duplicate D-Bus listeners, and CPU load to your system. ZenithShell does everything out of the box with zero extra daemons.
+
 ---
 
 ## 📸 UI Showcase & Operations
