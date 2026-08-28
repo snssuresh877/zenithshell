@@ -279,6 +279,24 @@ bind = SUPER CTRL, A, exec, gdbus call --session --dest dev.zenith.Shell --objec
 
 ---
 
+## 🚀 Autostart on Boot
+
+To have ZenithShell automatically start when you log in:
+
+### Option A: Standard Hyprland Config
+Add this line to your `~/.config/hypr/hyprland.conf`:
+```ini
+exec-once = zenithshell
+```
+
+### Option B: Systemd User Service
+ZenithShell includes a systemd unit. Enable and start it:
+```bash
+systemctl --user enable --now zenithshell
+```
+
+---
+
 ## 🛠️ Build & Installation
 
 ### ⚡ Method 1: Automated One-Line Installer (Recommended)

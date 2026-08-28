@@ -149,11 +149,64 @@ if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     echo -e "    ${BOLD}export PATH=\"\$HOME/.local/bin:\$PATH\"${RESET}"
 fi
 
-# --- 6. Hyprland Integration Check ---
+# --- 6. Hyprland & Autostart Integration ---
 if [ -d "$HOME/.config/hypr" ]; then
-    echo -e "\n${BLUE}▶ Hyprland configuration detected!${RESET}"
+    echo -e "\n${BLUE}▶ Setting up Hyprland integration & autostart...${RESET}"
     echo "zenithshell" > "$HOME/.config/hypr/ui_mode" 2>/dev/null || true
+
+    # 1. Standard hyprland.conf setup
+    if [ -f "$HOME/.config/hypr/hyprland.conf" ]; then
+        if ! grep -q "zenithshell" "$HOME/.config/hypr/hyprland.conf"; then
+            echo -e "\n# Auto-start ZenithShell\nexec-once = $INSTALL_DIR/zenithshell" >> "$HOME/.config/hypr/hyprland.conf"
+            echo -e "${GREEN}✔ Added 'exec-once = zenithshell' to ~/.config/hypr/hyprland.conf${RESET}"
+        fi
+    fi
+
+    # 2. Modular Lua setup (if using hyprland.lua modular structure)
+    if [ -f "$HOME/.config/hypr/modules/autostart.lua" ]; then
+        mkdir -p "$HOME/.config/hypr/scripts/ui"
+        cat << 'AUTOSCRIPT' > "$HOME/.config/hypr/scripts/ui/autostart_ui.sh"
+#!/usr/bin/env bash
+set -euo pipefail
+STATE_FILE="$HOME/.config/hypr/ui_mode"
+MODE="zenithshell"
+if [ -f "$STATE_FILE" ]; then
+    MODE=$(cat "$STATE_FILE" | tr -d '[:space:]')
 fi
+if [ "$MODE" = "waybar" ]; then
+    pgrep -f swaync >/dev/null 2>&1 || swaync >/dev/null 2>&1 &
+    pgrep -f waybar >/dev/null 2>&1 || waybar >/dev/null 2>&1 &
+else
+    if ! pgrep -f zenithshell >/dev/null 2>&1; then
+        if [ -x "$HOME/.local/bin/zenithshell" ]; then
+            setsid "$HOME/.local/bin/zenithshell" >/tmp/zenithshell.log 2>&1 &
+        fi
+    fi
+fi
+AUTOSCRIPT
+        chmod +x "$HOME/.config/hypr/scripts/ui/autostart_ui.sh"
+        echo -e "${GREEN}✔ Configured autostart launcher script in ~/.config/hypr/scripts/ui/${RESET}"
+    fi
+fi
+
+# Optional systemd user service setup
+mkdir -p "$HOME/.config/systemd/user"
+cat << SERVICE_EOF > "$HOME/.config/systemd/user/zenithshell.service"
+[Unit]
+Description=ZenithShell Native Desktop Shell
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/zenithshell
+Restart=on-failure
+RestartSec=2s
+
+[Install]
+WantedBy=graphical-session.target
+SERVICE_EOF
+echo -e "${GREEN}✔ Created systemd user service at ~/.config/systemd/user/zenithshell.service${RESET}"
 
 # --- 7. Completion Summary ---
 echo -e "\n${GREEN}================================================================${RESET}"
