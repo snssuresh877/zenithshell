@@ -85,7 +85,7 @@ zenithshell/
 │   │   ├── theme.hpp              # Theme data structures and token schemas
 │   │   ├── theme_engine.hpp       # Central ThemeEngine header
 │   │   ├── theme_engine.cpp       # 23 built-in themes, wallpaper scanner (260+ images), and theme applicator
-│   │   ├── theme_loader.hpp       # TOML / Omarchy theme file loader header
+│   │   ├── theme_loader.hpp       # TOML / Packaged theme file loader header
 │   │   ├── theme_loader.cpp       # TOML parser for loading external color palette files
 │   │   ├── pywal_importer.hpp     # Pywal cache importer header
 │   │   ├── pywal_importer.cpp     # Reads Pywal ~/.cache/wal/colors.json and builds dynamic palettes
@@ -225,7 +225,7 @@ The central configuration file is located at `~/.config/zenithshell/config.json`
         "show_ram": true,
         "show_battery": true
     },
-    "wallpaper_dir": "/home/m/Pictures/wallpapers"
+    "wallpaper_dir": "~/Pictures/wallpapers"
 }
 ```
 
@@ -252,7 +252,7 @@ gdbus call --session --dest dev.zenith.Shell --object-path /dev/zenith/Shell --m
 gdbus call --session --dest dev.zenith.Shell --object-path /dev/zenith/Shell --method dev.zenith.Shell.NextTheme
 gdbus call --session --dest dev.zenith.Shell --object-path /dev/zenith/Shell --method dev.zenith.Shell.NextWallpaper
 gdbus call --session --dest dev.zenith.Shell --object-path /dev/zenith/Shell --method dev.zenith.Shell.SetWallpaper "/path/to/image.jpg"
-gdbus call --session --dest dev.zenith.Shell --object-path /dev/zenith/Shell --method dev.zenith.Shell.SetWallpaperDir "/home/m/Pictures/wallpapers"
+gdbus call --session --dest dev.zenith.Shell --object-path /dev/zenith/Shell --method dev.zenith.Shell.SetWallpaperDir "~/Pictures/wallpapers"
 
 # Telemetry
 gdbus call --session --dest dev.zenith.Shell --object-path /dev/zenith/Shell --method dev.zenith.Shell.GetStats
@@ -286,7 +286,7 @@ bind = SUPER CTRL, A, exec, gdbus call --session --dest dev.zenith.Shell --objec
 Simply clone and run the interactive installation script:
 
 ```bash
-git clone https://github.com/your-username/zenithshell.git ~/Projects/zenithshell
+git clone https://github.com/snssuresh877/zenithshell.git ~/Projects/zenithshell
 cd ~/Projects/zenithshell
 chmod +x install.sh
 ./install.sh

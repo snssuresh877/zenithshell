@@ -22,7 +22,7 @@ This document provides the complete list of system packages, development headers
 
 ## 🐧 One-Line Install Commands by Distribution
 
-### 1. Arch Linux / Manjaro / EndeavourOS / Omarchy
+### 1. Arch Linux / Manjaro / EndeavourOS / CachyOS
 
 ```bash
 # Build toolchain and development headers

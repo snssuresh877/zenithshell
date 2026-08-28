@@ -58,7 +58,7 @@ install_dependencies() {
 
         if [[ "$confirm_install" =~ ^[Yy]$ ]]; then
             case "$DISTRO" in
-                arch|manjaro|endeavouros|omarchy)
+                arch|manjaro|endeavouros|cachyos)
                     echo -e "${CYAN}Installing dependencies via pacman...${RESET}"
                     sudo pacman -S --needed --noconfirm \
                         base-devel cmake ninja pkgconf \

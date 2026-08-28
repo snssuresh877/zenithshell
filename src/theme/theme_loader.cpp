@@ -89,7 +89,7 @@ std::optional<Theme> ThemeLoader::load_from_file(const std::string& filepath) {
     return theme;
 }
 
-std::optional<Theme> ThemeLoader::load_omarchy_theme(const std::string& theme_dir, std::vector<std::string>& out_wallpapers) {
+std::optional<Theme> ThemeLoader::load_theme_package(const std::string& theme_dir, std::vector<std::string>& out_wallpapers) {
     out_wallpapers.clear();
     std::string colors_file = theme_dir + "/colors.toml";
     std::ifstream file(colors_file);
@@ -157,8 +157,8 @@ std::optional<Theme> ThemeLoader::load_omarchy_theme(const std::string& theme_di
                     std::transform(ext.begin(), ext.end(), ext.begin(), ::tolower);
                     if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".webp") {
                         std::string fname = entry.path().filename().string();
-                        // Filter out tiny logo icons
-                        if (fname != "omarchy.png") {
+                        // Filter out tiny logo / banner icons
+                        if (fname.rfind("logo", 0) != 0 && fname.rfind("icon", 0) != 0) {
                             out_wallpapers.push_back(entry.path().string());
                         }
                     }

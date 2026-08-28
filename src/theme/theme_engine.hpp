@@ -61,7 +61,7 @@ private:
     static void register_builtins();
     static void apply_theme(const Theme& theme);
     static void scan_custom_themes();
-    static void scan_omarchy_themes();
+    static void scan_packaged_themes();
     static std::string format_theme_title(const std::string& raw_name);
     static std::string get_curated_desc(const std::string& raw_name);
 };

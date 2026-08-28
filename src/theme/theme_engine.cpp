@@ -150,10 +150,12 @@ void ThemeEngine::register_builtins() {
     theme_order.push_back("zenith-dark");
 }
 
-void ThemeEngine::scan_omarchy_themes() {
+void ThemeEngine::scan_packaged_themes() {
     std::vector<std::string> search_dirs = {
-        std::string(g_get_home_dir()) + "/omarchy/themes",
-        std::string(g_get_user_config_dir()) + "/omarchy/themes"
+        std::string(g_get_user_config_dir()) + "/zenithshell/themes",
+        std::string(g_get_home_dir()) + "/.local/share/zenithshell/themes",
+        "/usr/share/zenithshell/themes",
+        std::string(g_get_home_dir()) + "/themes"
     };
 
     for (const auto& base_dir : search_dirs) {
@@ -164,7 +166,7 @@ void ThemeEngine::scan_omarchy_themes() {
                 if (entry.is_directory()) {
                     std::string theme_path = entry.path().string();
                     std::vector<std::string> wallpapers;
-                    auto loaded = ThemeLoader::load_omarchy_theme(theme_path, wallpapers);
+                    auto loaded = ThemeLoader::load_theme_package(theme_path, wallpapers);
                     if (loaded) {
                         std::string tid = loaded->name;
                         builtin_themes[tid] = *loaded;
@@ -269,7 +271,7 @@ std::vector<std::string> ThemeEngine::get_custom_wallpapers() {
 
 void ThemeEngine::init(const std::string& default_theme, const std::string& custom_wallpaper_dir) {
     register_builtins();
-    scan_omarchy_themes();
+    scan_packaged_themes();
     scan_custom_themes();
     scan_custom_wallpapers(custom_wallpaper_dir);
 
@@ -334,7 +336,7 @@ std::string ThemeEngine::get_current_wallpaper_path() {
         return it->second[current_wallpaper_idx];
     }
     std::error_code ec;
-    std::string default_bg = std::string(g_get_home_dir()) + "/.local/state/omarchy/current/background";
+    std::string default_bg = std::string(g_get_home_dir()) + "/.local/state/zenithshell/current/background";
     if (fs::exists(default_bg, ec)) {
         return default_bg;
     }
@@ -354,16 +356,17 @@ void ThemeEngine::set_wallpaper(const std::string& path) {
     std::error_code ec;
     if (path.empty() || !fs::exists(path, ec)) return;
 
-    std::string bg_link = std::string(g_get_home_dir()) + "/.local/state/omarchy/current/background";
+    std::string state_dir = std::string(g_get_home_dir()) + "/.local/state/zenithshell/current";
+    std::string bg_link = state_dir + "/background";
     if (path == bg_link) return;
 
     // Apply wallpaper with awww transition
     std::string cmd = "awww img \"" + path + "\" --transition-type grow --transition-duration 0.4 --transition-fps 30 2>/dev/null &";
     system(cmd.c_str());
 
-    // Update current background symlink for Omarchy tools
+    // Update current background symlink
     try {
-        fs::create_directories(std::string(g_get_home_dir()) + "/.local/state/omarchy/current", ec);
+        fs::create_directories(state_dir, ec);
         fs::remove(bg_link, ec);
         fs::create_symlink(path, bg_link, ec);
     } catch (...) {}
@@ -388,8 +391,10 @@ void ThemeEngine::cycle_wallpaper() {
     if (it != theme_wallpapers.end() && !it->second.empty()) {
         current_wallpaper_idx = (current_wallpaper_idx + 1) % it->second.size();
         set_wallpaper(it->second[current_wallpaper_idx]);
+    } else if (!custom_wallpapers.empty()) {
+        current_wallpaper_idx = (current_wallpaper_idx + 1) % custom_wallpapers.size();
+        set_wallpaper(custom_wallpapers[current_wallpaper_idx]);
     } else {
-        // Dynamic mode cycle wallpapers across all omarchy backgrounds
         std::vector<std::string> all_wps;
         for (const auto& pair : theme_wallpapers) {
             all_wps.insert(all_wps.end(), pair.second.begin(), pair.second.end());
@@ -405,7 +410,7 @@ void ThemeEngine::set_theme(const std::string& theme_name) {
     if (theme_name == "dynamic" || theme_name == "pywal") {
         std::string cur_wp = get_current_wallpaper_path();
         if (cur_wp.empty()) {
-            cur_wp = std::string(g_get_home_dir()) + "/.local/state/omarchy/current/background";
+            cur_wp = std::string(g_get_home_dir()) + "/.local/state/zenithshell/current/background";
         }
         if (fs::exists(cur_wp)) {
             std::string wal_cmd = "wal -n -q -i \"" + cur_wp + "\" 2>/dev/null";
@@ -444,10 +449,12 @@ void ThemeEngine::set_theme(const std::string& theme_name) {
         set_wallpaper(wp);
     }
 
-    // Trigger full system sync via Omarchy theme setter script if available
-    std::string omarchy_bin = std::string(g_get_home_dir()) + "/omarchy/bin/omarchy-theme-set";
-    std::string omarchy_set_cmd = omarchy_bin + " \"" + current_theme.name + "\" 2>/dev/null &";
-    system(omarchy_set_cmd.c_str());
+    // Trigger user hook script if present
+    std::string hook = std::string(g_get_user_config_dir()) + "/zenithshell/hooks/on_theme_change.sh";
+    if (fs::exists(hook)) {
+        std::string hook_cmd = hook + " \"" + current_theme.name + "\" 2>/dev/null &";
+        system(hook_cmd.c_str());
+    }
 }
 
 std::string ThemeEngine::cycle_next_theme() {
