@@ -105,7 +105,7 @@ hl.bind(MOD .. " + SHIFT + R", hl.dsp.exec_cmd(Session.reboot), {
 	description = "Reboot system",
 })
 
-hl.bind(MOD .. " + SHIFT + E", hl.dsp.exit(), {
+hl.bind(MOD .. " + SHIFT + X", hl.dsp.exit(), {
 	description = "Logout session",
 })
 
