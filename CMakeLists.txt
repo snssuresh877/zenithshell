@@ -5,8 +5,25 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# Compiler Warning Flags & Optimizations
-add_compile_options(-O3 -Wall -Wextra)
+# Compiler Warning Flags, Optimizations & Security Hardening
+add_compile_options(
+    -O3
+    -Wall
+    -Wextra
+    -Wformat
+    -Wformat-security
+    -fstack-protector-strong
+    -fPIE
+    -D_FORTIFY_SOURCE=2
+)
+
+# Hardened Linker Flags (Full RELRO, Immediate Binding, No-Exec Stack)
+add_link_options(
+    -pie
+    -Wl,-z,relro
+    -Wl,-z,now
+    -Wl,-z,noexecstack
+)
 
 # Find Required Packages via PkgConfig
 find_package(PkgConfig REQUIRED)
