@@ -6,8 +6,29 @@ Designed as a high-performance, aesthetically refined replacement for heavy web/
 
 ---
 
+## 📸 UI Showcase & Operations
+
+| **Clean Desktop & Zenith TopBar** | **Flagship Control Center** |
+|:---:|:---:|
+| ![TopBar](assets/screenshots/01_zenith_topbar.png) | ![Control Center](assets/screenshots/02_control_center.png) |
+
+| **Spotlight Application Launcher** | **23-Theme Palette Drawer** |
+|:---:|:---:|
+| ![Spotlight Search](assets/screenshots/03_spotlight_launcher.png) | ![Theme Drawer](assets/screenshots/06_theme_palette_drawer.png) |
+
+| **Hardware Audio Routing** | **Wi-Fi & Network Manager** |
+|:---:|:---:|
+| ![Audio Routing](assets/screenshots/07_audio_routing.png) | ![Wi-Fi Manager](assets/screenshots/08_wifi_networks.png) |
+
+| **Interactive Keybinds Cheatsheet** | **Power Menu & Session Controls** |
+|:---:|:---:|
+| ![Keybindings](assets/screenshots/04_keybinds_cheatsheet.png) | ![Power Menu](assets/screenshots/10_powermenu_overlay.png) |
+
+---
+
 ## 📑 Table of Contents
 
+- [UI Showcase & Operations](#-ui-showcase--operations)
 - [Architectural Overview](#-architectural-overview)
 - [Directory & File Structure](#-directory--file-structure)
 - [Core Features](#-core-features)
