@@ -1,0 +1,2959 @@
+/* ─── Zenith Master Dynamic Design System ─── */
+
+* {
+    font-family: 'JetBrainsMono Nerd Font', 'Symbols Nerd Font', 'JetBrainsMonoNL Nerd Font', 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 11px;
+    box-shadow: none;
+    outline: none;
+    -gtk-icon-shadow: none;
+}
+
+button,
+button.flat,
+button:link,
+button:visited {
+    background-image: none;
+    box-shadow: none;
+    text-shadow: none;
+    border: none;
+}
+
+/* ─── 100% Transparent Bar Canvas (TopBar.qml: anchors top/left/right, margins 6/12/12) ─── */
+window,
+window.zenith-bar,
+window.zenith-bar > box,
+.zenith-bar,
+.bar-box,
+headerbar {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    padding: 0px;
+    margin: 3px 10px;
+    box-shadow: none;
+}
+
+.frameless-btn {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    padding: 0px;
+    margin: 0px;
+    box-shadow: none;
+}
+
+/* ─── Frosted Glass Pill Widgets ─── */
+.pill-widget {
+    background-color: rgba(22, 23, 34, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 2px 8px;
+    margin: 0px 3px;
+    color: @zenith_text_primary;
+    min-height: 24px;
+    transition: all 150ms ease-in-out;
+}
+
+.pill-widget:hover {
+    background-color: rgba(35, 37, 52, 0.85);
+    border-color: @zenith_border_hover;
+    color: #ffffff;
+}
+
+/* ─── Arch Logo Launcher Button ─── */
+.arch-launcher-btn {
+    background-color: rgba(22, 23, 34, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    min-width: 28px;
+    min-height: 24px;
+    padding: 0px;
+    margin: 0px 3px;
+    transition: all 150ms ease-in-out;
+}
+
+.arch-icon-lbl {
+    color: @zenith_accent;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.arch-launcher-btn:hover {
+    background-color: @zenith_accent;
+    border-color: @zenith_accent;
+    box-shadow: none;
+}
+
+.arch-launcher-btn:hover .arch-icon-lbl {
+    color: @zenith_bg;
+}
+
+/* ─── Active Window Pill ─── */
+.active-window-pill {
+    padding: 0px 8px;
+}
+
+.active-app-icon {
+    margin-right: 3px;
+    color: @zenith_text_primary;
+}
+
+.active-dot {
+    color: @zenith_accent;
+    font-size: 7px;
+    margin-right: 3px;
+}
+
+.window-title {
+    color: @zenith_text_primary;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* ─── Workspace Switcher ─── */
+.workspace-container {
+    background-color: rgba(22, 23, 34, 0.75);
+    border-radius: 14px;
+    padding: 1px 6px;
+    margin: 0px 3px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    min-height: 24px;
+}
+
+.workspace-btn {
+    background-color: transparent;
+    background-image: none;
+    border-radius: 14px;
+    min-width: 12px;
+    min-height: 18px;
+    padding: 0px 2px;
+    margin: 0px 1px;
+    border: 1px solid transparent;
+    box-shadow: none;
+    font-size: 9px;
+    color: @zenith_text_disabled;
+    transition: all 150ms ease-in-out;
+}
+
+.workspace-btn:hover {
+    background-color: rgba(35, 37, 52, 0.85);
+    color: @zenith_text_primary;
+}
+
+.workspace-btn.inactive-dot {
+    min-width: 12px;
+    color: @zenith_text_disabled;
+    font-size: 9px;
+}
+
+.workspace-btn.occupied {
+    min-width: 20px;
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: @zenith_text_primary;
+    font-size: 9px;
+}
+
+.workspace-btn.active {
+    min-width: 24px;
+    background-color: @zenith_accent;
+    border: 1px solid @zenith_accent;
+    color: @zenith_bg;
+    font-size: 10px;
+    font-weight: 800;
+    box-shadow: none;
+}
+
+.workspace-btn.active label {
+    color: @zenith_bg;
+    font-weight: 800;
+}
+
+/* ─── Clock Widget ─── */
+.clock-widget {
+    background-color: rgba(22, 23, 34, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 0px 10px;
+    min-height: 24px;
+    margin: 0px 3px;
+}
+
+.clock-date {
+    color: #9A9AAF;
+    font-size: 9.5px;
+    font-weight: 500;
+}
+
+.clock-time {
+    color: #F2F2F5;
+    font-size: 10.5px;
+    font-weight: 700;
+}
+
+.clock-widget:hover {
+    background-color: rgba(35, 37, 52, 0.85);
+    border-color: @zenith_border_hover;
+}
+
+/* ─── System Stats Widget ─── */
+.sys-stats-btn {
+    padding: 0px 12px;
+}
+
+.sys-cpu-icon {
+    color: #9A9AAF;
+    font-size: 11px;
+    margin-right: 2px;
+}
+
+.sys-cpu-text {
+    color: #F2F2F5;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.sys-ram-icon {
+    color: #9A9AAF;
+    font-size: 11px;
+    margin-right: 2px;
+}
+
+.sys-ram-text {
+    color: #F2F2F5;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.sys-vsep {
+    background-color: rgba(255, 255, 255, 0.10);
+    min-width: 1px;
+    min-height: 12px;
+    margin: 0px 6px;
+}
+
+.sys-vsep-lbl {
+    color: rgba(255, 255, 255, 0.15);
+    font-size: 9px;
+    margin: 0px 4px;
+}
+
+.stat-urgent {
+    color: #FF5C6C;
+}
+
+.stat-warning {
+    color: #FFB454;
+}
+
+/* ─── Network Speed Widget ─── */
+.net-pill {
+    padding: 0px 12px;
+}
+
+.net-icon {
+    color: #9A9AAF;
+    font-size: 11px;
+}
+
+.net-text {
+    color: #F2F2F5;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.net-vpn-text {
+    color: #35D07F;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.net-speed-text {
+    color: #F2F2F5;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.net-pill.vpn-active {
+    border-color: rgba(53, 208, 127, 0.40);
+}
+
+.net-pill.vpn-active .net-icon {
+    color: #35D07F;
+}
+
+/* ─── Control Center Button ─── */
+.control-btn {
+    background-color: rgba(22, 23, 34, 0.75);
+    color: #F2F2F5;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0px;
+    margin: 0px 4px;
+    font-size: 13px;
+    font-weight: 700;
+    transition: all 150ms ease-in-out;
+}
+
+.control-btn:hover {
+    background-color: rgba(35, 37, 52, 0.85);
+    border-color: @zenith_border_hover;
+    color: @zenith_accent;
+}
+
+/* ─── Volume Widget ─── */
+.volume-pill {
+    padding: 0px 12px;
+}
+
+.volume-icon {
+    color: #9A9AAF;
+    font-size: 11px;
+}
+
+.volume-text {
+    color: #F2F2F5;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.text-muted {
+    color: #5F6070;
+}
+
+/* ─── Battery Widget (BatteryWidget.qml) ─── */
+.battery-pill {
+    padding: 0px 12px;
+}
+
+.battery-icon {
+    color: @zenith_accent;
+    font-size: 11px;
+}
+
+.battery-text {
+    color: #f8f8f2;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.bat-charging {
+    color: #50fa7b;
+}
+
+.bat-urgent {
+    color: #ff5555;
+}
+
+window.control-center-window,
+.control-center-window,
+.control-center-backdrop {
+    background-color: transparent;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.control-card-flagship {
+    background-color: rgba(12, 13, 20, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 24px;
+    padding: 22px;
+    box-shadow: none;
+}
+
+.cc-header-row {
+    margin-bottom: 2px;
+}
+
+.cc-header-icon {
+    color: @zenith_accent;
+    font-size: 18px;
+}
+
+.cc-header-title {
+    color: #f8f8f2;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+}
+
+.cc-battery-badge {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    color: #a6adc8;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 5px 10px;
+}
+
+.cc-close-circle-btn {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    color: #6272a4;
+    font-size: 13px;
+    padding: 4px 10px;
+    transition: all 140ms ease-in-out;
+}
+
+.cc-close-circle-btn:hover {
+    background-color: rgba(255, 85, 85, 0.25);
+    border-color: #ff5555;
+    color: #ff5555;
+}
+
+/* 2x2 Hero Cards */
+.cc-hero-grid {
+    margin-bottom: 2px;
+}
+
+.cc-hero-card {
+    background-color: @zenith_surface;
+    border: 1px solid @zenith_border;
+    border-radius: 18px;
+    padding: 12px 14px;
+    transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: none;
+}
+
+.cc-hero-card:focus {
+    outline: none;
+}
+
+.cc-hero-card:hover {
+    background-color: @zenith_surface_variant;
+    border-color: @zenith_border_hover;
+    box-shadow: none;
+}
+
+.cc-card-icon {
+    color: @zenith_text_primary;
+    font-size: 17px;
+    margin-right: 6px;
+}
+
+.cc-card-title {
+    color: @zenith_text_primary;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.cc-card-subtitle {
+    color: @zenith_text_secondary;
+    font-size: 11px;
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+.cc-card-pill {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid @zenith_border;
+    border-radius: 8px;
+    color: @zenith_text_secondary;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+}
+
+/* 1x3 Quick Modes */
+.cc-modes-grid {
+    margin-bottom: 2px;
+}
+
+.cc-mode-btn {
+    background-color: @zenith_surface;
+    border: 1px solid @zenith_border;
+    border-radius: 14px;
+    padding: 10px 8px;
+    transition: all 150ms ease-in-out;
+}
+
+.cc-mode-btn:focus {
+    outline: none;
+}
+
+.cc-mode-btn:hover {
+    background-color: @zenith_surface_variant;
+    border-color: @zenith_border_hover;
+}
+
+.cc-mode-btn.active {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+}
+
+.cc-mode-btn.active .cc-mode-title {
+    color: @zenith_accent;
+}
+
+.cc-mode-btn.active .cc-mode-sub {
+    color: @zenith_accent;
+}
+
+.cc-mode-title {
+    color: @zenith_text_primary;
+    font-size: 11.5px;
+    font-weight: 700;
+}
+
+.cc-mode-sub {
+    color: @zenith_text_disabled;
+    font-size: 9.5px;
+    font-weight: 700;
+}
+
+/* Sliders Card */
+.cc-sliders-card {
+    background-color: @zenith_surface;
+    border: 1px solid @zenith_border;
+    border-radius: 18px;
+    padding: 12px 16px;
+}
+
+.cc-slider-icon {
+    color: @zenith_text_primary;
+    font-size: 14px;
+    margin-right: 6px;
+}
+
+.cc-slider-lbl {
+    color: @zenith_text_primary;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.cc-slider-val {
+    color: @zenith_text_secondary;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.cc-sliders-card scale trough {
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    min-height: 7px;
+}
+
+.cc-sliders-card scale highlight {
+    background-color: @zenith_accent;
+    border-radius: 8px;
+    min-height: 7px;
+}
+
+.cc-sliders-card scale slider {
+    background-color: @zenith_text_primary;
+    border: 1.5px solid @zenith_accent;
+    border-radius: 50%;
+    min-width: 15px;
+    min-height: 15px;
+}
+
+/* Power Surface Bar */
+.cc-power-bar {
+    margin-top: 2px;
+}
+
+.cc-power-btn {
+    background-color: rgba(22, 23, 34, 0.70);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 9px 6px;
+    transition: all 150ms ease-in-out;
+}
+
+.cc-power-btn:focus {
+    outline: none;
+}
+
+.cc-power-btn.pwr-lock:hover {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+}
+.cc-power-btn.pwr-lock:hover .cc-power-btn-icon,
+.cc-power-btn.pwr-lock:hover .cc-power-btn-lbl {
+    color: @zenith_accent;
+}
+
+.cc-power-btn.pwr-logout:hover {
+    background-color: rgba(255, 180, 84, 0.18);
+    border-color: #FFB454;
+}
+.cc-power-btn.pwr-logout:hover .cc-power-btn-icon,
+.cc-power-btn.pwr-logout:hover .cc-power-btn-lbl {
+    color: #FFB454;
+}
+
+.cc-power-btn.pwr-reboot:hover {
+    background-color: rgba(244, 114, 182, 0.18);
+    border-color: #f472b6;
+}
+.cc-power-btn.pwr-reboot:hover .cc-power-btn-icon,
+.cc-power-btn.pwr-reboot:hover .cc-power-btn-lbl {
+    color: #f472b6;
+}
+
+.cc-power-btn.pwr-shutdown:hover {
+    background-color: rgba(255, 92, 108, 0.20);
+    border-color: #FF5C6C;
+}
+.cc-power-btn.pwr-shutdown:hover .cc-power-btn-icon,
+.cc-power-btn.pwr-shutdown:hover .cc-power-btn-lbl {
+    color: #FF5C6C;
+}
+
+.cc-power-btn-icon {
+    color: #9A9AAF;
+    font-size: 13px;
+    margin-right: 4px;
+}
+
+.cc-power-btn-lbl {
+    color: #F2F2F5;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* Audio Drill-Down Detail Page */
+.cc-back-btn {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 4px 10px;
+    transition: all 140ms ease-in-out;
+}
+
+.cc-back-btn:hover {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+}
+
+.cc-back-icon {
+    color: @zenith_accent;
+    font-size: 14px;
+    margin-right: 4px;
+}
+
+.cc-back-lbl {
+    color: #f8f8f2;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.cc-action-pill-btn {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    color: #a6adc8;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    transition: all 140ms ease-in-out;
+}
+
+.cc-action-pill-btn:hover {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+    color: @zenith_accent;
+}
+
+.cc-section-lbl {
+    color: #6272a4;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    margin-top: 4px;
+}
+
+.cc-device-group-card {
+    background-color: rgba(18, 19, 28, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 6px;
+}
+
+.cc-sink-item-btn {
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    padding: 8px 10px;
+    transition: all 150ms ease-in-out;
+}
+
+.cc-sink-item-btn:focus {
+    outline: none;
+}
+
+.cc-sink-item-btn:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.cc-sink-item-btn.active {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_border_hover;
+}
+
+.cc-sink-item-btn.active .cc-device-icon {
+    color: @zenith_accent;
+}
+
+.cc-sink-item-btn.active .cc-device-title {
+    color: @zenith_accent;
+    font-weight: 800;
+}
+
+.cc-device-row-btn {
+    background-color: rgba(18, 19, 28, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 10px 14px;
+    transition: all 150ms ease-in-out;
+}
+
+.cc-device-row-btn:focus {
+    outline: none;
+}
+
+.cc-device-row-btn:hover {
+    background-color: rgba(30, 31, 45, 0.85);
+    border-color: @zenith_border_hover;
+}
+
+.cc-device-icon {
+    color: #a6adc8;
+    font-size: 16px;
+    margin-right: 6px;
+}
+
+.cc-device-title {
+    color: #f8f8f2;
+    font-size: 12.5px;
+    font-weight: 700;
+}
+
+.cc-device-sub {
+    color: #6272a4;
+    font-size: 10px;
+    font-weight: 500;
+}
+
+.cc-state-tag {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: #6272a4;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 3px 8px;
+    transition: all 140ms ease-in-out;
+}
+
+.cc-state-tag.active {
+    background-color: rgba(80, 250, 123, 0.15);
+    border-color: #50fa7b;
+    color: #50fa7b;
+}
+
+.cc-check-badge {
+    color: @zenith_accent;
+    font-size: 14px;
+    font-weight: 800;
+    margin-right: 4px;
+}
+
+/* Theme Card on Main Overview */
+.cc-theme-card-btn {
+    background-color: rgba(22, 23, 34, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 10px 14px;
+    transition: all 160ms ease-in-out;
+}
+
+.cc-theme-card-btn:focus {
+    outline: none;
+}
+
+.cc-theme-card-btn:hover {
+    background-color: rgba(36, 38, 54, 0.90);
+    border-color: @zenith_border_hover;
+}
+
+.cc-theme-icon {
+    font-size: 18px;
+    margin-right: 6px;
+}
+
+.cc-theme-title {
+    color: #f8f8f2;
+    font-size: 12.5px;
+    font-weight: 800;
+}
+
+.cc-theme-sub {
+    color: #a6adc8;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Theme Wallpaper Bar Card */
+.cc-wp-bar-card {
+    background-color: rgba(22, 23, 34, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 8px 12px;
+}
+
+.cc-wp-icon {
+    color: @zenith_accent;
+    font-size: 16px;
+    margin-right: 4px;
+}
+
+.cc-wp-title {
+    color: #f8f8f2;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.cc-wp-sub {
+    color: #6272a4;
+    font-size: 10px;
+    font-weight: 500;
+}
+
+/* Theme Drill-Down Page & Scrolled Window */
+.cc-theme-scrolled-win {
+    background-color: transparent;
+    border: none;
+}
+
+.cc-theme-scrolled-win scrollbar {
+    opacity: 0.35;
+    min-width: 4px;
+}
+
+.cc-theme-grid {
+    margin-top: 2px;
+    margin-bottom: 6px;
+}
+
+.cc-theme-tile-btn {
+    background-color: rgba(28, 30, 44, 0.90);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 16px;
+    padding: 12px 14px;
+    transition: all 160ms ease-in-out;
+}
+
+.cc-theme-tile-btn:focus {
+    outline: none;
+}
+
+.cc-theme-tile-btn:hover {
+    background-color: rgba(42, 45, 66, 0.95);
+    border-color: @zenith_border_hover;
+}
+
+.cc-theme-tile-btn.active {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+}
+
+.cc-theme-tile-title {
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.cc-theme-tile-btn.active .cc-theme-tile-title {
+    color: @zenith_accent;
+}
+
+.cc-theme-tile-desc {
+    color: #b0b8db;
+    font-size: 10.5px;
+    font-weight: 600;
+}
+
+.cc-theme-swatch-dot {
+    margin-right: 3px;
+    font-size: 14px;
+}
+
+.slider-icon {
+    color: @zenith_accent;
+    font-size: 14px;
+    margin-right: 6px;
+}
+
+.sliders-card scale trough {
+    background-color: #21222c;
+    border-radius: 10px;
+    min-height: 8px;
+}
+
+.sliders-card scale highlight {
+    background-color: @zenith_accent;
+    border-radius: 10px;
+    min-height: 8px;
+}
+
+.sliders-card scale slider {
+    background-color: #f8f8f2;
+    border: 1.5px solid @zenith_accent;
+    border-radius: 50%;
+    min-width: 16px;
+    min-height: 16px;
+}
+
+.media-card {
+    background-color: #12131a;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 18px;
+    padding: 14px 16px;
+}
+
+.media-title {
+    color: #f8f8f2;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.media-artist {
+    color: #6272a4;
+    font-size: 10px;
+}
+
+.media-ctrl-btn {
+    background-color: transparent;
+    border: none;
+    color: #f8f8f2;
+    font-size: 14px;
+    padding: 6px 10px;
+    border-radius: 12px;
+    transition: all 120ms ease-in-out;
+}
+
+.media-ctrl-btn:hover {
+    color: @zenith_accent;
+    background-color: @zenith_accent_soft;
+}
+
+.media-ctrl-btn.play-btn {
+    background-color: @zenith_accent;
+    color: #111116;
+    border-radius: 14px;
+    padding: 6px 16px;
+    font-weight: 800;
+}
+
+.media-ctrl-btn.play-btn:hover {
+    background-color: #caa6f7;
+    color: #111116;
+}
+
+.quick-toggle-btn {
+    background-color: #15161e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    color: #f8f8f2;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 12px 14px;
+    min-height: 44px;
+    transition: all 150ms ease-in-out;
+}
+
+.quick-toggle-btn:hover {
+    background-color: #21222c;
+    border-color: @zenith_accent;
+    color: @zenith_accent;
+}
+
+.quick-toggle-btn.active {
+    background-color: @zenith_accent;
+    border-color: @zenith_accent;
+    color: #111116;
+    font-weight: 800;
+}
+
+.power-pill-btn {
+    background-color: #15161e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    color: #f8f8f2;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 8px 6px;
+    min-height: 32px;
+    transition: all 140ms ease-in-out;
+}
+
+.power-pill-btn:hover {
+    background-color: #21222c;
+    border-color: @zenith_accent;
+    color: @zenith_accent;
+}
+
+.power-pill-btn.btn-lock:hover {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+    color: @zenith_accent;
+}
+
+.power-pill-btn.btn-suspend:hover {
+    background-color: rgba(139, 233, 253, 0.18);
+    border-color: #8be9fd;
+    color: #8be9fd;
+}
+
+.power-pill-btn.btn-logout:hover {
+    background-color: rgba(255, 184, 108, 0.18);
+    border-color: #ffb86c;
+    color: #ffb86c;
+}
+
+.power-pill-btn.btn-reboot:hover {
+    background-color: rgba(255, 121, 198, 0.18);
+    border-color: #ff79c6;
+    color: #ff79c6;
+}
+
+.power-pill-btn.urgent {
+    background-color: rgba(255, 85, 85, 0.15);
+    border-color: rgba(255, 85, 85, 0.35);
+    color: #ff5555;
+}
+
+.power-pill-btn.urgent:hover {
+    background-color: #ff5555;
+    border-color: #ff5555;
+    color: #111116;
+}
+
+/* ─── Spotlight Search Modal (Refined Curvy Card: 600px width, 24px radius) ─── */
+window.spotlight-window {
+    background-color: transparent;
+}
+
+.spotlight-card {
+    background-color: @zenith_bg;
+    border: 1px solid @zenith_border;
+    border-radius: 24px;
+    padding: 18px 20px;
+    box-shadow: none;
+}
+
+.spotlight-input-container {
+    background-color: @zenith_surface;
+    border: 1px solid @zenith_border;
+    border-radius: 16px;
+    padding: 4px 14px;
+    min-height: 48px;
+    transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.spotlight-input-container:focus-within {
+    background-color: @zenith_surface_variant;
+    border-color: @zenith_accent;
+    box-shadow: none;
+}
+
+.spotlight-search-icon {
+    color: @zenith_text_secondary;
+    font-size: 16px;
+    margin-right: 6px;
+    transition: color 150ms ease-in-out;
+}
+
+.spotlight-input-container:focus-within .spotlight-search-icon {
+    color: @zenith_accent;
+}
+
+.spotlight-input-field {
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    color: @zenith_text_primary;
+    font-size: 13.5px;
+    font-weight: 600;
+    padding: 8px 0px;
+}
+
+/* ─── Spotlight Category Filter Bar ─── */
+.spotlight-cat-scroll {
+    background-color: transparent;
+    border: none;
+    margin: 2px 0px 4px 0px;
+}
+
+.spotlight-cat-bar {
+    padding: 2px 0px;
+}
+
+.spotlight-cat-btn {
+    background-color: @zenith_surface;
+    border: 1px solid @zenith_border;
+    border-radius: 10px;
+    color: @zenith_text_secondary;
+    font-size: 10.5px;
+    font-weight: 600;
+    padding: 5px 11px;
+    transition: all 120ms ease-in-out;
+}
+
+.spotlight-cat-btn:hover {
+    background-color: @zenith_surface_variant;
+    border-color: @zenith_border_hover;
+    color: @zenith_text_primary;
+}
+
+.spotlight-cat-btn.active {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+    color: @zenith_accent;
+    font-weight: 800;
+}
+
+/* ─── Spotlight Results List ─── */
+.spotlight-list {
+    background-color: transparent;
+    border: none;
+}
+
+.spotlight-list row {
+    background-color: transparent;
+    border: none;
+    padding: 2px 0px;
+}
+
+.spotlight-item {
+    padding: 7px 12px;
+    border-radius: 14px;
+    background-color: @zenith_surface;
+    border: 1px solid @zenith_border;
+    transition: all 120ms ease-in-out;
+}
+
+.spotlight-icon-box {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid @zenith_border;
+    border-radius: 10px;
+    min-width: 36px;
+    min-height: 36px;
+}
+
+.spotlight-item-title {
+    color: @zenith_text_primary;
+    font-size: 12.5px;
+    font-weight: 700;
+}
+
+.spotlight-item-sub {
+    color: @zenith_text_secondary;
+    font-size: 10.5px;
+    font-weight: 500;
+}
+
+.spotlight-item-badge {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid @zenith_border;
+    border-radius: 8px;
+    color: @zenith_text_secondary;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 8px;
+}
+
+/* Pro-Grade Tinted Glass Selected State (Raycast / Apple Style) */
+.spotlight-list row:selected .spotlight-item,
+.spotlight-list row:hover .spotlight-item {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+}
+
+.spotlight-list row:selected .spotlight-item-title,
+.spotlight-list row:hover .spotlight-item-title {
+    color: #FFFFFF;
+    font-weight: 800;
+}
+
+.spotlight-list row:selected .spotlight-item-sub,
+.spotlight-list row:hover .spotlight-item-sub {
+    color: @zenith_text_primary;
+}
+
+.spotlight-list row:selected .spotlight-icon-box,
+.spotlight-list row:hover .spotlight-icon-box {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+}
+
+.spotlight-list row:selected .spotlight-item-badge,
+.spotlight-list row:hover .spotlight-item-badge {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+    color: @zenith_accent;
+}
+
+.spotlight-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding-top: 10px;
+    margin-top: 4px;
+}
+
+.spotlight-footer-hint {
+    color: #6272a4;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+/* ─── Notification Pill in TopBar ─── */
+.notif-pill {
+    padding: 0px 12px;
+}
+
+.notif-pill.has-notifications {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+}
+
+.notif-pill-icon {
+    color: @zenith_accent;
+    font-size: 12px;
+}
+
+.notif-pill-badge {
+    color: #f8f8f2;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+/* ─── Notification Popup Toasts (Automatic popups on top right) ─── */
+window.toast-window,
+window.notification-overlay {
+    background-color: transparent;
+    border: none;
+}
+
+.toast-time {
+    color: #6272a4;
+    font-size: 10px;
+    margin-right: 6px;
+}
+
+.toast-container {
+    background-color: transparent;
+    border: none;
+    padding: 0px;
+}
+
+.notification-toast {
+    background-color: rgba(14, 15, 22, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    padding: 12px 16px;
+    box-shadow: none;
+    margin-bottom: 8px;
+}
+
+.toast-icon {
+    color: @zenith_accent;
+    font-size: 16px;
+    margin-right: 4px;
+}
+
+.toast-app-name {
+    color: @zenith_accent;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.toast-summary {
+    color: #F2F2F5;
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 2px;
+}
+
+.toast-body {
+    color: #9A9AAF;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.toast-close-btn {
+    background-color: rgba(22, 23, 34, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    color: #9A9AAF;
+    font-size: 11px;
+    padding: 4px 8px;
+    transition: all 120ms ease-in-out;
+}
+
+.toast-close-btn:hover {
+    color: #FF5C6C;
+    background-color: rgba(255, 92, 108, 0.20);
+    border-color: #FF5C6C;
+}
+
+/* ─── Notification History Drawer Panel (380px width, 24px radius) ─── */
+window.notif-panel-window,
+.notif-panel-window {
+    background-color: transparent;
+    border: none;
+}
+
+.notif-panel-backdrop {
+    background-color: transparent;
+}
+
+.notif-panel-card {
+    background-color: rgba(14, 15, 22, 0.94);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 24px;
+    padding: 18px;
+    box-shadow: none;
+}
+
+.notif-panel-header {
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.notif-panel-title-icon {
+    color: @zenith_accent;
+    font-size: 16px;
+    margin-right: 2px;
+}
+
+.notif-panel-title {
+    color: #f8f8f2;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.notif-panel-badge {
+    background-color: @zenith_accent_soft;
+    border: 1px solid @zenith_border_hover;
+    color: @zenith_accent;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 7px;
+    margin-left: 4px;
+}
+
+.notif-clear-all-btn {
+    background-color: #15161e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    color: #a6adc8;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 10px;
+    transition: all 120ms ease-in-out;
+}
+
+.notif-clear-all-btn:hover {
+    background-color: rgba(255, 85, 85, 0.20);
+    border-color: #ff5555;
+    color: #ff5555;
+}
+
+.notif-panel-close-btn {
+    background-color: #15161e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    color: #a6adc8;
+    font-size: 11px;
+    padding: 4px 8px;
+    transition: all 120ms ease-in-out;
+}
+
+.notif-panel-close-btn:hover {
+    background-color: #21222c;
+    border-color: @zenith_accent;
+    color: @zenith_accent;
+}
+
+.notif-history-list {
+    background-color: transparent;
+    border: none;
+}
+
+.notif-history-list row {
+    background-color: transparent;
+    border: none;
+    padding: 2px 0px;
+}
+
+.notif-item-card {
+    background-color: #12131a;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    transition: all 120ms ease-in-out;
+}
+
+.notif-item-card:hover {
+    border-color: @zenith_border_hover;
+    background-color: #171822;
+}
+
+.notif-item-icon {
+    color: @zenith_accent;
+    font-size: 13px;
+}
+
+.notif-item-app-name {
+    color: @zenith_accent;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.notif-item-time {
+    color: #6272a4;
+    font-size: 10px;
+}
+
+.notif-item-dismiss-btn {
+    background-color: transparent;
+    border: none;
+    border-radius: 6px;
+    color: #6272a4;
+    font-size: 10px;
+    padding: 1px 5px;
+    min-height: 18px;
+    transition: all 120ms ease-in-out;
+}
+
+.notif-item-dismiss-btn:hover {
+    background-color: rgba(255, 85, 85, 0.20);
+    color: #ff5555;
+}
+
+.notif-item-summary {
+    color: #f8f8f2;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.notif-item-body {
+    color: #a6adc8;
+    font-size: 11px;
+}
+
+.notif-empty-box {
+    padding: 40px 20px;
+}
+
+.notif-empty-icon {
+    color: #6272a4;
+    font-size: 44px;
+    margin-bottom: 8px;
+}
+
+.notif-empty-title {
+    color: #f8f8f2;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.notif-empty-sub {
+    color: #6272a4;
+    font-size: 11px;
+}
+
+/* ─── Active Background Apps Arrow Pill & Popover Drawer ─── */
+.active-apps-pill {
+    padding: 0 10px;
+    margin-left: 2px;
+}
+
+.active-apps-arrow {
+    color: @zenith_accent;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.active-apps-text {
+    color: #f8f8f2;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+window.active-apps-window,
+.active-apps-window {
+    background-color: transparent;
+    border: none;
+}
+
+.active-apps-backdrop {
+    background-color: transparent;
+}
+
+.active-apps-card {
+    background-color: #0b0c10;
+    border: 2px solid @zenith_accent;
+    border-radius: 24px;
+    padding: 16px;
+    box-shadow: none;
+}
+
+.active-apps-header {
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.active-apps-title-icon {
+    color: @zenith_accent;
+    font-size: 16px;
+    margin-right: 2px;
+}
+
+.active-apps-title {
+    color: #f8f8f2;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.active-apps-badge {
+    background-color: @zenith_accent_soft;
+    border: 1px solid @zenith_border_hover;
+    color: @zenith_accent;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 7px;
+    margin-left: 4px;
+}
+
+.active-apps-close-btn {
+    background-color: #15161e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    color: #a6adc8;
+    font-size: 11px;
+    padding: 4px 8px;
+    transition: all 120ms ease-in-out;
+}
+
+.active-apps-close-btn:hover {
+    background-color: #21222c;
+    border-color: @zenith_accent;
+    color: @zenith_accent;
+}
+
+.active-apps-list {
+    background-color: transparent;
+    border: none;
+}
+
+.active-apps-list row {
+    background-color: transparent;
+    border: none;
+    padding: 2px 0px;
+}
+
+.active-app-item-card {
+    background-color: #12131a;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    transition: all 120ms ease-in-out;
+}
+
+.active-app-item-card:hover {
+    border-color: @zenith_border_hover;
+    background-color: #171822;
+}
+
+.active-app-icon-box {
+    background-color: #1c1d28;
+    border-radius: 10px;
+    padding: 4px;
+    margin-right: 4px;
+}
+
+.active-app-title {
+    color: #f8f8f2;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.active-app-sub {
+    color: #a6adc8;
+    font-size: 10px;
+}
+
+.active-app-focus-btn {
+    background-color: #1c1d28;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    color: #f8f8f2;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 8px;
+    transition: all 120ms ease-in-out;
+}
+
+.active-app-focus-btn:hover {
+    background-color: @zenith_accent;
+    color: #111116;
+    border-color: @zenith_accent;
+}
+
+.active-app-close-btn {
+    background-color: #15161e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    color: #a6adc8;
+    font-size: 11px;
+    padding: 4px 8px;
+    transition: all 120ms ease-in-out;
+}
+
+.active-app-close-btn:hover {
+    color: #ff5555;
+    background-color: rgba(255, 85, 85, 0.20);
+    border-color: #ff5555;
+}
+
+.active-app-kill-icon-btn {
+    background-color: #15161e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    color: #a6adc8;
+    font-size: 11px;
+    padding: 4px 7px;
+    transition: all 120ms ease-in-out;
+}
+
+.active-app-kill-icon-btn:hover {
+    color: #ff5555;
+    background-color: rgba(255, 85, 85, 0.25);
+    border-color: #ff5555;
+}
+
+.active-app-kill-btn {
+    background-color: rgba(255, 85, 85, 0.15);
+    border: 1px solid rgba(255, 85, 85, 0.35);
+    border-radius: 10px;
+    color: #ff5555;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 8px;
+    transition: all 120ms ease-in-out;
+}
+
+.active-app-kill-btn:hover {
+    background-color: #ff5555;
+    color: #111116;
+    border-color: #ff5555;
+}
+
+.active-app-relaunch-btn {
+    background-color: rgba(80, 250, 123, 0.15);
+    border: 1px solid rgba(80, 250, 123, 0.35);
+    border-radius: 10px;
+    color: #50fa7b;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 8px;
+    transition: all 120ms ease-in-out;
+}
+
+.active-app-relaunch-btn:hover {
+    background-color: #50fa7b;
+    color: #111116;
+    border-color: #50fa7b;
+}
+
+.active-app-ghost-tag {
+    background-color: rgba(255, 184, 108, 0.20);
+    border: 1px solid rgba(255, 184, 108, 0.40);
+    color: #ffb86c;
+    border-radius: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 6px;
+    margin-left: 6px;
+}
+
+.active-apps-empty-box {
+    padding: 40px 20px;
+}
+
+.active-apps-empty-icon {
+    color: #50fa7b;
+    font-size: 40px;
+    margin-bottom: 6px;
+}
+
+.active-apps-empty-title {
+    color: #f8f8f2;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.active-apps-empty-sub {
+    color: #6272a4;
+    font-size: 11px;
+}
+
+/* ─── Collapsible System Tray Drawer (Waybar group/drawer style) ─── */
+.tray-drawer-pill {
+    padding: 0px 4px 0px 8px;
+}
+
+.tray-arrow-btn {
+    background: transparent;
+    border: none;
+    padding: 0px 2px;
+    margin: 0px;
+    border-radius: 6px;
+}
+
+.tray-arrow-btn:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.tray-arrow-icon {
+    color: @zenith_accent;
+    font-size: 13px;
+    font-weight: 700;
+    margin-right: 2px;
+}
+
+.tray-icons-box {
+    margin: 0px;
+    padding: 0px;
+}
+
+.tray-item-btn {
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    padding: 2px 5px;
+    margin: 0 1px;
+    transition: all 120ms ease-in-out;
+}
+
+.tray-item-btn:hover {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.tray-fallback-icon {
+    color: @zenith_accent;
+    font-size: 14px;
+}
+
+/* ─── Calendar Window & Card Overlay ─── */
+.calendar-window {
+    background-color: transparent;
+}
+
+.calendar-card {
+    background-color: rgba(22, 23, 34, 0.95);
+    border: 1px solid @zenith_border_hover;
+    border-radius: 18px;
+    padding: 16px 18px;
+    box-shadow: none;
+    min-width: 290px;
+}
+
+.calendar-header-box {
+    margin-bottom: 4px;
+}
+
+.calendar-header-icon {
+    color: @zenith_accent;
+    font-size: 24px;
+    margin-right: 10px;
+}
+
+.calendar-header-date {
+    color: #f8f8f2;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.calendar-header-time {
+    color: @zenith_accent;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.calendar-sep {
+    background-color: rgba(255, 255, 255, 0.10);
+    margin: 4px 0px 8px 0px;
+}
+
+/* ─── GtkCalendar Widget Styling ─── */
+calendar.zenith-calendar {
+    background-color: transparent;
+    color: #f8f8f2;
+    border: none;
+    font-size: 11px;
+}
+
+calendar.zenith-calendar:selected {
+    background-color: @zenith_accent;
+    color: #21222c;
+    border-radius: 8px;
+    font-weight: 800;
+}
+
+calendar.zenith-calendar.header {
+    color: @zenith_accent;
+    font-weight: 700;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+    padding-bottom: 6px;
+    margin-bottom: 6px;
+}
+
+calendar.zenith-calendar.button {
+    color: @zenith_accent;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    padding: 2px 6px;
+}
+
+calendar.zenith-calendar.button:hover {
+    background-color: @zenith_accent_soft;
+    color: #ffffff;
+}
+
+calendar.zenith-calendar.highlight {
+    color: #50fa7b;
+    font-weight: 700;
+}
+
+/* ─── Keyboard Shortcuts Cheatsheet Overlay ─── */
+.keybinds-window {
+    background-color: transparent;
+}
+
+.keybinds-card {
+    background-color: rgba(22, 23, 34, 0.95);
+    border: 1px solid @zenith_border_hover;
+    border-radius: 18px;
+    padding: 18px 20px;
+    box-shadow: none;
+    min-width: 520px;
+}
+
+.keybinds-header-icon {
+    color: @zenith_accent;
+    font-size: 22px;
+    margin-right: 8px;
+}
+
+.keybinds-header-title {
+    color: #f8f8f2;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.keybinds-close-btn {
+    background: transparent;
+    border: none;
+    color: #6272a4;
+    font-size: 14px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    transition: all 120ms ease-in-out;
+}
+
+.keybinds-close-btn:hover {
+    background-color: rgba(255, 85, 85, 0.20);
+    color: #ff5555;
+}
+
+.keybinds-search-entry {
+    background-color: #21222c;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 10px;
+    padding: 8px 12px;
+    color: #f8f8f2;
+    font-size: 12px;
+    margin-bottom: 6px;
+    transition: all 150ms ease-in-out;
+}
+
+.keybinds-search-entry:focus {
+    border-color: @zenith_accent;
+    background-color: #282a36;
+    box-shadow: none;
+}
+
+.keybinds-cat-header {
+    color: @zenith_accent;
+    font-size: 11px;
+    font-weight: 800;
+    margin-top: 8px;
+    margin-bottom: 2px;
+}
+
+.keybinds-row-card {
+    background-color: rgba(40, 42, 54, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    transition: all 120ms ease-in-out;
+}
+
+.keybinds-row-card:hover {
+    background-color: rgba(68, 71, 90, 0.75);
+    border-color: @zenith_border_hover;
+}
+
+.keybinds-row-desc {
+    color: #f8f8f2;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.keybinds-row-keys {
+    background-color: #191a21;
+    border: 1px solid @zenith_border_hover;
+    border-radius: 6px;
+    color: @zenith_accent;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+}
+
+/* ─── Clipboard History Overlay ─── */
+window.clipboard-window,
+.clipboard-window {
+    background-color: transparent;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.clipboard-card {
+    background-color: rgba(22, 23, 34, 0.95);
+    border: 1px solid @zenith_border_hover;
+    border-radius: 18px;
+    padding: 18px 20px;
+    box-shadow: none;
+    min-width: 500px;
+}
+
+.clipboard-header {
+    margin-bottom: 2px;
+}
+
+.clipboard-header-icon {
+    color: @zenith_accent;
+    font-size: 22px;
+    margin-right: 6px;
+}
+
+.clipboard-header-title {
+    color: #f8f8f2;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.clipboard-badge {
+    background-color: @zenith_accent_soft;
+    border: 1px solid @zenith_border_hover;
+    border-radius: 10px;
+    color: @zenith_accent;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    margin-left: 6px;
+}
+
+.clipboard-clear-btn {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 8px;
+    color: #f8f8f2;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    margin-right: 6px;
+    transition: all 120ms ease-in-out;
+}
+
+.clipboard-clear-btn:hover {
+    background-color: rgba(255, 85, 85, 0.25);
+    border-color: #ff5555;
+    color: #ff5555;
+}
+
+.clipboard-close-btn {
+    background: transparent;
+    border: none;
+    color: #6272a4;
+    font-size: 14px;
+    padding: 2px 6px;
+    border-radius: 8px;
+    transition: all 120ms ease-in-out;
+}
+
+.clipboard-close-btn:hover {
+    background-color: rgba(255, 85, 85, 0.20);
+    color: #ff5555;
+}
+
+.clipboard-search {
+    background-color: #21222c;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 10px;
+    padding: 8px 12px;
+    color: #f8f8f2;
+    font-size: 12px;
+    margin-bottom: 6px;
+    transition: all 150ms ease-in-out;
+}
+
+.clipboard-search:focus {
+    border-color: @zenith_accent;
+    background-color: #282a36;
+    box-shadow: none;
+}
+
+.clipboard-list {
+    background-color: transparent;
+}
+
+.clipboard-list row {
+    background-color: transparent;
+    padding: 2px 0px;
+}
+
+.clipboard-item {
+    background-color: rgba(40, 42, 54, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 9px 12px;
+    transition: all 120ms ease-in-out;
+}
+
+.clipboard-list row:hover .clipboard-item,
+.clipboard-list row:selected .clipboard-item {
+    background-color: rgba(68, 71, 90, 0.85);
+    border-color: @zenith_border_hover;
+}
+
+.clip-icon {
+    color: @zenith_accent;
+    font-size: 14px;
+    margin-right: 4px;
+}
+
+.clip-text {
+    color: #f8f8f2;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.clip-time {
+    background-color: #191a21;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    color: #a6adc8;
+    font-size: 10px;
+    padding: 2px 6px;
+}
+
+.clipboard-empty-box {
+    padding: 50px 20px;
+}
+
+.clipboard-empty-icon {
+    color: #6272a4;
+    font-size: 42px;
+    margin-bottom: 6px;
+}
+
+.clipboard-empty-title {
+    color: #f8f8f2;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.clipboard-empty-sub {
+    color: #6272a4;
+    font-size: 11px;
+}
+
+/* ─── Network & Wi-Fi Management Panel ─── */
+window.network-window,
+.network-window {
+    background-color: transparent;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.network-backdrop {
+    background-color: transparent;
+}
+
+.network-card {
+    background-color: rgba(22, 23, 34, 0.96);
+    border: 1px solid @zenith_border_hover;
+    border-radius: 20px;
+    padding: 18px 20px;
+    box-shadow: none;
+    min-width: 440px;
+}
+
+.network-header {
+    margin-bottom: 6px;
+}
+
+.network-header-icon {
+    color: @zenith_accent;
+    font-size: 18px;
+    margin-right: 6px;
+}
+
+.network-header-title {
+    color: #f8f8f2;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.network-wifi-switch {
+    margin-right: 6px;
+}
+
+.btn-icon-action,
+.btn-close-action {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: #f8f8f2;
+    font-size: 12px;
+    padding: 4px 9px;
+    transition: all 120ms ease-in-out;
+}
+
+.btn-icon-action:hover {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+    color: @zenith_accent;
+}
+
+.btn-close-action:hover {
+    background-color: rgba(255, 85, 85, 0.25);
+    border-color: #ff5555;
+    color: #ff5555;
+}
+
+/* Active Connection Card */
+.active-net-card {
+    background-color: rgba(35, 38, 52, 0.85);
+    border: 1px solid rgba(80, 250, 123, 0.35);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 6px;
+}
+
+/* Privacy & Connectivity Tools */
+.privacy-tools-grid {
+    margin-bottom: 8px;
+}
+
+.privacy-tool-btn {
+    background-color: rgba(26, 27, 38, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 10px 12px;
+    transition: all 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.privacy-tool-btn:focus {
+    outline: none;
+}
+
+.privacy-tool-btn:hover {
+    background-color: rgba(36, 38, 54, 0.90);
+    border-color: @zenith_border_hover;
+}
+
+.privacy-tool-icon {
+    font-size: 16px;
+    margin-right: 6px;
+}
+
+.privacy-tool-btn.tool-vpn .privacy-tool-icon {
+    color: #34d399;
+}
+
+.privacy-tool-btn.tool-hotspot .privacy-tool-icon {
+    color: #fb923c;
+}
+
+.privacy-tool-title {
+    color: #f8f8f2;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.privacy-tool-sub {
+    color: #7982a9;
+    font-size: 10.5px;
+    font-weight: 600;
+    margin-top: 1px;
+}
+
+.privacy-tool-btn.tool-vpn.active {
+    background-color: rgba(52, 211, 153, 0.16);
+    border-color: #34d399;
+}
+.privacy-tool-btn.tool-vpn.active .privacy-tool-sub {
+    color: #34d399;
+}
+
+.privacy-tool-btn.tool-hotspot.active {
+    background-color: rgba(251, 146, 60, 0.16);
+    border-color: #fb923c;
+}
+.privacy-tool-btn.tool-hotspot.active .privacy-tool-sub {
+    color: #fb923c;
+}
+
+.active-connected-dot {
+    color: #50fa7b;
+    font-size: 13px;
+    margin-right: 4px;
+}
+
+.active-ssid-title {
+    color: #f8f8f2;
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.active-band-badge {
+    background-color: rgba(80, 250, 123, 0.15);
+    border: 1px solid rgba(80, 250, 123, 0.35);
+    border-radius: 8px;
+    color: #50fa7b;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+}
+
+.active-details-grid {
+    margin-top: 6px;
+    margin-bottom: 10px;
+}
+
+.active-detail-item {
+    color: #a6adc8;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.active-actions-row {
+    margin-top: 4px;
+}
+
+.btn-active-action {
+    background-color: @zenith_accent_soft;
+    border: 1px solid @zenith_border_hover;
+    border-radius: 8px;
+    color: @zenith_accent;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 12px;
+    transition: all 120ms ease-in-out;
+}
+
+.btn-active-action:hover {
+    background-color: @zenith_accent;
+    color: #191a21;
+}
+
+.btn-active-disconnect {
+    background-color: rgba(255, 85, 85, 0.12);
+    border: 1px solid rgba(255, 85, 85, 0.30);
+    border-radius: 8px;
+    color: #ff5555;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 12px;
+    transition: all 120ms ease-in-out;
+}
+
+.btn-active-disconnect:hover {
+    background-color: #ff5555;
+    color: #ffffff;
+}
+
+.active-disconnected-icon {
+    color: #6272a4;
+    font-size: 18px;
+}
+
+.active-disconnected-title {
+    color: #6272a4;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.network-section-header {
+    color: #6272a4;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    margin-top: 6px;
+    margin-bottom: 4px;
+}
+
+/* Wi-Fi List */
+.network-scroll,
+.network-scroll viewport,
+.network-scroll list,
+.wifi-list,
+.wifi-list row,
+.wifi-list row:selected,
+.wifi-list row:focus {
+    background-color: transparent;
+    background: transparent;
+    border: none;
+    outline: none;
+    box-shadow: none;
+}
+
+.network-scroll overshoot.top,
+.network-scroll overshoot.bottom {
+    background: none;
+}
+
+/* Wi-Fi Item Container */
+.wifi-item-container {
+    background-color: rgba(40, 42, 54, 0.50);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    margin: 2px 0px;
+    transition: all 140ms ease-in-out;
+}
+
+.wifi-list row:hover .wifi-item-container {
+    background-color: rgba(68, 71, 90, 0.75);
+    border-color: @zenith_border_hover;
+}
+
+.wifi-item-container.expanded {
+    background-color: rgba(28, 29, 40, 0.95);
+    border: 1px solid @zenith_border_hover;
+    border-radius: 14px;
+}
+
+.wifi-item-row {
+    padding: 10px 14px;
+}
+
+/* Inline Expandable Password Form directly below network row */
+.wifi-inline-connect-box {
+    border-top: 1px solid @zenith_accent_soft;
+    background-color: rgba(18, 19, 26, 0.70);
+    border-bottom-left-radius: 14px;
+    border-bottom-right-radius: 14px;
+    padding: 10px 14px 12px 14px;
+}
+
+.wifi-inline-title {
+    color: #f8f8f2;
+    font-size: 11px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.wifi-inline-entry {
+    background-color: #14151e;
+    border: 1px solid @zenith_border_hover;
+    border-radius: 8px;
+    color: #f8f8f2;
+    font-size: 12px;
+    padding: 5px 10px;
+    min-height: 26px;
+}
+
+.wifi-inline-entry:focus {
+    border-color: @zenith_accent;
+    background-color: #191a24;
+}
+
+.btn-inline-eye {
+    background-color: #14151e;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 8px;
+    color: #a6adc8;
+    font-size: 13px;
+    padding: 4px 9px;
+    transition: all 120ms ease-in-out;
+}
+
+.btn-inline-eye:hover {
+    color: @zenith_accent;
+    border-color: @zenith_accent;
+}
+
+.btn-inline-connect {
+    background-color: #50fa7b;
+    border: none;
+    border-radius: 8px;
+    color: #111116;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 14px;
+    transition: all 120ms ease-in-out;
+}
+
+.btn-inline-connect:hover {
+    background-color: #69ff94;
+}
+
+.btn-inline-cancel {
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 8px;
+    color: #a6adc8;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 10px;
+    transition: all 120ms ease-in-out;
+}
+
+.btn-inline-cancel:hover {
+    background-color: rgba(255, 85, 85, 0.20);
+    border-color: #ff5555;
+    color: #ff5555;
+}
+
+.wifi-inline-status-lbl {
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 6px;
+}
+
+.wifi-inline-status-lbl.error {
+    color: #ff5555;
+}
+
+.wifi-inline-status-lbl.info {
+    color: #8be9fd;
+}
+
+.wifi-inline-status-lbl.success {
+    color: #50fa7b;
+}
+
+.wifi-item-row.connected {
+    border: 1px solid rgba(80, 250, 123, 0.30);
+    background-color: rgba(80, 250, 123, 0.08);
+}
+
+.wifi-signal-icon {
+    color: @zenith_accent;
+    font-size: 16px;
+    margin-right: 6px;
+}
+
+.wifi-name-lbl {
+    color: #f8f8f2;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.wifi-lock-badge {
+    color: @zenith_accent;
+    font-size: 12px;
+    margin-left: 4px;
+}
+
+.wifi-connected-pill {
+    background-color: rgba(80, 250, 123, 0.18);
+    border: 1px solid rgba(80, 250, 123, 0.45);
+    border-radius: 8px;
+    color: #50fa7b;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+}
+
+.active-connected-eth-dot {
+    color: #8be9fd;
+    font-size: 13px;
+    margin-right: 4px;
+}
+
+.network-status-lbl {
+    color: #8be9fd;
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 2px;
+    margin-bottom: 4px;
+}
+
+.network-count-lbl {
+    color: #6272a4;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.wifi-freq-badge {
+    background-color: @zenith_accent_soft;
+    border: 1px solid @zenith_accent_soft;
+    border-radius: 6px;
+    color: @zenith_accent;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    margin-left: 4px;
+}
+
+.btn-wifi-forget {
+    background-color: rgba(255, 85, 85, 0.12);
+    border: 1px solid rgba(255, 85, 85, 0.28);
+    border-radius: 8px;
+    color: #ff5555;
+    font-size: 11px;
+    padding: 4px 8px;
+    margin-left: 4px;
+    transition: all 120ms ease-in-out;
+}
+
+.btn-wifi-forget:hover {
+    background-color: #ff5555;
+    color: #ffffff;
+}
+
+.btn-wifi-connect {
+    background-color: @zenith_accent_soft;
+    border: 1px solid @zenith_border_hover;
+    border-radius: 8px;
+    color: @zenith_accent;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    transition: all 120ms ease-in-out;
+}
+
+.btn-wifi-connect:hover {
+    background-color: @zenith_accent;
+    color: #191a21;
+    border-color: @zenith_accent;
+}
+
+/* Footer & Utilities */
+.network-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 10px;
+    margin-top: 6px;
+}
+
+.network-footer-btn {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    color: #f8f8f2;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 12px;
+    transition: all 120ms ease-in-out;
+}
+
+.network-footer-btn:hover {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+    color: @zenith_accent;
+}
+
+.network-ping-lbl {
+    color: #50fa7b;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* ─── Wi-Fi QR Code Sharing View ─── */
+.qr-view-card {
+    background-color: rgba(35, 38, 52, 0.90);
+    border: 1px solid @zenith_border_hover;
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin: 4px 0px;
+}
+
+.btn-qr-back {
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    color: #f8f8f2;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    transition: all 120ms ease-in-out;
+}
+
+.btn-qr-back:hover {
+    background-color: @zenith_accent;
+    color: #191a21;
+}
+
+.qr-title-lbl {
+    color: #f8f8f2;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.qr-img-frame {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: none;
+}
+
+/* ─── Timers & Reminders Overlay ─── */
+window.reminder-window,
+.reminder-window {
+    background-color: transparent;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.reminder-card {
+    background-color: rgba(22, 23, 34, 0.95);
+    border: 1px solid @zenith_border_hover;
+    border-radius: 20px;
+    padding: 18px 20px;
+    box-shadow: none;
+}
+
+.qr-pass-box {
+    background-color: rgba(22, 23, 34, 0.80);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 10px;
+    padding: 6px 14px;
+    margin-top: 4px;
+}
+
+.qr-pass-tag {
+    color: #a6adc8;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.qr-pass-text {
+    color: #50fa7b;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.btn-qr-copy {
+    background-color: @zenith_accent_soft;
+    border: 1px solid @zenith_border_hover;
+    border-radius: 6px;
+    color: @zenith_accent;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    transition: all 120ms ease-in-out;
+}
+
+.btn-qr-copy:hover {
+    background-color: @zenith_accent;
+    color: #191a21;
+}
+
+.qr-hint-text {
+    color: #6272a4;
+    font-size: 10px;
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+/* ─── Zenith Native Power & Session Menu Overlay ─── */
+window.powermenu-window {
+    background-color: transparent;
+}
+
+.powermenu-backdrop {
+    background-color: rgba(5, 6, 10, 0.85);
+}
+
+.powermenu-card {
+    background-color: rgba(13, 14, 22, 0.96);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 28px;
+    padding: 26px 30px;
+    box-shadow: none;
+}
+
+.powermenu-header {
+    margin-bottom: 8px;
+}
+
+.powermenu-avatar-box {
+    background-color: @zenith_accent_soft;
+    border: 1px solid @zenith_accent_soft;
+    border-radius: 14px;
+    padding: 8px 10px;
+}
+
+.powermenu-avatar-icon {
+    color: @zenith_accent;
+    font-size: 20px;
+}
+
+.powermenu-user-title {
+    color: #f8f8f2;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+}
+
+.powermenu-session-sub {
+    color: #6272a4;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.powermenu-status-capsule {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    color: #a6adc8;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 14px;
+}
+
+.powermenu-close-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #6272a4;
+    font-size: 14px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    transition: all 140ms ease-in-out;
+}
+
+.powermenu-close-btn:hover {
+    background-color: rgba(255, 85, 85, 0.25);
+    border-color: #ff5555;
+    color: #ff5555;
+}
+
+.powermenu-tile {
+    background-color: rgba(20, 21, 31, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 22px;
+    padding: 14px 10px;
+    transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: none;
+}
+
+.powermenu-tile:focus {
+    outline: none;
+}
+
+.powermenu-keycap {
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 7px;
+    color: #a6adc8;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 7px;
+    box-shadow: none;
+    transition: all 150ms ease-in-out;
+}
+
+.powermenu-icon-orb {
+    border-radius: 18px;
+    min-width: 52px;
+    min-height: 52px;
+    transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.powermenu-orb-icon {
+    font-size: 24px;
+}
+
+.powermenu-tile-title {
+    color: #f8f8f2;
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: -0.2px;
+}
+
+.powermenu-tile-sub {
+    color: #6272a4;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+/* Specific Aesthetic Tile Variants */
+.powermenu-tile.tile-lock .powermenu-icon-orb {
+    background-color: @zenith_accent_soft;
+    border: 1px solid @zenith_accent_soft;
+}
+.powermenu-tile.tile-lock .powermenu-orb-icon { color: @zenith_accent; }
+.powermenu-tile.tile-lock:hover, .powermenu-tile.tile-lock:focus {
+    background-color: @zenith_accent_soft;
+    border-color: rgba(189, 147, 249, 0.70);
+    box-shadow: none;
+}
+.powermenu-tile.tile-lock:hover .powermenu-icon-orb, .powermenu-tile.tile-lock:focus .powermenu-icon-orb {
+    background-color: @zenith_accent;
+    border-color: @zenith_accent;
+}
+.powermenu-tile.tile-lock:hover .powermenu-orb-icon, .powermenu-tile.tile-lock:focus .powermenu-orb-icon {
+    color: #0d0e15;
+}
+.powermenu-tile.tile-lock:hover .powermenu-keycap, .powermenu-tile.tile-lock:focus .powermenu-keycap {
+    background-color: @zenith_accent;
+    color: #0d0e15;
+    border-color: @zenith_accent;
+}
+
+.powermenu-tile.tile-suspend .powermenu-icon-orb {
+    background-color: rgba(56, 189, 248, 0.12);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+}
+.powermenu-tile.tile-suspend .powermenu-orb-icon { color: #38bdf8; }
+.powermenu-tile.tile-suspend:hover, .powermenu-tile.tile-suspend:focus {
+    background-color: rgba(56, 189, 248, 0.16);
+    border-color: rgba(56, 189, 248, 0.70);
+    box-shadow: none;
+}
+.powermenu-tile.tile-suspend:hover .powermenu-icon-orb, .powermenu-tile.tile-suspend:focus .powermenu-icon-orb {
+    background-color: #38bdf8;
+    border-color: #38bdf8;
+}
+.powermenu-tile.tile-suspend:hover .powermenu-orb-icon, .powermenu-tile.tile-suspend:focus .powermenu-orb-icon {
+    color: #0d0e15;
+}
+.powermenu-tile.tile-suspend:hover .powermenu-keycap, .powermenu-tile.tile-suspend:focus .powermenu-keycap {
+    background-color: #38bdf8;
+    color: #0d0e15;
+    border-color: #38bdf8;
+}
+
+.powermenu-tile.tile-logout .powermenu-icon-orb {
+    background-color: rgba(251, 146, 60, 0.12);
+    border: 1px solid rgba(251, 146, 60, 0.25);
+}
+.powermenu-tile.tile-logout .powermenu-orb-icon { color: #fb923c; }
+.powermenu-tile.tile-logout:hover, .powermenu-tile.tile-logout:focus {
+    background-color: rgba(251, 146, 60, 0.16);
+    border-color: rgba(251, 146, 60, 0.70);
+    box-shadow: none;
+}
+.powermenu-tile.tile-logout:hover .powermenu-icon-orb, .powermenu-tile.tile-logout:focus .powermenu-icon-orb {
+    background-color: #fb923c;
+    border-color: #fb923c;
+}
+.powermenu-tile.tile-logout:hover .powermenu-orb-icon, .powermenu-tile.tile-logout:focus .powermenu-orb-icon {
+    color: #0d0e15;
+}
+.powermenu-tile.tile-logout:hover .powermenu-keycap, .powermenu-tile.tile-logout:focus .powermenu-keycap {
+    background-color: #fb923c;
+    color: #0d0e15;
+    border-color: #fb923c;
+}
+
+.powermenu-tile.tile-reboot .powermenu-icon-orb {
+    background-color: rgba(244, 114, 182, 0.12);
+    border: 1px solid rgba(244, 114, 182, 0.25);
+}
+.powermenu-tile.tile-reboot .powermenu-orb-icon { color: #f472b6; }
+.powermenu-tile.tile-reboot:hover, .powermenu-tile.tile-reboot:focus {
+    background-color: rgba(244, 114, 182, 0.16);
+    border-color: rgba(244, 114, 182, 0.70);
+    box-shadow: none;
+}
+.powermenu-tile.tile-reboot:hover .powermenu-icon-orb, .powermenu-tile.tile-reboot:focus .powermenu-icon-orb {
+    background-color: #f472b6;
+    border-color: #f472b6;
+}
+.powermenu-tile.tile-reboot:hover .powermenu-orb-icon, .powermenu-tile.tile-reboot:focus .powermenu-orb-icon {
+    color: #0d0e15;
+}
+.powermenu-tile.tile-reboot:hover .powermenu-keycap, .powermenu-tile.tile-reboot:focus .powermenu-keycap {
+    background-color: #f472b6;
+    color: #0d0e15;
+    border-color: #f472b6;
+}
+
+.powermenu-tile.tile-power .powermenu-icon-orb {
+    background-color: rgba(248, 113, 113, 0.12);
+    border: 1px solid rgba(248, 113, 113, 0.25);
+}
+.powermenu-tile.tile-power .powermenu-orb-icon { color: #f87171; }
+.powermenu-tile.tile-power {
+    background-color: rgba(248, 113, 113, 0.05);
+    border-color: rgba(248, 113, 113, 0.20);
+}
+.powermenu-tile.tile-power:hover, .powermenu-tile.tile-power:focus {
+    background-color: rgba(248, 113, 113, 0.20);
+    border-color: rgba(248, 113, 113, 0.75);
+    box-shadow: none;
+}
+.powermenu-tile.tile-power:hover .powermenu-icon-orb, .powermenu-tile.tile-power:focus .powermenu-icon-orb {
+    background-color: #f87171;
+    border-color: #f87171;
+}
+.powermenu-tile.tile-power:hover .powermenu-orb-icon, .powermenu-tile.tile-power:focus .powermenu-orb-icon {
+    color: #0d0e15;
+}
+.powermenu-tile.tile-power:hover .powermenu-keycap, .powermenu-tile.tile-power:focus .powermenu-keycap {
+    background-color: #f87171;
+    color: #0d0e15;
+    border-color: #f87171;
+}
+
+.powermenu-footer-box {
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
+    padding: 8px 18px;
+    margin-top: 2px;
+}
+
+.powermenu-footer-kbd {
+    color: #a6adc8;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.powermenu-footer-esc {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 6px;
+    color: #6272a4;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+}
+
+
+
+

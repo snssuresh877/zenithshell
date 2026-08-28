@@ -1,0 +1,22 @@
+{
+    "position": "top",
+    "height": 28,
+    "margin_top": 4,
+    "margin_left": 12,
+    "margin_right": 12,
+    "exclusive_zone": true,
+    "workspaces": {
+        "count": 10,
+        "show_icons": true
+    },
+    "clock": {
+        "format": "📅 %a %b %d  🕒 %H:%M"
+    },
+    "sys_info": {
+        "update_interval_ms": 1500,
+        "show_cpu": true,
+        "show_ram": true,
+        "show_battery": true
+    },
+    "wallpaper_dir": "~/Pictures/wallpapers"
+}

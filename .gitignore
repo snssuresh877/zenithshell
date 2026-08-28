@@ -1,0 +1,21 @@
+# Build directory
+build/
+bin/
+
+# Object & binary files
+*.o
+*.a
+*.so
+zenithshell
+
+# Logs and temporary files
+*.log
+*.bak
+/tmp/
+
+# Editor & tooling artifacts
+.cache/
+compile_commands.json
+.vscode/
+.idea/
+.DS_Store
