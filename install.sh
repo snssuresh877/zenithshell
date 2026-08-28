@@ -140,6 +140,14 @@ if [ -f "$CONFIG_DIR/style.css" ]; then
 fi
 cp style.css "$CONFIG_DIR/style.css"
 
+# Install wallpaper pack
+if [ -d "wallpapers" ]; then
+    echo -e "${CYAN}Installing curated wallpaper pack...${RESET}"
+    mkdir -p "$CONFIG_DIR/wallpapers"
+    cp -rn wallpapers/* "$CONFIG_DIR/wallpapers/" 2>/dev/null || cp -r wallpapers/* "$CONFIG_DIR/wallpapers/" 2>/dev/null || true
+    echo -e "${GREEN}✔ Installed wallpapers to:${RESET} $CONFIG_DIR/wallpapers"
+fi
+
 echo -e "${GREEN}✔ User configuration and style assets installed to:${RESET} $CONFIG_DIR"
 
 # --- 5. PATH Verification ---
