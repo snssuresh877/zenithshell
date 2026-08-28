@@ -25,6 +25,10 @@ Press **`SUPER + ALT + U`** or run:
 
 ```text
 classic-addons/
+├── kitty/                     # Pro-grade Kitty terminal configuration (Pywal dynamic theme sync)
+│   └── kitty.conf             # JetBrainsMono Nerd Font, powerline tabs, smart clipboard
+├── foot/                      # Ultra-fast lightweight Wayland native terminal configuration
+│   └── foot.ini               # High-FPS rendering, beam cursor, 20K scrollback
 ├── rofi/                      # App launcher and clipboard picker styles
 │   ├── config.rasi            # Modern obsidian app launcher styling
 │   ├── colors.rasi            # Dynamic color token mappings
@@ -80,6 +84,8 @@ The following scripts support both the classic stack and modular Hyprland deskto
 
 ### To Keep and Install:
 ```bash
+cp -r classic-addons/kitty ~/.config/
+cp -r classic-addons/foot ~/.config/
 cp -r classic-addons/rofi ~/.config/
 cp -r classic-addons/waybar ~/.config/
 cp -r classic-addons/swaync ~/.config/
