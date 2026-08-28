@@ -158,6 +158,18 @@ if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
 fi
 
 # --- 6. Hyprland & Autostart Integration ---
+if [ ! -d "$HOME/.config/hypr" ]; then
+    if [ -d "hyprland" ]; then
+        read -rp "No ~/.config/hypr found. Install full Zenith Hyprland Lua configuration? (Y/n): " install_hypr_dots
+        install_hypr_dots=${install_hypr_dots:-Y}
+        if [[ "$install_hypr_dots" =~ ^[Yy]$ ]]; then
+            mkdir -p "$HOME/.config/hypr"
+            cp -r hyprland/* "$HOME/.config/hypr/"
+            echo -e "${GREEN}✔ Installed full Zenith Hyprland Lua configuration to ~/.config/hypr${RESET}"
+        fi
+    fi
+fi
+
 if [ -d "$HOME/.config/hypr" ]; then
     echo -e "\n${BLUE}▶ Setting up Hyprland integration & autostart...${RESET}"
     echo "zenithshell" > "$HOME/.config/hypr/ui_mode" 2>/dev/null || true
