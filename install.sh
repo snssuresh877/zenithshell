@@ -155,6 +155,23 @@ if [ -d "wallpapers" ]; then
     echo -e "${GREEN}✔ Installed wallpapers to:${RESET} $CONFIG_DIR/wallpapers"
 fi
 
+# --- 5. Pywal Setup & Color Seeding ---
+echo -e "\n${BLUE}▶ Initializing Pywal dynamic theme engine...${RESET}"
+if ! command -v wal >/dev/null 2>&1; then
+    echo -e "${YELLOW}ℹ Pywal command 'wal' not in PATH, attempting user installation...${RESET}"
+    pip install --user pywal 2>/dev/null || pip3 install --user pywal 2>/dev/null || true
+fi
+
+if command -v wal >/dev/null 2>&1; then
+    INIT_WP=$(find "$CONFIG_DIR/wallpapers" -maxdepth 2 -type f \( -name "*.jpg" -o -name "*.png" -o -name "*.webp" \) 2>/dev/null | head -n 1 || true)
+    if [ -n "$INIT_WP" ]; then
+        wal -n -q -i "$INIT_WP" 2>/dev/null || true
+        echo -e "${GREEN}✔ Initialized dynamic Pywal color palette cache (~/.cache/wal)${RESET}"
+    fi
+else
+    echo -e "${YELLOW}⚠ Note: Pywal (wal) is optional for dynamic wallpaper extraction.${RESET}"
+fi
+
 echo -e "${GREEN}✔ User configuration and style assets installed to:${RESET} $CONFIG_DIR"
 
 # --- 5. PATH Verification ---
