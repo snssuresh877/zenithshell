@@ -79,3 +79,4 @@ target_link_libraries(zenithshell PRIVATE
 include(GNUInstallDirs)
 install(TARGETS zenithshell DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES config.json style.css DESTINATION ${CMAKE_INSTALL_DATADIR}/zenithshell)
+install(FILES zenithshell.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)

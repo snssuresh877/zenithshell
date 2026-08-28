@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=ZenithShell
+Comment=Native C++20 Desktop Shell & Widget Suite for Wayland
+Exec=zenithshell
+Icon=preferences-desktop-theme
+Terminal=false
+Type=Application
+Categories=System;Utility;Core;
+Keywords=shell;bar;launcher;wayland;hyprland;
+StartupNotify=false

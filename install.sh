@@ -127,6 +127,13 @@ cp -f build/zenithshell "$INSTALL_DIR/zenithshell"
 chmod +x "$INSTALL_DIR/zenithshell"
 echo -e "${GREEN}✔ Installed binary to:${RESET} $INSTALL_DIR/zenithshell"
 
+# Install desktop entry
+mkdir -p "$HOME/.local/share/applications"
+if [ -f "zenithshell.desktop" ]; then
+    cp zenithshell.desktop "$HOME/.local/share/applications/"
+    echo -e "${GREEN}✔ Installed desktop entry to:${RESET} $HOME/.local/share/applications/zenithshell.desktop"
+fi
+
 # Install config.json and style.css (preserves user customizations with backup)
 if [ -f "$CONFIG_DIR/config.json" ]; then
     cp "$CONFIG_DIR/config.json" "$CONFIG_DIR/config.json.bak"
