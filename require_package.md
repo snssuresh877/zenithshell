@@ -168,6 +168,29 @@ To render all status symbols and category glyphs correctly, install at least one
 
 ---
 
+## 📊 LibreOffice MS Office & Excel Precision Compatibility
+
+To open, edit, and save Microsoft Excel (`.xlsx`), Word (`.docx`), and PowerPoint (`.pptx`) documents without breaking fonts, column widths, tables, or formatting:
+
+### 1. Essential Metric-Identical & Microsoft Fonts
+Install Google's metric-compatible drop-in replacements for standard Microsoft fonts:
+- **`Carlito`** (`ttf-carlito` / `google-carlito-fonts` / `fonts-carlito`): 1:1 metric replacement for **Calibri**.
+- **`Caladea`** (`ttf-caladea` / `google-caladea-fonts` / `fonts-caladea`): 1:1 metric replacement for **Cambria**.
+- **`Liberation`** (`ttf-liberation` / `fonts-liberation`): 1:1 metric replacements for **Arial**, **Times New Roman**, and **Courier New**.
+- **`ttf-ms-fonts`** / **`ttf-mscorefonts-installer`**: Original Microsoft TrueType core fonts.
+
+### 2. One-Click Automated Setup
+Run the automated optimizer script:
+```bash
+~/.config/hypr/scripts/apps/setup-libreoffice-excel.sh
+```
+This script automatically:
+1. Sets default save filters to **Excel 2007-365 (`.xlsx`)**, **Word 2007-365 (`.docx`)**, and **PowerPoint (`.pptx`)**.
+2. Disables alien format warnings for clean saving.
+3. Enables document font embedding and high-DPI Skia hardware rendering.
+
+---
+
 ## 🚀 Verification Command
 
 To quickly verify that all required build dependencies are installed and detectable by `pkg-config`:
