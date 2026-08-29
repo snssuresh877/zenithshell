@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <unordered_set>
+#include <fstream>
 
 namespace fs = std::filesystem;
 
@@ -278,7 +279,16 @@ void ThemeEngine::init(const std::string& default_theme, const std::string& cust
     std::string cs = exec_cmd_read("gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null");
     cached_dark_mode = (cs.find("dark") != std::string::npos || cs.find("prefer-dark") != std::string::npos);
 
+    // 1. Check for previously saved wallpaper across reboots
+    std::string saved_wp = get_current_wallpaper_path();
+
+    // 2. Set theme
     set_theme(default_theme);
+
+    // 3. If a saved wallpaper exists, restore it directly on boot
+    if (!saved_wp.empty() && fs::exists(saved_wp)) {
+        set_wallpaper(saved_wp);
+    }
 }
 
 bool ThemeEngine::is_dark_mode() {
@@ -330,15 +340,57 @@ const Theme& ThemeEngine::get_current_theme() {
 }
 
 std::string ThemeEngine::get_current_wallpaper_path() {
+    std::error_code ec;
+    std::string current_dir = std::string(g_get_home_dir()) + "/.local/state/zenithshell/current";
+    std::string state_file = current_dir + "/wallpaper_path.txt";
+
+    // 1. Check persistent wallpaper state file
+    if (fs::exists(state_file, ec)) {
+        std::ifstream in(state_file);
+        std::string saved_path;
+        if (in.is_open() && std::getline(in, saved_path)) {
+            while (!saved_path.empty() && (saved_path.back() == '\r' || saved_path.back() == '\n' || saved_path.back() == ' ')) {
+                saved_path.pop_back();
+            }
+            if (!saved_path.empty() && fs::exists(saved_path, ec)) {
+                return saved_path;
+            }
+        }
+    }
+
+    // 2. Check symlink ~/.local/state/zenithshell/current/background
+    std::string default_bg = current_dir + "/background";
+    if (fs::exists(default_bg, ec)) {
+        std::string target = fs::canonical(default_bg, ec).string();
+        if (!target.empty() && fs::exists(target, ec)) {
+            return target;
+        }
+    }
+
+    // 3. Check Pywal saved cache ~/.cache/wal/wal
+    std::string wal_file = std::string(g_get_home_dir()) + "/.cache/wal/wal";
+    if (fs::exists(wal_file, ec)) {
+        std::ifstream in(wal_file);
+        std::string wal_path;
+        if (in.is_open() && std::getline(in, wal_path)) {
+            while (!wal_path.empty() && (wal_path.back() == '\r' || wal_path.back() == '\n' || wal_path.back() == ' ')) {
+                wal_path.pop_back();
+            }
+            if (!wal_path.empty() && fs::exists(wal_path, ec)) {
+                return wal_path;
+            }
+        }
+    }
+
+    // 4. Fallback to active theme's wallpaper list
     auto it = theme_wallpapers.find(current_theme.name);
     if (it != theme_wallpapers.end() && !it->second.empty()) {
         if (current_wallpaper_idx >= it->second.size()) current_wallpaper_idx = 0;
         return it->second[current_wallpaper_idx];
     }
-    std::error_code ec;
-    std::string default_bg = std::string(g_get_home_dir()) + "/.local/state/zenithshell/current/background";
-    if (fs::exists(default_bg, ec)) {
-        return default_bg;
+    if (!custom_wallpapers.empty()) {
+        if (current_wallpaper_idx >= custom_wallpapers.size()) current_wallpaper_idx = 0;
+        return custom_wallpapers[current_wallpaper_idx];
     }
     return "";
 }
@@ -356,20 +408,43 @@ void ThemeEngine::set_wallpaper(const std::string& path) {
     std::error_code ec;
     if (path.empty() || !fs::exists(path, ec)) return;
 
-    std::string state_dir = std::string(g_get_home_dir()) + "/.local/state/zenithshell/current";
-    std::string bg_link = state_dir + "/background";
-    if (path == bg_link) return;
+    std::string state_dir = std::string(g_get_home_dir()) + "/.local/state/zenithshell";
+    std::string current_dir = state_dir + "/current";
+    fs::create_directories(current_dir, ec);
 
-    // Apply wallpaper with awww transition
-    std::string cmd = "awww img \"" + path + "\" --transition-type grow --transition-duration 0.4 --transition-fps 30 2>/dev/null &";
-    system(cmd.c_str());
+    // Write persistent wallpaper path to text file
+    std::string state_file = current_dir + "/wallpaper_path.txt";
+    std::ofstream out(state_file, std::ios::trunc);
+    if (out.is_open()) {
+        out << path << "\n";
+        out.close();
+    }
 
     // Update current background symlink
+    std::string bg_link = current_dir + "/background";
     try {
-        fs::create_directories(state_dir, ec);
         fs::remove(bg_link, ec);
         fs::create_symlink(path, bg_link, ec);
     } catch (...) {}
+
+    // Update active index in theme and custom lists
+    auto it = theme_wallpapers.find(current_theme.name);
+    if (it != theme_wallpapers.end()) {
+        auto pos = std::find(it->second.begin(), it->second.end(), path);
+        if (pos != it->second.end()) {
+            current_wallpaper_idx = std::distance(it->second.begin(), pos);
+        }
+    }
+    if (!custom_wallpapers.empty()) {
+        auto pos = std::find(custom_wallpapers.begin(), custom_wallpapers.end(), path);
+        if (pos != custom_wallpapers.end()) {
+            current_wallpaper_idx = std::distance(custom_wallpapers.begin(), pos);
+        }
+    }
+
+    // Apply wallpaper with awww daemon verification and transition
+    std::string cmd = "pgrep -x awww-daemon >/dev/null 2>&1 || awww-daemon & sleep 0.05; awww img \"" + path + "\" --transition-type grow --transition-duration 0.4 --transition-fps 30 2>/dev/null &";
+    system(cmd.c_str());
 
     // Run Pywal quietly
     std::string wal_cmd = "wal -n -q -i \"" + path + "\" 2>/dev/null";
@@ -442,11 +517,16 @@ void ThemeEngine::set_theme(const std::string& theme_name) {
 
     apply_theme(current_theme);
 
-    // Apply matching theme wallpaper
-    current_wallpaper_idx = 0;
-    std::string wp = get_current_wallpaper_path();
-    if (!wp.empty()) {
-        set_wallpaper(wp);
+    // Apply matching theme wallpaper if theme has distinct packaged wallpapers
+    auto wp_it = theme_wallpapers.find(theme_name);
+    if (wp_it != theme_wallpapers.end() && !wp_it->second.empty() && wp_it->second != custom_wallpapers) {
+        current_wallpaper_idx = 0;
+        set_wallpaper(wp_it->second[0]);
+    } else {
+        std::string wp = get_current_wallpaper_path();
+        if (!wp.empty() && fs::exists(wp)) {
+            set_wallpaper(wp);
+        }
     }
 
     // Trigger user hook script if present
