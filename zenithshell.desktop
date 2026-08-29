@@ -1,10 +1,11 @@
 [Desktop Entry]
 Name=ZenithShell
-Comment=Native C++20 Desktop Shell & Widget Suite for Wayland
+GenericName=Desktop Shell & Status Bar
+Comment=Ultra-Low-RAM Native C++20 Desktop Shell, TopBar, Spotlight Launcher & Control Center for Wayland
 Exec=zenithshell
 Icon=preferences-desktop-theme
 Terminal=false
 Type=Application
-Categories=System;Utility;Core;
-Keywords=shell;bar;launcher;wayland;hyprland;
+Categories=System;Utility;Core;DesktopSettings;
+Keywords=shell;bar;topbar;launcher;spotlight;wayland;hyprland;desktop;control center;widgets;themes;pywal;quickshell;waybar;status bar;audio;wifi;clipboard;reminders;
 StartupNotify=false

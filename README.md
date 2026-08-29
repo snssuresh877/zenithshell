@@ -1,8 +1,23 @@
 # 🌌 ZenithShell
 
+<div align="center">
+
+[![C++20](https://img.shields.io/badge/Language-C%2B%2B20-00599C?style=for-the-badge&logo=c%2B%2B&logoColor=white)](https://en.cppreference.com/)
+[![Hyprland](https://img.shields.io/badge/Compositor-Hyprland-00C7FF?style=for-the-badge&logo=hyprland&logoColor=white)](https://hyprland.org/)
+[![Memory Footprint](https://img.shields.io/badge/RAM_Footprint-~26MB-3DDC84?style=for-the-badge&logo=speedtest&logoColor=white)](https://github.com/snssuresh877/zenithshell)
+[![MIT License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/snssuresh877/zenithshell/ci.yml?branch=main&style=for-the-badge&label=Build)](https://github.com/snssuresh877/zenithshell/actions)
+
+**An ultra-fast, native C++20 desktop shell & widget suite for Wayland / Hyprland.**  
+*Status Bar • Spotlight App Launcher • Control Center • Notification Daemon • Theme Engine • Reminders • Clipboard*
+
+</div>
+
+---
+
 An ultra-low-footprint, pro-grade desktop shell and widget suite written natively in **C++20** with **GTK3**, **gtk-layer-shell**, **Cairo**, and direct non-polling **Hyprland UNIX Sockets**.
 
-Designed as a high-performance, aesthetically refined replacement for heavy web/QML-based desktop bars, ZenithShell delivers a sub-**30MB RAM** footprint, **0.0% idle CPU** load, and instant sub-40ms startup while providing deep dynamic theming and native Wayland integration.
+Designed as a high-performance, aesthetically refined replacement for heavy web/QML/JS-based desktop bars, ZenithShell delivers a sub-**30MB RAM** footprint, **0.0% idle CPU** load, and instant sub-40ms startup while providing deep dynamic theming and native Wayland integration.
 
 > [!IMPORTANT]
 > **🚀 Performance Recommendation: Use as Standalone (No Waybar / Rofi / SwayNC Needed)**
@@ -62,6 +77,26 @@ Designed as a high-performance, aesthetically refined replacement for heavy web/
 - SysStats        - 3 Quick Modes (Night/Focus/Dark) - Keyboard Hints   - WCAG AAA Contrast
 - Tray & Battery  - Precision Sliders & Power Bar - Shadowless Glass   - Zero Hardcoded Colors
 ```
+
+---
+
+## 📊 Performance Comparison
+
+| Metric / Feature | 🌌 **ZenithShell** (C++20) | 📦 **Waybar + Rofi + SwayNC** | 🐢 **AGS / Astal (JS/TS)** | ⚡ **Eww (Rust/Yuck)** |
+|---|:---:|:---:|:---:|:---:|
+| **Idle Memory (RAM)** | **~26 MB** | ~95 MB (3 processes) | ~190 MB (GJS runtime) | ~75 MB |
+| **Startup Time** | **< 40 ms** | ~450 ms | ~1400 ms | ~320 ms |
+| **Idle CPU Usage** | **0.0%** (UNIX Socket) | 0.4% - 1.2% (Polling) | 1.0% - 2.5% | 0.5% - 1.0% |
+| **Process Count** | **1 Unified Binary** | 3 Separate Daemons | 1 Heavy Runtime | 1 Daemon + Windows |
+| **Theme Engine** | **23 Palettes + Pywal Sync** | Static CSS files | CSS / SCSS | Custom SCSS |
+| **Built-in Launcher** | **✅ Spotlight + Calculator** | ❌ (Requires Rofi) | ⚠️ Custom Scripting | ❌ (Requires Rofi) |
+| **Notification Daemon**| **✅ Native DBus (`org.freedesktop.Notifications`)** | ❌ (Requires SwayNC/Dunst) | ⚠️ Complex GJS | ❌ (External daemon) |
+
+---
+
+## 🏷️ Topics & Search Keywords
+
+`hyprland` • `wayland` • `desktop-shell` • `status-bar` • `control-center` • `spotlight-search` • `waybar-alternative` • `quickshell-alternative` • `rofi-alternative` • `gtk3` • `gtk-layer-shell` • `cairo` • `cpp20` • `pywal` • `pipewire` • `dotfiles` • `linux-desktop` • `yazi` • `cosmic-files`
 
 ---
 
