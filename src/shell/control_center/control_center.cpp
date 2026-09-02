@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <memory>
 #include <array>
+#include <algorithm>
 #include <glob.h>
 
 namespace zenith {
@@ -70,6 +71,8 @@ static std::string exec_cmd_read(const char* cmd) {
     return result;
 }
 
+static bool s_syncing_ui = false;
+
 std::string ControlCenter::get_battery_info() {
     std::string bat_path = "/sys/class/power_supply/BAT0/";
     std::ifstream test(bat_path + "capacity");
@@ -113,27 +116,30 @@ bool ControlCenter::is_bluetooth_enabled() {
 }
 
 int ControlCenter::get_current_brightness() {
+    // 1. Read target brightness sysfs entry (NOT actual_brightness which fluctuates with ABM/hardware dimming)
     glob_t glob_result;
-    if (glob("/sys/class/backlight/*/actual_brightness", 0, nullptr, &glob_result) == 0 && glob_result.gl_pathc > 0) {
-        std::ifstream act_f(glob_result.gl_pathv[0]);
+    if (glob("/sys/class/backlight/*/brightness", 0, nullptr, &glob_result) == 0 && glob_result.gl_pathc > 0) {
+        std::ifstream bri_f(glob_result.gl_pathv[0]);
         std::string max_p = glob_result.gl_pathv[0];
         size_t last_slash = max_p.find_last_of('/');
         if (last_slash != std::string::npos) {
             max_p = max_p.substr(0, last_slash) + "/max_brightness";
         }
         std::ifstream max_f(max_p);
-        long act = 0, max = 1;
-        if (act_f.is_open() && max_f.is_open()) {
-            act_f >> act;
+        long bri = 0, max = 1;
+        if (bri_f.is_open() && max_f.is_open()) {
+            bri_f >> bri;
             max_f >> max;
             globfree(&glob_result);
-            if (max > 0) return static_cast<int>((act * 100) / max);
+            if (max > 0) return std::clamp(static_cast<int>((bri * 100) / max), 1, 100);
         }
         globfree(&glob_result);
     }
+
+    // 2. Fallback to brightnessctl query
     std::string br = exec_cmd_read("brightnessctl -m 2>/dev/null | cut -d, -f4 | tr -d '%'");
     if (!br.empty()) {
-        try { return std::stoi(br); } catch (...) {}
+        try { return std::clamp(std::stoi(br), 1, 100); } catch (...) {}
     }
     return 80;
 }
@@ -496,6 +502,7 @@ GtkWidget* ControlCenter::create_main_page() {
     gtk_range_set_value(GTK_RANGE(brightness_slider), cur_bri);
     gtk_widget_set_hexpand(brightness_slider, TRUE);
     g_signal_connect(brightness_slider, "value-changed", G_CALLBACK(+[](GtkRange* range, gpointer) {
+        if (s_syncing_ui) return;
         int val = static_cast<int>(gtk_range_get_value(range));
         if (brightness_val_lbl) {
             gtk_label_set_text(GTK_LABEL(brightness_val_lbl), (std::to_string(val) + "%").c_str());
@@ -526,6 +533,7 @@ GtkWidget* ControlCenter::create_main_page() {
     gtk_range_set_value(GTK_RANGE(volume_slider), cur_vol);
     gtk_widget_set_hexpand(volume_slider, TRUE);
     g_signal_connect(volume_slider, "value-changed", G_CALLBACK(+[](GtkRange* range, gpointer) {
+        if (s_syncing_ui) return;
         int val = static_cast<int>(gtk_range_get_value(range));
         if (volume_val_lbl) {
             gtk_label_set_text(GTK_LABEL(volume_val_lbl), (std::to_string(val) + "%").c_str());
@@ -663,6 +671,7 @@ GtkWidget* ControlCenter::create_audio_page() {
     gtk_range_set_value(GTK_RANGE(audio_detail_vol_slider), cur_v);
     gtk_widget_set_hexpand(audio_detail_vol_slider, TRUE);
     g_signal_connect(audio_detail_vol_slider, "value-changed", G_CALLBACK(+[](GtkRange* range, gpointer) {
+        if (s_syncing_ui) return;
         int val = static_cast<int>(gtk_range_get_value(range));
         if (audio_detail_vol_lbl) {
             gtk_label_set_text(GTK_LABEL(audio_detail_vol_lbl), (std::to_string(val) + "%").c_str());
@@ -730,6 +739,7 @@ GtkWidget* ControlCenter::create_audio_page() {
     gtk_range_set_value(GTK_RANGE(mic_gain_slider), cur_g);
     gtk_widget_set_hexpand(mic_gain_slider, TRUE);
     g_signal_connect(mic_gain_slider, "value-changed", G_CALLBACK(+[](GtkRange* range, gpointer) {
+        if (s_syncing_ui) return;
         int val = static_cast<int>(gtk_range_get_value(range));
         if (mic_gain_lbl) {
             gtk_label_set_text(GTK_LABEL(mic_gain_lbl), (std::to_string(val) + "%").c_str());
@@ -1004,6 +1014,7 @@ void ControlCenter::refresh_audio_page() {
     }
 
     // 2. Refresh Volume Slider
+    s_syncing_ui = true;
     int vol = AudioManager::get_volume();
     if (audio_detail_vol_slider) {
         gtk_range_set_value(GTK_RANGE(audio_detail_vol_slider), vol);
@@ -1029,6 +1040,7 @@ void ControlCenter::refresh_audio_page() {
     if (mic_gain_lbl) {
         gtk_label_set_text(GTK_LABEL(mic_gain_lbl), (std::to_string(mg) + "%").c_str());
     }
+    s_syncing_ui = false;
 
     // 4. Refresh Noise Cancelling
     bool nc = AudioManager::is_noise_cancelling_active();
@@ -1223,6 +1235,7 @@ void ControlCenter::refresh_data() {
     if (audio_sub_lbl) {
         gtk_label_set_text(GTK_LABEL(audio_sub_lbl), AudioManager::get_default_sink_name().c_str());
     }
+    s_syncing_ui = true;
     int v = AudioManager::get_volume();
     if (audio_pill_lbl) {
         gtk_label_set_text(GTK_LABEL(audio_pill_lbl), (std::to_string(v) + "%  ›").c_str());
@@ -1240,6 +1253,7 @@ void ControlCenter::refresh_data() {
             gtk_label_set_text(GTK_LABEL(brightness_val_lbl), (std::to_string(b) + "%").c_str());
         }
     }
+    s_syncing_ui = false;
 
     // Theme Subtitle
     if (theme_card_sub_lbl) {
