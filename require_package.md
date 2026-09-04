@@ -15,9 +15,13 @@ This document provides the complete list of system packages, development headers
 | **Network & Bluetooth** | `networkmanager` (`nmcli`), `bluez`, `bluez-utils` (`bluetoothctl`) | Wi-Fi scanning & Bluetooth control |
 | **Hardware Controls** | `brightnessctl` | Display backlight range control |
 | **Wallpaper & Theming** | `awww` (or `swww`), `python-pywal` | Animated wallpaper transitions & dynamic color extraction |
-| **Clipboard & Extras** | `cliphist`, `wl-clipboard`, `hyprshade` | Clipboard search/paste & blue light filter |
+| **Clipboard History** | `cliphist`, `wl-clipboard`, `wl-clip-persist` | `SUPER + V` Zenith native clipboard overlay with history & persistence |
+| **Screenshots & Capture** | `grim`, `slurp`, `swappy` | `Print` (window), `SHIFT + Print` (area), interactive editor |
+| **Color Picker** | `hyprpicker` | `SUPER + SHIFT + C` screen hex/rgb sampler to clipboard |
+| **Screen Recording** | `wf-recorder` | `SUPER + SHIFT + R` instant Wayland area/screen recording |
+| **OCR Text Grab** | `tesseract`, `tesseract-data-eng` | `SUPER + SHIFT + T` select any screen text and copy to clipboard |
 | **Security & Authentication** | `hyprpolkitagent` | Native Wayland PolicyKit authorization modal agent |
-| **Pro Workstation Tools** | `yazi`, `cosmic-files`, `fd`, `ripgrep`, `jq`, `fzf`, `zoxide`, `eza`, `bat`, `zip`, `unzip`, `p7zip` | High-end terminal, file management, and instant directory navigation |
+| **Pro Workstation Tools** | `yazi`, `btop`, `cosmic-files`, `fd`, `ripgrep`, `jq`, `fzf`, `zoxide`, `eza`, `bat`, `zip`, `unzip`, `p7zip` | High-end terminal, file management, and instant directory navigation |
 
 ---
 
@@ -53,7 +57,7 @@ sudo pacman -S --needed \
     glib2 \
     nlohmann-json
 
-# Runtime utilities, audio, network, theming, polkit, and workstation tools
+# Runtime utilities, audio, network, theming, polkit, clipboard, and capture tools
 sudo pacman -S --needed \
     pipewire \
     wireplumber \
@@ -64,6 +68,14 @@ sudo pacman -S --needed \
     python-pywal \
     cliphist \
     wl-clipboard \
+    wl-clip-persist \
+    grim \
+    slurp \
+    swappy \
+    hyprpicker \
+    wf-recorder \
+    tesseract \
+    tesseract-data-eng \
     hyprpolkitagent \
     hyprshade \
     yazi \

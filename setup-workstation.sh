@@ -189,16 +189,16 @@ fi
 
 # 4. Workstation & CLI Power Tools
 if [ "$INSTALL_WORKSTATION_TOOLS" -eq 1 ]; then
-    echo -e "${BLUE}▶ [4/7] Checking CLI Power Utilities, BTOP, GTK Settings & File Managers...${RESET}"
+    echo -e "${BLUE}▶ [4/7] Checking CLI Power Utilities, Clipboard, BTOP, GTK Settings & File Managers...${RESET}"
     case "$DISTRO" in
         arch|manjaro|endeavouros|cachyos)
-            sudo pacman -S --needed --noconfirm yazi btop fd ripgrep jq fzf zoxide eza bat zip unzip p7zip 2>/dev/null || true
+            sudo pacman -S --needed --noconfirm yazi btop fd ripgrep jq fzf zoxide eza bat zip unzip p7zip cliphist wl-clipboard wl-clip-persist 2>/dev/null || true
             ;;
         fedora|rhel)
-            sudo dnf install -y yazi btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip 2>/dev/null || true
+            sudo dnf install -y yazi btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip wl-clipboard 2>/dev/null || true
             ;;
         ubuntu|debian|pop)
-            sudo apt install -y btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip-full 2>/dev/null || true
+            sudo apt install -y btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip-full wl-clipboard 2>/dev/null || true
             ;;
     esac
 
@@ -227,15 +227,15 @@ if [ "$INSTALL_WORKSTATION_TOOLS" -eq 1 ]; then
         cp -f classic-addons/xdg/mimeapps.list "$HOME/.config/mimeapps.list"
     fi
 
-    echo -e "${GREEN}✔ CLI workstation power tools, Yazi, BTOP, and GTK settings deployed!${RESET}\n"
+    echo -e "${GREEN}✔ CLI workstation power tools, Clipboard, Yazi, BTOP, and GTK settings deployed!${RESET}\n"
 fi
 
 # 5. Multimedia & Screen Recording Tools
 if [ "$INSTALL_MEDIA_TOOLS" -eq 1 ]; then
-    echo -e "${BLUE}▶ [5/7] Checking Screen Recording & OCR Utilities...${RESET}"
+    echo -e "${BLUE}▶ [5/7] Checking Screen Recording, OCR Text Capture & Screenshot Utilities...${RESET}"
     case "$DISTRO" in
         arch|manjaro|endeavouros|cachyos)
-            sudo pacman -S --needed --noconfirm wf-recorder tesseract slurp grim ffmpegthumbnailer imagemagick chafa 2>/dev/null || true
+            sudo pacman -S --needed --noconfirm wf-recorder tesseract tesseract-data-eng slurp grim swappy hyprpicker ffmpegthumbnailer imagemagick chafa 2>/dev/null || true
             ;;
         fedora|rhel)
             sudo dnf install -y wf-recorder tesseract slurp grim ffmpegthumbnailer ImageMagick chafa 2>/dev/null || true
@@ -244,7 +244,7 @@ if [ "$INSTALL_MEDIA_TOOLS" -eq 1 ]; then
             sudo apt install -y wf-recorder tesseract-ocr slurp grim ffmpegthumbnailer imagemagick chafa 2>/dev/null || true
             ;;
     esac
-    echo -e "${GREEN}✔ Media & Screen capture utilities ready!${RESET}\n"
+    echo -e "${GREEN}✔ Media, Screenshot, Screen Recording & OCR utilities ready!${RESET}\n"
 fi
 
 # 6. LibreOffice Compatibility & Fonts
