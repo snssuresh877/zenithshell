@@ -55,56 +55,82 @@ prompt_step() {
     fi
 }
 
-# --- Module Selection ---
-echo -e "${MAGENTA}--- 📦 Component Selection ---${RESET}"
+# --- Module Selection / Automated Mode ---
+AUTO_ALL=0
+if [[ "${1:-}" =~ ^(-y|--yes|-a|--all|--auto)$ ]]; then
+    AUTO_ALL=1
+fi
 
-INSTALL_CORE=1
-if prompt_step "1. Install ZenithShell Core (~26MB C++20 Shell, 23 Themes & 260+ Wallpapers)" "Y"; then
+if [ "$AUTO_ALL" -eq 1 ]; then
+    echo -e "${GREEN}⚡ Automated 1-Click Mode: Installing and configuring all recommended workstation components...${RESET}\n"
     INSTALL_CORE=1
-else
-    INSTALL_CORE=0
-fi
-
-INSTALL_HYPR=1
-if prompt_step "2. Install Modular Hyprland Lua Dotfiles & Keybindings" "Y"; then
     INSTALL_HYPR=1
-else
-    INSTALL_HYPR=0
-fi
-
-INSTALL_TERMINALS=1
-if prompt_step "3. Install & Configure Pro Terminal Stack (Foot, Kitty, Fish Shell & PATHs)" "Y"; then
     INSTALL_TERMINALS=1
-else
-    INSTALL_TERMINALS=0
-fi
-
-INSTALL_WORKSTATION_TOOLS=1
-if prompt_step "4. Install Modern File Managers & CLI Tools (Yazi, Cosmic Files, fd, rg, fzf, bat)" "Y"; then
     INSTALL_WORKSTATION_TOOLS=1
-else
-    INSTALL_WORKSTATION_TOOLS=0
-fi
-
-INSTALL_MEDIA_TOOLS=1
-if prompt_step "5. Install Screen Recording, OCR Text Capture & Multimedia Utilities" "Y"; then
     INSTALL_MEDIA_TOOLS=1
-else
-    INSTALL_MEDIA_TOOLS=0
-fi
-
-INSTALL_OFFICE=1
-if prompt_step "6. Configure LibreOffice for 100% MS Office/Excel Compatibility & Metric Fonts" "Y"; then
     INSTALL_OFFICE=1
-else
-    INSTALL_OFFICE=0
-fi
-
-INSTALL_POWER=1
-if prompt_step "7. Configure Smart Battery & Idle Power Management (Hypridle & Hyprlock)" "Y"; then
     INSTALL_POWER=1
 else
-    INSTALL_POWER=0
+    echo -e "${MAGENTA}--- 🚀 Setup Mode ---${RESET}"
+    if prompt_step "Full Automated Turn-Key Setup? (Press ENTER to install all components with 1-click)" "Y"; then
+        INSTALL_CORE=1
+        INSTALL_HYPR=1
+        INSTALL_TERMINALS=1
+        INSTALL_WORKSTATION_TOOLS=1
+        INSTALL_MEDIA_TOOLS=1
+        INSTALL_OFFICE=1
+        INSTALL_POWER=1
+    else
+        echo -e "\n${MAGENTA}--- 📦 Custom Component Selection ---${RESET}"
+        INSTALL_CORE=1
+        if prompt_step "1. Install ZenithShell Core (~26MB C++20 Shell, 23 Themes & 260+ Wallpapers)" "Y"; then
+            INSTALL_CORE=1
+        else
+            INSTALL_CORE=0
+        fi
+
+        INSTALL_HYPR=1
+        if prompt_step "2. Install Modular Hyprland Lua Dotfiles & Keybindings" "Y"; then
+            INSTALL_HYPR=1
+        else
+            INSTALL_HYPR=0
+        fi
+
+        INSTALL_TERMINALS=1
+        if prompt_step "3. Install & Configure Pro Terminal Stack (Foot, Kitty, Fish Shell & PATHs)" "Y"; then
+            INSTALL_TERMINALS=1
+        else
+            INSTALL_TERMINALS=0
+        fi
+
+        INSTALL_WORKSTATION_TOOLS=1
+        if prompt_step "4. Install Modern File Managers & CLI Tools (Yazi, Cosmic Files, fd, rg, fzf, bat)" "Y"; then
+            INSTALL_WORKSTATION_TOOLS=1
+        else
+            INSTALL_WORKSTATION_TOOLS=0
+        fi
+
+        INSTALL_MEDIA_TOOLS=1
+        if prompt_step "5. Install Screen Recording, OCR Text Capture & Multimedia Utilities" "Y"; then
+            INSTALL_MEDIA_TOOLS=1
+        else
+            INSTALL_MEDIA_TOOLS=0
+        fi
+
+        INSTALL_OFFICE=1
+        if prompt_step "6. Configure LibreOffice for 100% MS Office/Excel Compatibility & Metric Fonts" "Y"; then
+            INSTALL_OFFICE=1
+        else
+            INSTALL_OFFICE=0
+        fi
+
+        INSTALL_POWER=1
+        if prompt_step "7. Configure Smart Battery & Idle Power Management (Hypridle & Hyprlock)" "Y"; then
+            INSTALL_POWER=1
+        else
+            INSTALL_POWER=0
+        fi
+    fi
 fi
 
 echo -e "\n${GREEN}✔ Selections recorded! Beginning installation...${RESET}\n"
@@ -230,21 +256,23 @@ if [ "$INSTALL_OFFICE" -eq 1 ]; then
     echo -e "${GREEN}✔ LibreOffice save filters & metric fonts configured!${RESET}\n"
 fi
 
-# 7. Power Management & Idle
+# 7. Power Management, Polkit & Idle
 if [ "$INSTALL_POWER" -eq 1 ]; then
-    echo -e "${BLUE}▶ [7/7] Verifying Power Management & Idle Daemon...${RESET}"
+    echo -e "${BLUE}▶ [7/7] Verifying Power Management, Polkit Agent & Idle Daemon...${RESET}"
     case "$DISTRO" in
         arch|manjaro|endeavouros|cachyos)
-            sudo pacman -S --needed --noconfirm hypridle hyprlock brightnessctl 2>/dev/null || true
+            sudo pacman -S --needed --noconfirm hypridle hyprlock hyprpolkitagent brightnessctl 2>/dev/null || true
+            systemctl --user enable --now hyprpolkitagent.service 2>/dev/null || true
             ;;
         fedora|rhel)
-            sudo dnf install -y hypridle hyprlock brightnessctl 2>/dev/null || true
+            sudo dnf install -y hypridle hyprlock hyprpolkitagent brightnessctl 2>/dev/null || true
+            systemctl --user enable --now hyprpolkitagent.service 2>/dev/null || true
             ;;
         ubuntu|debian|pop)
             sudo apt install -y hypridle hyprlock brightnessctl 2>/dev/null || true
             ;;
     esac
-    echo -e "${GREEN}✔ Power & Idle management verified!${RESET}\n"
+    echo -e "${GREEN}✔ Power, Polkit authentication & Idle management verified!${RESET}\n"
 fi
 
 echo -e "${CYAN}================================================================"

@@ -66,7 +66,7 @@ install_dependencies() {
                         pipewire wireplumber networkmanager bluez bluez-utils \
                         brightnessctl python-pywal cliphist wl-clipboard \
                         yazi fd ripgrep jq fzf zoxide eza bat zip unzip p7zip \
-                        ttf-jetbrains-mono-nerd papirus-icon-theme
+                        hyprpolkitagent ttf-jetbrains-mono-nerd papirus-icon-theme
                     ;;
                 fedora|rhel)
                     echo -e "${CYAN}Installing dependencies via dnf...${RESET}"

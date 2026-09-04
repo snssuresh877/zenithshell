@@ -16,12 +16,26 @@ This document provides the complete list of system packages, development headers
 | **Hardware Controls** | `brightnessctl` | Display backlight range control |
 | **Wallpaper & Theming** | `awww` (or `swww`), `python-pywal` | Animated wallpaper transitions & dynamic color extraction |
 | **Clipboard & Extras** | `cliphist`, `wl-clipboard`, `hyprshade` | Clipboard search/paste & blue light filter |
-| **Icons & Typography** | `ttf-jetbrains-mono-nerd` / `nerd-fonts` | UI icons (󰍉, 󰖟, 󰎈, 󰅩, 󰏘, 󰏫, 󰒋, 󰒓, 󰉋, , 󰍹, 󰌵, 🎨) |
+| **Security & Authentication** | `hyprpolkitagent` | Native Wayland PolicyKit authorization modal agent |
 | **Pro Workstation Tools** | `yazi`, `cosmic-files`, `fd`, `ripgrep`, `jq`, `fzf`, `zoxide`, `eza`, `bat`, `zip`, `unzip`, `p7zip` | High-end terminal, file management, and instant directory navigation |
 
 ---
 
-## 🐧 One-Line Install Commands by Distribution
+## ⚡ Automated 1-Click Setup (Single Confirmation)
+
+You can install and configure the entire workstation with a single confirmation:
+
+```bash
+# Automated 1-Click Turn-Key Setup
+./setup-workstation.sh
+
+# Or unattended mode (accepts all recommended defaults automatically)
+./setup-workstation.sh -y
+```
+
+---
+
+## 🐧 Manual One-Line Install Commands by Distribution
 
 ### 1. Arch Linux / Manjaro / EndeavourOS / CachyOS
 
@@ -39,7 +53,7 @@ sudo pacman -S --needed \
     glib2 \
     nlohmann-json
 
-# Runtime utilities, audio, network, theming, and workstation tools
+# Runtime utilities, audio, network, theming, polkit, and workstation tools
 sudo pacman -S --needed \
     pipewire \
     wireplumber \
@@ -50,8 +64,10 @@ sudo pacman -S --needed \
     python-pywal \
     cliphist \
     wl-clipboard \
+    hyprpolkitagent \
     hyprshade \
     yazi \
+    btop \
     fd \
     ripgrep \
     jq \
@@ -68,9 +84,6 @@ sudo pacman -S --needed \
     chafa \
     ttf-jetbrains-mono-nerd \
     papirus-icon-theme
-
-# Modern GUI File Manager (Cosmic Files or Dolphin)
-# sudo pacman -S cosmic-files # or dolphin
 ```
 
 ---
