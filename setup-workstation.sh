@@ -192,13 +192,13 @@ if [ "$INSTALL_WORKSTATION_TOOLS" -eq 1 ]; then
     echo -e "${BLUE}▶ [4/7] Checking CLI Power Utilities, Clipboard, BTOP, GTK Settings & File Managers...${RESET}"
     case "$DISTRO" in
         arch|manjaro|endeavouros|cachyos)
-            sudo pacman -S --needed --noconfirm yazi btop fd ripgrep jq fzf zoxide eza bat zip unzip p7zip cliphist wl-clipboard wl-clip-persist 2>/dev/null || true
+            sudo pacman -S --needed --noconfirm yazi btop fd ripgrep jq fzf zoxide eza bat zip unzip p7zip cliphist wl-clipboard wl-clip-persist networkmanager network-manager-applet 2>/dev/null || true
             ;;
         fedora|rhel)
-            sudo dnf install -y yazi btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip wl-clipboard 2>/dev/null || true
+            sudo dnf install -y yazi btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip wl-clipboard NetworkManager network-manager-applet 2>/dev/null || true
             ;;
         ubuntu|debian|pop)
-            sudo apt install -y btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip-full wl-clipboard 2>/dev/null || true
+            sudo apt install -y btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip-full wl-clipboard network-manager network-manager-gnome 2>/dev/null || true
             ;;
     esac
 

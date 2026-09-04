@@ -12,7 +12,7 @@ This document provides the complete list of system packages, development headers
 | **GUI & Layer Shell** | `gtk3`, `gtk-layer-shell`, `glib2`, `cairo`, `pango` | Native Wayland floating UI & layer shell rendering |
 | **JSON Parser** | `nlohmann-json` | Parsing `config.json` |
 | **Audio Infrastructure** | `pipewire`, `wireplumber` (`wpctl`) | PipeWire volume & audio routing |
-| **Network & Bluetooth** | `networkmanager` (`nmcli`), `bluez`, `bluez-utils` (`bluetoothctl`) | Wi-Fi scanning & Bluetooth control |
+| **Network & Bluetooth** | `networkmanager` (`nmcli`), `network-manager-applet` (`nm-connection-editor`), `bluez`, `bluez-utils` (`bluetoothctl`) | Background Wi-Fi scanning (`nmcli`), network dialog (`nm-connection-editor`) & Bluetooth control |
 | **Hardware Controls** | `brightnessctl` | Display backlight range control |
 | **Wallpaper & Theming** | `awww` (or `swww`), `python-pywal` | Animated wallpaper transitions & dynamic color extraction |
 | **Clipboard History** | `cliphist`, `wl-clipboard`, `wl-clip-persist` | `SUPER + V` Zenith native clipboard overlay with history & persistence |
@@ -62,6 +62,7 @@ sudo pacman -S --needed \
     pipewire \
     wireplumber \
     networkmanager \
+    network-manager-applet \
     bluez \
     bluez-utils \
     brightnessctl \
@@ -122,6 +123,7 @@ sudo dnf install -y \
     pipewire \
     wireplumber \
     NetworkManager \
+    network-manager-applet \
     bluez \
     brightnessctl \
     python3-pywal \
@@ -154,6 +156,7 @@ sudo apt install -y \
     pipewire \
     wireplumber \
     network-manager \
+    network-manager-gnome \
     bluez \
     brightnessctl \
     python3-pip \
@@ -185,8 +188,8 @@ pip3 install --user pywal
 
 1. **`wireplumber` (`wpctl`)**:
    - ZenithShell invokes `wpctl get-volume @DEFAULT_AUDIO_SINK@`, `wpctl set-volume`, and `wpctl status` for real-time sink/source routing and volume levels.
-2. **`networkmanager` (`nmcli`)**:
-   - Used by the Control Center Wi-Fi drawer to scan networks (`nmcli -t -f SSID,SIGNAL,SECURITY dev wifi list`) and connect to access points.
+2. **`networkmanager` (`nmcli`) & `network-manager-applet` (`nm-connection-editor`)**:
+   - ZenithShell's Control Center Wi-Fi drawer invokes `nmcli` in the background (`nmcli -t -f SSID,SIGNAL,SECURITY dev wifi list` and `nmcli dev wifi connect`) for zero-overhead background scanning and wireless association. In addition, `nm-connection-editor` (provided by `network-manager-applet` / `network-manager-gnome`) is called when opening advanced network settings (static IP, enterprise 802.1X, VPNs, and hidden SSIDs).
 3. **`brightnessctl`**:
    - Controls backlight hardware (`brightnessctl s <percent>%` / `brightnessctl g`).
 4. **`awww` / `swww`**:
