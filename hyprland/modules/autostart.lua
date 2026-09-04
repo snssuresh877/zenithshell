@@ -25,7 +25,7 @@ hl.on("hyprland.start", function()
 	-- POLKIT
 	--------------------------------------------------------
 
-	hl.exec_cmd("pgrep -x polkit-kde-authentication-agent-1 >/dev/null " .. "|| /usr/lib/polkit-kde-agent-1")
+	hl.exec_cmd("pgrep -x hyprpolkitagent >/dev/null || /usr/lib/hyprpolkitagent")
 
 	--------------------------------------------------------
 	-- WALLPAPER
