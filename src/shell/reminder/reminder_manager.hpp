@@ -21,6 +21,8 @@ public:
     static void hide();
     static void add_reminder(const std::string& title, int minutes);
     static void render_list();
+    static void save_to_disk();
+    static void load_from_disk();
 
 private:
     static GtkWidget* window;
@@ -33,3 +35,4 @@ private:
 };
 
 } // namespace zenith
+

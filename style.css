@@ -2640,8 +2640,103 @@ window.reminder-window,
     background-color: rgba(22, 23, 34, 0.95);
     border: 1px solid @zenith_border_hover;
     border-radius: 20px;
-    padding: 18px 20px;
-    box-shadow: none;
+    padding: 20px 22px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.60);
+}
+
+.reminder-title {
+    color: @zenith_text_primary;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+}
+
+.btn-close-sm {
+    background: transparent;
+    color: @zenith_text_secondary;
+    border: none;
+    font-size: 13px;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.btn-close-sm:hover {
+    background-color: rgba(255, 92, 108, 0.20);
+    color: #FF5C6C;
+}
+
+.btn-preset-chip {
+    background-color: @zenith_surface_variant;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    color: @zenith_text_secondary;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    transition: all 120ms ease;
+}
+
+.btn-preset-chip:hover {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+    color: @zenith_accent;
+}
+
+.reminder-list {
+    background-color: transparent;
+}
+
+.reminder-item {
+    background-color: @zenith_surface_variant;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+}
+
+.rem-icon {
+    color: @zenith_accent;
+    font-size: 15px;
+}
+
+.rem-text {
+    color: @zenith_text_primary;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.rem-time {
+    color: @zenith_accent_sec;
+    font-size: 11px;
+    font-weight: 700;
+    background-color: rgba(255, 255, 255, 0.06);
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.btn-del {
+    background: transparent;
+    border: none;
+    color: #FF5C6C;
+    font-size: 13px;
+    padding: 2px 6px;
+    border-radius: 6px;
+}
+
+.btn-del:hover {
+    background-color: rgba(255, 92, 108, 0.25);
+}
+
+.rem-empty-icon {
+    color: @zenith_text_disabled;
+    font-size: 32px;
+    margin-bottom: 4px;
+}
+
+.rem-empty-label {
+    color: @zenith_text_disabled;
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .qr-pass-box {
