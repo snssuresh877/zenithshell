@@ -103,52 +103,134 @@ std::string ThemeEngine::get_curated_desc(const std::string& raw) {
 }
 
 void ThemeEngine::register_builtins() {
-    // 1. Dynamic Wallpaper Adaptive Mode (Top of list)
-    Theme dynamic_th;
-    dynamic_th.name = "dynamic";
-    dynamic_th.background = "#0e0f14";
-    dynamic_th.surface = "#161720";
-    dynamic_th.surface_variant = "#1e202c";
-    dynamic_th.text_primary = "#F2F2F5";
-    dynamic_th.text_secondary = "#9A9AAF";
-    dynamic_th.text_disabled = "#5F6070";
-    dynamic_th.text = "#F2F2F5";
-    dynamic_th.text_muted = "#9A9AAF";
-    dynamic_th.accent = "#A875FF";
-    dynamic_th.accent_secondary = "#38bdf8";
-    dynamic_th.border = "rgba(255, 255, 255, 0.08)";
-    dynamic_th.semantic_success = "#3DDC84";
-    dynamic_th.semantic_warning = "#FFB454";
-    dynamic_th.semantic_error = "#FF5C6C";
-    dynamic_th.semantic_info = "#55B9FF";
-    builtin_themes["dynamic"] = dynamic_th;
-    theme_display_names["dynamic"] = "Dynamic (Wallpaper)";
-    theme_descriptions["dynamic"] = "Wallpaper Adaptive Palette";
-    theme_order.push_back("dynamic");
+    auto add_builtin = [&](const std::string& name, const std::string& title, const std::string& desc,
+                           const std::string& bg, const std::string& surf, const std::string& surf_var,
+                           const std::string& txt, const std::string& txt_sec, const std::string& accent,
+                           const std::string& sec_accent) {
+        Theme t;
+        t.name = name;
+        t.background = bg;
+        t.surface = surf;
+        t.surface_variant = surf_var;
+        t.text_primary = txt;
+        t.text_secondary = txt_sec;
+        t.text_disabled = ColorUtils::derive_text_disabled(txt_sec);
+        t.text = txt;
+        t.text_muted = txt_sec;
+        t.accent = accent;
+        t.accent_secondary = sec_accent;
+        t.border = "rgba(255, 255, 255, 0.08)";
+        t.semantic_success = "#3DDC84";
+        t.semantic_warning = "#FFB454";
+        t.semantic_error = "#FF5C6C";
+        t.semantic_info = "#55B9FF";
+        t.success = "#3DDC84";
+        t.warning = "#FFB454";
+        t.error = "#FF5C6C";
+
+        builtin_themes[name] = t;
+        theme_display_names[name] = title;
+        theme_descriptions[name] = desc;
+        if (std::find(theme_order.begin(), theme_order.end(), name) == theme_order.end()) {
+            theme_order.push_back(name);
+        }
+    };
+
+    // 1. Dynamic Wallpaper Mode (Pywal Adaptive)
+    add_builtin("dynamic", "Dynamic (Wallpaper)", "Wallpaper Adaptive Palette",
+                "#0e0f14", "#161720", "#1e202c", "#F2F2F5", "#9A9AAF", "#A875FF", "#38bdf8");
 
     // 2. Zenith Obsidian
-    Theme zdark;
-    zdark.name = "zenith-dark";
-    zdark.background = "#0e0f14";
-    zdark.surface = "#161720";
-    zdark.surface_variant = "#1e202c";
-    zdark.text_primary = "#F2EEFF";
-    zdark.text_secondary = "#A6A2C2";
-    zdark.text_disabled = "#5F5C72";
-    zdark.text = "#F2EEFF";
-    zdark.text_muted = "#A6A2C2";
-    zdark.accent = "#A875FF";
-    zdark.accent_secondary = "#C084FC";
-    zdark.border = "rgba(255, 255, 255, 0.08)";
-    zdark.semantic_success = "#3DDC84";
-    zdark.semantic_warning = "#FFB454";
-    zdark.semantic_error = "#FF5C6C";
-    zdark.semantic_info = "#55B9FF";
-    builtin_themes[zdark.name] = zdark;
-    theme_display_names[zdark.name] = "Zenith Obsidian";
-    theme_descriptions[zdark.name] = "Cyberpunk Obsidian Glass";
+    add_builtin("zenith-dark", "Zenith Obsidian", "Cyberpunk Obsidian Glass",
+                "#0e0f14", "#161720", "#1e202c", "#F2EEFF", "#A6A2C2", "#A875FF", "#C084FC");
 
-    theme_order.push_back("zenith-dark");
+    // 3. Kanagawa
+    add_builtin("kanagawa", "Kanagawa", "Sumi Ink & Great Wave",
+                "#1f1f28", "#2a2a37", "#363646", "#dcd7ba", "#957fb8", "#7e9cd8", "#98bb6c");
+
+    // 4. Rosé Pine
+    add_builtin("rose-pine", "Rosé Pine", "Soho Dusk & Coral Glow",
+                "#191724", "#1f1d2e", "#26233a", "#e0def4", "#908caa", "#ebbcba", "#31748f");
+
+    // 5. Hackerman (Matrix)
+    add_builtin("hackerman", "Hackerman", "Matrix Terminal Phosphor",
+                "#0d1117", "#161b22", "#21262d", "#e6edf3", "#8b949e", "#00ff66", "#39d353");
+
+    // 6. Everforest
+    add_builtin("everforest", "Everforest", "Natural Earthy Pine",
+                "#272e33", "#2e383e", "#374145", "#d3c6aa", "#9da9a0", "#a7c080", "#7fbbb3");
+
+    // 7. Tokyo Night
+    add_builtin("tokyo-night", "Tokyo Night", "Cyber Neon & Violet",
+                "#1a1b26", "#24283b", "#2f3549", "#c0caf5", "#7982a9", "#7aa2f7", "#bb9af7");
+
+    // 8. Catppuccin Mocha
+    add_builtin("catppuccin", "Catppuccin Mocha", "Modern Pastel Slate",
+                "#1e1e2e", "#181825", "#313244", "#cdd6f4", "#a6adc8", "#cba6f7", "#89b4fa");
+
+    // 9. Catppuccin Latte
+    add_builtin("catppuccin-latte", "Catppuccin Latte", "Clean Daytime Pastel",
+                "#eff1f5", "#e6e9ef", "#dce0e8", "#4c4f69", "#6c6f85", "#8839ef", "#1e66f5");
+
+    // 10. Gruvbox
+    add_builtin("gruvbox", "Gruvbox", "Warm Retro Gold",
+                "#282828", "#3c3836", "#504945", "#ebdbb2", "#a89984", "#fabd2f", "#fe8019");
+
+    // 11. Nord
+    add_builtin("nord", "Nord", "Cool Arctic Frost",
+                "#2e3440", "#3b4252", "#434c5e", "#eceff4", "#d8dee9", "#88c0d0", "#81a1c1");
+
+    // 12. Dracula
+    add_builtin("dracula", "Dracula", "Vibrant Purple & Pink",
+                "#282a36", "#44475a", "#6272a4", "#f8f8f2", "#6272a4", "#bd93f9", "#ff79c6");
+
+    // 13. Matte Black
+    add_builtin("matte-black", "Matte Black", "True OLED Pitch Black",
+                "#000000", "#0c0c0c", "#181818", "#f2f2f2", "#888888", "#ffffff", "#aaaaaa");
+
+    // 14. Vantablack
+    add_builtin("vantablack", "Vantablack", "Deep Void Obsidian",
+                "#050505", "#0d0d0d", "#1a1a1a", "#eaeaea", "#757575", "#ff0055", "#ff5500");
+
+    // 15. Miasma
+    add_builtin("miasma", "Miasma", "Atmospheric Toxic Swamp",
+                "#222222", "#2b2b2b", "#363636", "#c2c2b0", "#78824b", "#a28a5b", "#bb7744");
+
+    // 16. Osaka Jade
+    add_builtin("osaka-jade", "Osaka Jade", "Japanese Shrine Jade",
+                "#141c18", "#1c2621", "#26332d", "#e8f0ec", "#8fa89b", "#52b788", "#74c69d");
+
+    // 17. Retro '82
+    add_builtin("retro-82", "Retro '82", "Vintage 80s Synthwave",
+                "#1a102f", "#241742", "#32215a", "#fbf1c7", "#928374", "#ff71ce", "#01cdfe");
+
+    // 18. Ristretto
+    add_builtin("ristretto", "Ristretto", "Dark Espresso Roast",
+                "#2c2523", "#362f2d", "#433b38", "#f0e6df", "#a89984", "#d4a373", "#e09f67");
+
+    // 19. Solitude
+    add_builtin("solitude", "Solitude", "Quiet Velvet Ash",
+                "#1c1d21", "#25262c", "#30323a", "#e0e2ec", "#9094a6", "#9fa8da", "#b0bec5");
+
+    // 20. Last Horizon
+    add_builtin("last-horizon", "Last Horizon", "Twilight Sunset Horizon",
+                "#181424", "#221c33", "#2e2645", "#f5e6eb", "#a391a8", "#ff7b00", "#ff0055");
+
+    // 21. Lumon
+    add_builtin("lumon", "Lumon", "Severance Cold Slate",
+                "#1b2028", "#232a35", "#2d3744", "#e2e8f0", "#94a3b8", "#0ea5e9", "#38bdf8");
+
+    // 22. Lupine
+    add_builtin("lupine", "Lupine", "Midnight Forest Blue",
+                "#0f172a", "#1e293b", "#334155", "#f8fafc", "#94a3b8", "#38bdf8", "#818cf8");
+
+    // 23. Ethereal
+    add_builtin("ethereal", "Ethereal", "Dreamy Pastel Velvet",
+                "#1e1b2e", "#28243d", "#353052", "#f3e8ff", "#c084fc", "#d8b4fe", "#f472b6");
+
+    // 24. Flexoki Light
+    add_builtin("flexoki-light", "Flexoki Light", "Inky Warm Editorial Paper",
+                "#fffcf0", "#f2f0e5", "#e6e4d9", "#100f0f", "#6f6e69", "#205ea6", "#871094");
 }
 
 void ThemeEngine::scan_packaged_themes() {
