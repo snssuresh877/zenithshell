@@ -1,0 +1,22 @@
+[Default Applications]
+inode/directory=com.system76.CosmicFiles.desktop;org.gnome.Nautilus.desktop;thunar.desktop;
+text/plain=nvim.desktop;org.gnome.TextEditor.desktop;kate.desktop;
+image/png=org.gnome.Loupe.desktop;imv.desktop;viewnior.desktop;feh.desktop;
+image/jpeg=org.gnome.Loupe.desktop;imv.desktop;viewnior.desktop;feh.desktop;
+image/gif=org.gnome.Loupe.desktop;imv.desktop;viewnior.desktop;
+image/webp=org.gnome.Loupe.desktop;imv.desktop;viewnior.desktop;
+application/pdf=org.gnome.Evince.desktop;org.pwmt.zathura.desktop;
+video/mp4=mpv.desktop;vlc.desktop;
+video/mkv=mpv.desktop;vlc.desktop;
+video/webm=mpv.desktop;vlc.desktop;
+audio/mpeg=mpv.desktop;vlc.desktop;
+audio/flac=mpv.desktop;vlc.desktop;
+audio/wav=mpv.desktop;vlc.desktop;
+x-scheme-handler/http=zen-browser.desktop;google-chrome.desktop;firefox.desktop;brave-browser.desktop;
+x-scheme-handler/https=zen-browser.desktop;google-chrome.desktop;firefox.desktop;brave-browser.desktop;
+x-scheme-handler/about=zen-browser.desktop;google-chrome.desktop;firefox.desktop;
+x-scheme-handler/unknown=zen-browser.desktop;google-chrome.desktop;firefox.desktop;
+application/zip=org.gnome.FileRoller.desktop;
+application/x-tar=org.gnome.FileRoller.desktop;
+application/x-7z-compressed=org.gnome.FileRoller.desktop;
+application/x-rar=org.gnome.FileRoller.desktop;

@@ -149,30 +149,59 @@ if [ "$INSTALL_TERMINALS" -eq 1 ]; then
         mkdir -p "$HOME/.config/kitty"
         cp -f classic-addons/kitty/kitty.conf "$HOME/.config/kitty/kitty.conf"
     fi
+    if [ -d "classic-addons/starship" ]; then
+        cp -f classic-addons/starship/starship.toml "$HOME/.config/starship.toml"
+    fi
     if [ -f "hyprland/scripts/system/setup_fish_environment.sh" ]; then
         bash "hyprland/scripts/system/setup_fish_environment.sh"
     elif [ -d "classic-addons/fish" ]; then
         mkdir -p "$HOME/.config/fish"
         cp -f classic-addons/fish/config.fish "$HOME/.config/fish/config.fish"
     fi
-    echo -e "${GREEN}✔ Terminals and Fish Shell configured!${RESET}\n"
+    echo -e "${GREEN}✔ Terminals, Prompt (Starship), and Fish Shell configured!${RESET}\n"
 fi
 
 # 4. Workstation & CLI Power Tools
 if [ "$INSTALL_WORKSTATION_TOOLS" -eq 1 ]; then
-    echo -e "${BLUE}▶ [4/7] Checking CLI Power Utilities & File Managers...${RESET}"
+    echo -e "${BLUE}▶ [4/7] Checking CLI Power Utilities, BTOP, GTK Settings & File Managers...${RESET}"
     case "$DISTRO" in
         arch|manjaro|endeavouros|cachyos)
-            sudo pacman -S --needed --noconfirm yazi fd ripgrep jq fzf zoxide eza bat zip unzip p7zip 2>/dev/null || true
+            sudo pacman -S --needed --noconfirm yazi btop fd ripgrep jq fzf zoxide eza bat zip unzip p7zip 2>/dev/null || true
             ;;
         fedora|rhel)
-            sudo dnf install -y fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip 2>/dev/null || true
+            sudo dnf install -y yazi btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip 2>/dev/null || true
             ;;
         ubuntu|debian|pop)
-            sudo apt install -y fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip-full 2>/dev/null || true
+            sudo apt install -y btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip-full 2>/dev/null || true
             ;;
     esac
-    echo -e "${GREEN}✔ CLI workstation power tools verified!${RESET}\n"
+
+    # Deploy Yazi configuration
+    if [ -d "classic-addons/yazi" ]; then
+        mkdir -p "$HOME/.config/yazi"
+        cp -f classic-addons/yazi/yazi.toml "$HOME/.config/yazi/yazi.toml"
+    fi
+
+    # Deploy BTOP configuration
+    if [ -d "classic-addons/btop" ]; then
+        mkdir -p "$HOME/.config/btop"
+        cp -f classic-addons/btop/btop.conf "$HOME/.config/btop/btop.conf"
+    fi
+
+    # Deploy GTK-3.0 & GTK-4.0 Dark Mode Preferences
+    if [ -d "classic-addons/gtk-3.0" ]; then
+        mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0"
+        cp -f classic-addons/gtk-3.0/settings.ini "$HOME/.config/gtk-3.0/settings.ini"
+        cp -f classic-addons/gtk-4.0/settings.ini "$HOME/.config/gtk-4.0/settings.ini"
+    fi
+
+    # Deploy XDG Default MIME associations
+    if [ -d "classic-addons/xdg" ]; then
+        mkdir -p "$HOME/.config"
+        cp -f classic-addons/xdg/mimeapps.list "$HOME/.config/mimeapps.list"
+    fi
+
+    echo -e "${GREEN}✔ CLI workstation power tools, Yazi, BTOP, and GTK settings deployed!${RESET}\n"
 fi
 
 # 5. Multimedia & Screen Recording Tools
