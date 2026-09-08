@@ -36,7 +36,7 @@ cd ~/Projects/zenithshell
 | **Network & Bluetooth** | `networkmanager` (`nmcli`), `network-manager-applet` (`nm-connection-editor`), `bluez`, `bluez-utils`, `blueman` | Control Center background Wi-Fi scanning (`nmcli`), advanced network dialog, and Bluetooth pairing. |
 | **Backlight & Power Management** | `brightnessctl`, `hypridle`, `hyprlock`, `hyprshade` | Hardware backlight slider, Wayland lock screen (`SUPER + L`), idle sleep, and night light shaders. |
 | **Wallpaper & Theming** | Native C++ Layer-Shell, `nwg-look`, `bibata-cursor-theme`, `papirus-icon-theme` | Inbuilt 60fps Wayland wallpaper engine (zero `awww`/`swww` dependency!) & native dynamic palette extractor (zero Python/pywal dependency!). |
-| **Clipboard History** | `cliphist`, `wl-clipboard`, `wl-clip-persist` | `SUPER + V` native Zenith clipboard overlay with search and close-persistence. |
+| **Clipboard History** | Inbuilt C++ Engine, `wl-clipboard` | `SUPER + V` native Zenith clipboard overlay with search, per-clip deletion, and reboot JSON persistence (zero `cliphist`/`wl-clip-persist` dependency!). |
 | **Screenshots & Capture** | `grim`, `slurp`, `swappy`, `libnotify`, `jq` | `Print` (window), `SHIFT + Print` (interactive area), instant editor, and desktop notifications. |
 | **Color Picker & Recording** | `hyprpicker`, `wf-recorder` | `SUPER + SHIFT + C` pixel color sampler, `SUPER + SHIFT + R` instant Wayland screen recorder. |
 | **OCR Text Grab** | `tesseract`, `tesseract-data-eng` | `SUPER + SHIFT + T` select any screen text and copy words directly to clipboard. |
@@ -66,7 +66,7 @@ sudo pacman -S --needed \
     networkmanager network-manager-applet bluez bluez-utils blueman \
     brightnessctl hypridle hyprlock hyprshade \
     nwg-look bibata-cursor-theme papirus-icon-theme \
-    cliphist wl-clipboard wl-clip-persist \
+    wl-clipboard \
     grim slurp swappy hyprpicker wf-recorder tesseract tesseract-data-eng libnotify jq \
     foot kitty fish starship \
     yazi btop fd ripgrep fzf zoxide eza bat zip unzip p7zip \

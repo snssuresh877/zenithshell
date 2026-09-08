@@ -4,9 +4,15 @@
 #include <gdk/gdk.h>
 #include <gdk/gdkkeysyms.h>
 #include <cairo.h>
+#include <nlohmann/json.hpp>
 #include <iostream>
+#include <fstream>
+#include <filesystem>
 #include <ctime>
 #include <algorithm>
+
+namespace fs = std::filesystem;
+using json = nlohmann::json;
 
 namespace zenith {
 
@@ -18,6 +24,71 @@ GtkWidget* ClipboardManager::empty_box = nullptr;
 std::deque<ClipItem> ClipboardManager::history;
 std::string ClipboardManager::last_copied = "";
 std::vector<int> ClipboardManager::filtered_indices;
+GtkClipboard* ClipboardManager::gtk_clip = nullptr;
+
+namespace {
+
+std::string get_history_file_path() {
+    const char* home = g_get_home_dir();
+    if (!home) return "";
+    std::string dir = std::string(home) + "/.local/state/zenithshell";
+    std::error_code ec;
+    fs::create_directories(dir, ec);
+    return dir + "/clipboard_history.json";
+}
+
+} // namespace
+
+void ClipboardManager::load_history() {
+    std::string path = get_history_file_path();
+    if (path.empty() || !fs::exists(path)) return;
+
+    try {
+        std::ifstream file(path);
+        if (!file.is_open()) return;
+
+        json j;
+        file >> j;
+        if (j.is_array()) {
+            history.clear();
+            for (const auto& item : j) {
+                if (item.contains("text") && item.contains("timestamp")) {
+                    history.push_back({
+                        item["text"].get<std::string>(),
+                        item["timestamp"].get<std::string>()
+                    });
+                }
+            }
+            if (!history.empty()) {
+                last_copied = history.front().text;
+            }
+            std::cout << "[ClipboardManager] Loaded " << history.size() << " clipboard items from disk." << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "[ClipboardManager] Failed to parse history file: " << e.what() << std::endl;
+    }
+}
+
+void ClipboardManager::save_history() {
+    std::string path = get_history_file_path();
+    if (path.empty()) return;
+
+    try {
+        json j = json::array();
+        for (const auto& item : history) {
+            j.push_back({
+                {"text", item.text},
+                {"timestamp", item.timestamp}
+            });
+        }
+        std::ofstream file(path, std::ios::trunc);
+        if (file.is_open()) {
+            file << j.dump(2);
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "[ClipboardManager] Failed to save history: " << e.what() << std::endl;
+    }
+}
 
 void ClipboardManager::init(GtkApplication* app) {
     window = gtk_application_window_new(app);
@@ -143,7 +214,7 @@ void ClipboardManager::init(GtkApplication* app) {
 
     gtk_container_add(GTK_CONTAINER(window), card);
 
-    // Keyboard navigation (Escape, Up, Down, Enter)
+    // Keyboard navigation (Escape, Up, Down, Enter, Delete)
     g_signal_connect(window, "key-press-event", G_CALLBACK(+[](GtkWidget*, GdkEventKey* event, gpointer) -> gboolean {
         if (event->keyval == GDK_KEY_Escape) {
             ClipboardManager::hide();
@@ -173,6 +244,16 @@ void ClipboardManager::init(GtkApplication* app) {
             }
             return TRUE;
         }
+        if (event->keyval == GDK_KEY_Delete && (event->state & GDK_SHIFT_MASK)) {
+            GtkListBoxRow* selected = gtk_list_box_get_selected_row(GTK_LIST_BOX(listbox));
+            if (selected) {
+                int row_idx = gtk_list_box_row_get_index(selected);
+                if (row_idx >= 0 && static_cast<size_t>(row_idx) < filtered_indices.size()) {
+                    ClipboardManager::delete_item(filtered_indices[row_idx]);
+                    return TRUE;
+                }
+            }
+        }
         if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter) {
             GtkListBoxRow* selected = gtk_list_box_get_selected_row(GTK_LIST_BOX(listbox));
             if (!selected) {
@@ -189,8 +270,29 @@ void ClipboardManager::init(GtkApplication* app) {
         return FALSE;
     }), nullptr);
 
-    // Background Poll for Wayland Clipboard (wl-paste)
-    g_timeout_add(1000, poll_clipboard, nullptr);
+    // Native Wayland GtkClipboard Event Listener (Zero-CPU idle overhead)
+    gtk_clip = gtk_clipboard_get_default(gdk_display_get_default());
+    if (!gtk_clip) {
+        gtk_clip = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    }
+
+    if (gtk_clip) {
+        g_signal_connect(gtk_clip, "owner-change", G_CALLBACK(+[](GtkClipboard* clip, GdkEventOwnerChange*, gpointer) {
+            gtk_clipboard_request_text(clip, +[](GtkClipboard*, const gchar* text, gpointer) {
+                if (text && *text) {
+                    ClipboardManager::add_item(text);
+                }
+            }, nullptr);
+        }), nullptr);
+    }
+
+    // Load persisted history from disk
+    load_history();
+
+    // Terminate legacy cliphist watchers and spawn native event-driven watcher
+    g_spawn_command_line_async("pkill -f 'wl-paste.*cliphist'", nullptr);
+    g_spawn_command_line_async("pkill -f 'wl-paste.*--clip-store'", nullptr);
+    g_spawn_command_line_async("wl-paste --watch zenithshell --clip-store", nullptr);
 }
 
 void ClipboardManager::toggle() {
@@ -205,6 +307,16 @@ void ClipboardManager::show() {
     if (search_entry) {
         gtk_entry_set_text(GTK_ENTRY(search_entry), "");
     }
+
+    // Sync latest text if any clipboard change occurred while hidden
+    if (gtk_clip) {
+        gtk_clipboard_request_text(gtk_clip, +[](GtkClipboard*, const gchar* text, gpointer) {
+            if (text && *text) {
+                ClipboardManager::add_item(text);
+            }
+        }, nullptr);
+    }
+
     render_list("");
     gtk_widget_show_all(window);
     if (search_entry) {
@@ -218,21 +330,38 @@ void ClipboardManager::hide() {
     gtk_widget_hide(window);
 }
 
-void ClipboardManager::add_item(const std::string& text) {
+void ClipboardManager::add_item(const std::string& text, const std::string& timestamp) {
     if (text.empty() || text == last_copied) return;
 
-    // Deduplicate
+    // Deduplicate identical items
     history.erase(std::remove_if(history.begin(), history.end(), [&](const ClipItem& item) {
         return item.text == text;
     }), history.end());
 
-    auto now = std::time(nullptr);
-    char tbuf[16];
-    std::strftime(tbuf, sizeof(tbuf), "%H:%M", std::localtime(&now));
+    std::string t = timestamp;
+    if (t.empty()) {
+        auto now = std::time(nullptr);
+        char tbuf[16];
+        std::strftime(tbuf, sizeof(tbuf), "%H:%M", std::localtime(&now));
+        t = std::string(tbuf);
+    }
 
-    history.push_front({text, std::string(tbuf)});
-    if (history.size() > 60) history.pop_back();
+    history.push_front({text, t});
+    if (history.size() > 100) history.pop_back();
     last_copied = text;
+
+    save_history();
+
+    if (window && gtk_widget_get_visible(window)) {
+        render_list(search_entry ? gtk_entry_get_text(GTK_ENTRY(search_entry)) : "");
+    }
+}
+
+void ClipboardManager::delete_item(int index) {
+    if (index < 0 || static_cast<size_t>(index) >= history.size()) return;
+    history.erase(history.begin() + index);
+    save_history();
+    render_list(search_entry ? gtk_entry_get_text(GTK_ENTRY(search_entry)) : "");
 }
 
 void ClipboardManager::paste_item(int index) {
@@ -240,7 +369,15 @@ void ClipboardManager::paste_item(int index) {
     std::string text = history[index].text;
     hide();
 
-    // Use wl-copy to copy text to Wayland primary/clipboard buffer
+    last_copied = text;
+
+    // Set clipboard in GTK and store in memory (persists even if apps close)
+    if (gtk_clip) {
+        gtk_clipboard_set_text(gtk_clip, text.c_str(), static_cast<gint>(text.length()));
+        gtk_clipboard_store(gtk_clip);
+    }
+
+    // Fallback direct Wayland pipe
     FILE* fp = popen("wl-copy 2>/dev/null", "w");
     if (fp) {
         fwrite(text.c_str(), 1, text.size(), fp);
@@ -252,6 +389,7 @@ void ClipboardManager::clear_history() {
     history.clear();
     last_copied = "";
     filtered_indices.clear();
+    save_history();
     render_list("");
 }
 
@@ -305,7 +443,7 @@ void ClipboardManager::render_list(const std::string& filter_text) {
         GtkWidget* icon = gtk_label_new(icon_char);
         gtk_widget_add_css_class(icon, "clip-icon");
 
-        // Single line preview (replace newlines with space)
+        // Single line preview
         std::string clean_preview = item.text;
         std::replace(clean_preview.begin(), clean_preview.end(), '\n', ' ');
         std::replace(clean_preview.begin(), clean_preview.end(), '\t', ' ');
@@ -313,14 +451,24 @@ void ClipboardManager::render_list(const std::string& filter_text) {
         GtkWidget* text_lbl = gtk_label_new(clean_preview.c_str());
         gtk_widget_add_css_class(text_lbl, "clip-text");
         gtk_label_set_ellipsize(GTK_LABEL(text_lbl), PANGO_ELLIPSIZE_END);
-        gtk_label_set_max_width_chars(GTK_LABEL(text_lbl), 50);
+        gtk_label_set_max_width_chars(GTK_LABEL(text_lbl), 46);
         gtk_widget_set_halign(text_lbl, GTK_ALIGN_START);
 
         GtkWidget* time_lbl = gtk_label_new(item.timestamp.c_str());
         gtk_widget_add_css_class(time_lbl, "clip-time");
 
+        // Per-item delete button
+        GtkWidget* del_btn = gtk_button_new_with_label("󰅖");
+        gtk_widget_add_css_class(del_btn, "clip-item-del-btn");
+        gtk_widget_set_tooltip_text(del_btn, "Delete clip");
+        g_signal_connect(del_btn, "clicked", G_CALLBACK(+[](GtkButton*, gpointer data) {
+            int clip_idx = GPOINTER_TO_INT(data);
+            ClipboardManager::delete_item(clip_idx);
+        }), GINT_TO_POINTER(static_cast<int>(i)));
+
         gtk_box_pack_start(GTK_BOX(row_box), icon, FALSE, FALSE, 0);
         gtk_box_pack_start(GTK_BOX(row_box), text_lbl, TRUE, TRUE, 0);
+        gtk_box_pack_end(GTK_BOX(row_box), del_btn, FALSE, FALSE, 0);
         gtk_box_pack_end(GTK_BOX(row_box), time_lbl, FALSE, FALSE, 0);
 
         gtk_container_add(GTK_CONTAINER(listbox), row_box);
@@ -337,23 +485,6 @@ void ClipboardManager::render_list(const std::string& filter_text) {
     }
 
     gtk_widget_show_all(listbox);
-}
-
-gboolean ClipboardManager::poll_clipboard(gpointer) {
-    FILE* fp = popen("wl-paste -n 2>/dev/null", "r");
-    if (fp) {
-        char buffer[2048];
-        std::string text;
-        while (fgets(buffer, sizeof(buffer), fp) != nullptr) {
-            text += buffer;
-        }
-        pclose(fp);
-
-        if (!text.empty() && text != last_copied) {
-            add_item(text);
-        }
-    }
-    return TRUE;
 }
 
 } // namespace zenith

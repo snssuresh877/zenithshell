@@ -27,6 +27,10 @@ static const gchar introspection_xml[] =
     "    <method name='ToggleSpotlight'/>"
     "    <method name='ToggleControlCenter'/>"
     "    <method name='ToggleClipboard'/>"
+    "    <method name='StoreClipboard'>"
+    "      <arg type='s' name='text' direction='in'/>"
+    "    </method>"
+    "    <method name='ClearClipboard'/>"
     "    <method name='ToggleReminders'/>"
     "    <method name='ToggleNotifications'/>"
     "    <method name='ToggleNotificationCenter'/>"
@@ -158,6 +162,25 @@ void DBusService::handle_method_call(GDBusConnection*,
     } else if (method == "ToggleClipboard") {
         g_idle_add([](gpointer) -> gboolean {
             ClipboardManager::toggle();
+            return FALSE;
+        }, nullptr);
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "StoreClipboard") {
+        const gchar* text = nullptr;
+        g_variant_get(parameters, "(&s)", &text);
+        if (text && *text) {
+            std::string t = text;
+            g_idle_add_full(G_PRIORITY_DEFAULT_IDLE, [](gpointer data) -> gboolean {
+                auto* str = static_cast<std::string*>(data);
+                ClipboardManager::add_item(*str);
+                delete str;
+                return FALSE;
+            }, new std::string(t), nullptr);
+        }
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "ClearClipboard") {
+        g_idle_add([](gpointer) -> gboolean {
+            ClipboardManager::clear_history();
             return FALSE;
         }, nullptr);
         g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));

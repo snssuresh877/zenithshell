@@ -18,9 +18,13 @@ public:
     static void toggle();
     static void show();
     static void hide();
-    static void add_item(const std::string& text);
+    static void add_item(const std::string& text, const std::string& timestamp = "");
     static void paste_item(int index);
+    static void delete_item(int index);
     static void clear_history();
+
+    static void load_history();
+    static void save_history();
 
 private:
     static GtkWidget* window;
@@ -31,9 +35,9 @@ private:
     static std::deque<ClipItem> history;
     static std::string last_copied;
     static std::vector<int> filtered_indices;
+    static GtkClipboard* gtk_clip;
 
     static void render_list(const std::string& filter);
-    static gboolean poll_clipboard(gpointer user_data);
 };
 
 } // namespace zenith

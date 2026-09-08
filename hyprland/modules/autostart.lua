@@ -64,10 +64,7 @@ hl.on("hyprland.start", function()
 	hl.exec_cmd("$HOME/.config/hypr/scripts/ui/sync_keybind_desktop_entries.sh &")
 
 	--------------------------------------------------------
-	-- CLIPBOARD HISTORY
+	-- CLIPBOARD HISTORY (Managed natively by ZenithShell)
 	--------------------------------------------------------
-
-	hl.exec_cmd("wl-paste --type text --watch cliphist store &")
-
-	hl.exec_cmd("wl-paste --type image --watch cliphist store &")
+	-- ZenithShell automatically monitors Wayland clipboard in-process and persists history.
 end)
