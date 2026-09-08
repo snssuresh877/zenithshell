@@ -1,5 +1,6 @@
 #include "cli/zenithctl.hpp"
 #include "system/backlight_manager.hpp"
+#include "theme/theme_engine.hpp"
 #include <gio/gio.h>
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -128,6 +129,7 @@ bool ZenithCtl::should_handle(int argc, char** argv) {
     if (argc > 1) {
         std::string cmd = argv[1];
         if (cmd == "--clip-store") return true;
+        if (cmd == "__complete") return true;
         if (cmd == "-h" || cmd == "--help" || cmd == "help") return true;
         if (cmd == "-v" || cmd == "--version" || cmd == "version") return true;
         if (cmd == "wallpaper" || cmd == "wp") return true;
@@ -165,6 +167,38 @@ int ZenithCtl::run(int argc, char** argv) {
 
     if (args[0] == "-v" || args[0] == "--version" || args[0] == "version") {
         std::cout << "ZenithShell v1.0.0 (Native C++ Desktop Suite)\n";
+        return 0;
+    }
+
+    // --- Autocompletion Dynamic Query Helper ---
+    if (args[0] == "__complete") {
+        std::string target = (args.size() > 1) ? args[1] : "commands";
+        if (target == "commands") {
+            std::cout << "wallpaper\ntheme\nbrightness\nbri\nclipboard\nclip\ntoggle\nbar\nlauncher\nspotlight\ncontrol-center\ncc\nnotifications\nnc\nreminders\nactive-apps\nkeybinds\nnetwork\naudio\npower\nstats\nreload\nhelp\nversion\n";
+            return 0;
+        } else if (target == "themes") {
+            GVariant* res = call_method("ListThemes");
+            std::vector<std::string> themes;
+            if (res) {
+                GVariantIter* iter = nullptr;
+                g_variant_get(res, "(as)", &iter);
+                const char* tn = nullptr;
+                while (g_variant_iter_next(iter, "&s", &tn)) {
+                    themes.push_back(tn);
+                }
+                g_variant_iter_free(iter);
+                g_variant_unref(res);
+            } else {
+                themes = ThemeEngine::get_available_themes();
+            }
+            for (const auto& t : themes) {
+                std::cout << t << "\n";
+            }
+            return 0;
+        } else if (target == "modules") {
+            std::cout << "bar\nlauncher\nspotlight\ncontrol-center\ncc\nnotifications\nnc\nreminders\nactive-apps\nkeybinds\nnetwork\naudio\npower\nclipboard\n";
+            return 0;
+        }
         return 0;
     }
 
@@ -265,6 +299,7 @@ int ZenithCtl::run(int argc, char** argv) {
             g_variant_unref(res);
             return 0;
         } else if (sub == "list") {
+            bool raw = (args.size() > 2 && (args[2] == "--raw" || args[2] == "-r"));
             GVariant* cur_res = call_method("GetTheme");
             std::string cur_theme;
             if (cur_res) {
@@ -275,20 +310,35 @@ int ZenithCtl::run(int argc, char** argv) {
             }
 
             GVariant* res = call_method("ListThemes");
-            if (!res) return 1;
-            GVariantIter* iter = nullptr;
-            g_variant_get(res, "(as)", &iter);
-            const char* theme_name = nullptr;
+            std::vector<std::string> themes;
+            if (res) {
+                GVariantIter* iter = nullptr;
+                g_variant_get(res, "(as)", &iter);
+                const char* theme_name = nullptr;
+                while (g_variant_iter_next(iter, "&s", &theme_name)) {
+                    themes.push_back(theme_name);
+                }
+                g_variant_iter_free(iter);
+                g_variant_unref(res);
+            } else {
+                themes = ThemeEngine::get_available_themes();
+            }
+
+            if (raw) {
+                for (const auto& t : themes) {
+                    std::cout << t << "\n";
+                }
+                return 0;
+            }
+
             std::cout << C_BOLD << "Available Themes:\n" << C_RESET;
-            while (g_variant_iter_next(iter, "&s", &theme_name)) {
+            for (const auto& theme_name : themes) {
                 if (cur_theme == theme_name) {
                     std::cout << C_GREEN << "  * " << C_BOLD << theme_name << C_CYAN << " (active)" << C_RESET << "\n";
                 } else {
                     std::cout << "    " << theme_name << "\n";
                 }
             }
-            g_variant_iter_free(iter);
-            g_variant_unref(res);
             return 0;
         } else {
             // Treat as theme name directly (e.g. 'zenithctl theme set kanagawa' or 'zenithctl theme kanagawa')

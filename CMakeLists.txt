@@ -102,3 +102,13 @@ install(TARGETS zenithshell DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(CODE "execute_process(COMMAND \${CMAKE_COMMAND} -E create_symlink zenithshell \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/zenithctl)")
 install(FILES config.json style.css DESTINATION ${CMAKE_INSTALL_DATADIR}/zenithshell)
 install(FILES zenithshell.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+
+# Shell Completions
+install(FILES completions/fish/zenithctl.fish DESTINATION ${CMAKE_INSTALL_DATADIR}/fish/vendor_completions.d)
+install(CODE "execute_process(COMMAND \${CMAKE_COMMAND} -E create_symlink zenithctl.fish \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/fish/vendor_completions.d/zenithshell.fish)")
+
+install(FILES completions/bash/zenithctl DESTINATION ${CMAKE_INSTALL_DATADIR}/bash-completion/completions)
+install(CODE "execute_process(COMMAND \${CMAKE_COMMAND} -E create_symlink zenithctl \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/bash-completion/completions/zenithshell)")
+
+install(FILES completions/zsh/_zenithctl DESTINATION ${CMAKE_INSTALL_DATADIR}/zsh/site-functions)
+install(CODE "execute_process(COMMAND \${CMAKE_COMMAND} -E create_symlink _zenithctl \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_DATADIR}/zsh/site-functions/_zenithshell)")
