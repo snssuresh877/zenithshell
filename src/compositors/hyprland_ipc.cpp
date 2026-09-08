@@ -147,6 +147,44 @@ void HyprlandIPC::close_window(const std::string& address) {
     system(cmd.c_str());
 }
 
+void HyprlandIPC::exit() {
+    // 1. Try Lua dispatcher
+    if (dispatch("hl.dsp.exit()")) return;
+    // 2. Try standard Hyprland dispatcher
+    if (dispatch("exit")) return;
+    // 3. Fallback
+    system("hyprctl dispatch exit 2>/dev/null &");
+}
+
+bool HyprlandIPC::send_command(const std::string& cmd) {
+    std::string c = cmd;
+    // Strip leading "hyprctl " if present
+    if (c.rfind("hyprctl ", 0) == 0) {
+        c = c.substr(8);
+    }
+    // Trim trailing background & redirects
+    size_t amp = c.find('&');
+    if (amp != std::string::npos) c = c.substr(0, amp);
+    while (!c.empty() && (c.back() == ' ' || c.back() == '\t')) c.pop_back();
+    if (c.rfind("2>/dev/null") != std::string::npos) {
+        c = c.substr(0, c.rfind("2>/dev/null"));
+        while (!c.empty() && (c.back() == ' ' || c.back() == '\t')) c.pop_back();
+    }
+
+    if (c == "dispatch exit" || c == "exit") {
+        exit();
+        return true;
+    }
+
+    if (c.rfind("dispatch ", 0) == 0) {
+        std::string sub = c.substr(9);
+        return dispatch(sub);
+    }
+
+    std::string resp = request(c);
+    return !resp.empty();
+}
+
 int HyprlandIPC::get_active_workspace_id() {
     std::string res = query_json("activeworkspace");
     if (!res.empty()) {

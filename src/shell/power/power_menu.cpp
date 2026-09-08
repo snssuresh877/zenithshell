@@ -1,4 +1,5 @@
 #include "shell/power/power_menu.hpp"
+#include "compositors/hyprland_ipc.hpp"
 #include "gtk3_compat.hpp"
 #include <gtk-layer-shell/gtk-layer-shell.h>
 #include <gdk/gdk.h>
@@ -50,6 +51,10 @@ std::string PowerMenu::get_uptime_string() {
 void PowerMenu::execute_action(size_t index) {
     if (index >= actions.size()) return;
     hide();
+    if (actions[index].id == "logout") {
+        HyprlandIPC::exit();
+        return;
+    }
     std::string cmd = actions[index].command;
     if (!cmd.empty()) {
         system(cmd.c_str());

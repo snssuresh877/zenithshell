@@ -3,6 +3,7 @@
 #include "pipewire/audio_manager.hpp"
 #include "system/backlight_manager.hpp"
 #include "theme/theme_engine.hpp"
+#include "compositors/hyprland_ipc.hpp"
 #include "gtk3_compat.hpp"
 #include <gtk-layer-shell/gtk-layer-shell.h>
 #include <cairo.h>
@@ -552,7 +553,14 @@ GtkWidget* ControlCenter::create_main_page() {
         std::string command = cmd;
         g_signal_connect(btn, "clicked", G_CALLBACK(+[](GtkButton*, gpointer data) {
             char* c = static_cast<char*>(data);
-            if (c) system(c);
+            if (c) {
+                if (strstr(c, "dispatch exit") != nullptr) {
+                    HyprlandIPC::exit();
+                } else {
+                    system(c);
+                }
+                free(c);
+            }
             ControlCenter::hide_popup();
         }), strdup(command.c_str()));
 

@@ -34,6 +34,8 @@ public:
     static void switch_workspace_relative(int delta);
     static void focus_window(const std::string& target);
     static void close_window(const std::string& address);
+    static void exit();
+    static bool send_command(const std::string& cmd);
     static int get_active_workspace_id();
     static std::string get_clients_json();
 

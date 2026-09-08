@@ -1,4 +1,7 @@
 #include "shell/launcher/spotlight_search.hpp"
+#include "compositors/hyprland_ipc.hpp"
+#include "shell/clipboard/clipboard_manager.hpp"
+#include "dbus/notification_manager.hpp"
 #include "gtk3_compat.hpp"
 #include <gtk-layer-shell/gtk-layer-shell.h>
 #include <gio/gdesktopappinfo.h>
@@ -640,7 +643,9 @@ void SpotlightSearch::execute_result(const SearchResult& result) {
             }
         }
     } else if (result.type == SearchResult::SYSTEM) {
-        if (!result.action_cmd.empty()) {
+        if (result.action_cmd == "hyprctl dispatch exit") {
+            HyprlandIPC::exit();
+        } else if (!result.action_cmd.empty()) {
             std::string cmd = result.action_cmd + " &";
             system(cmd.c_str());
         }
@@ -649,10 +654,8 @@ void SpotlightSearch::execute_result(const SearchResult& result) {
         if (copy_val.rfind("= ", 0) == 0) {
             copy_val = copy_val.substr(2);
         }
-        std::string cmd = "wl-copy '" + copy_val + "' 2>/dev/null";
-        system(cmd.c_str());
-        std::string notif = "notify-send -u low 'Zenith Calculator' 'Copied " + copy_val + " to clipboard' 2>/dev/null &";
-        system(notif.c_str());
+        ClipboardManager::add_item(copy_val);
+        NotificationManager::send_notification("Zenith Calculator", "accessories-calculator", "Zenith Calculator", "Copied " + copy_val + " to clipboard", 2500);
     }
 }
 
