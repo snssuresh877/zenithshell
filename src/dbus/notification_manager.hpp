@@ -28,6 +28,11 @@ public:
     static const NotificationItem* get_latest();
     static void set_history_changed_callback(std::function<void()> cb);
     static void show_toast(const NotificationItem& item, int timeout_ms = 5000);
+    static uint32_t send_notification(const std::string& app_name,
+                                      const std::string& app_icon,
+                                      const std::string& summary,
+                                      const std::string& body,
+                                      int timeout_ms = 5000);
 
 private:
     static GtkApplication* gtk_app;

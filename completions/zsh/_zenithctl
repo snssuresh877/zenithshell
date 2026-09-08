@@ -32,6 +32,7 @@ _zenithctl() {
                 'volume:Audio volume & PipeWire control'
                 'vol:Audio volume (shorthand)'
                 'mic:Microphone mute toggle'
+                'reminder:Reminders manager & timer CLI'
                 'clipboard:Clipboard history & overlay'
                 'clip:Clipboard history (shorthand)'
                 'toggle:Toggle shell modules & overlays'
@@ -81,6 +82,10 @@ _zenithctl() {
                 mic)
                     _arguments \
                         '1: :(mute)'
+                    ;;
+                reminder|reminders)
+                    _arguments \
+                        '1: :(list add clear toggle)'
                     ;;
                 clipboard|clip)
                     _arguments \

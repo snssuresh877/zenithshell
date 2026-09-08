@@ -176,6 +176,42 @@ void NotificationManager::show_toast(const NotificationItem& item, int timeout_m
     }, win);
 }
 
+uint32_t NotificationManager::send_notification(const std::string& app_name,
+                                                const std::string& app_icon,
+                                                const std::string& summary,
+                                                const std::string& body,
+                                                int timeout_ms) {
+    uint32_t id = next_id++;
+    auto now = std::time(nullptr);
+    char tbuf[16];
+    std::strftime(tbuf, sizeof(tbuf), "%H:%M", std::localtime(&now));
+
+    NotificationItem item{
+        id,
+        app_name,
+        app_icon,
+        summary,
+        body,
+        std::string(tbuf)
+    };
+
+    history.insert(history.begin(), item);
+    if (history.size() > 50) history.pop_back();
+
+    int timeout = (timeout_ms > 0) ? timeout_ms : 5000;
+    g_idle_add([](gpointer data) -> gboolean {
+        auto* p = static_cast<std::pair<NotificationItem, int>*>(data);
+        NotificationManager::show_toast(p->first, p->second);
+        if (NotificationManager::history_cb) {
+            NotificationManager::history_cb();
+        }
+        delete p;
+        return FALSE;
+    }, new std::pair<NotificationItem, int>(item, timeout));
+
+    return id;
+}
+
 void NotificationManager::on_bus_acquired(GDBusConnection* connection, const gchar*, gpointer) {
     static const GDBusInterfaceVTable interface_vtable = {
         NotificationManager::handle_method_call,

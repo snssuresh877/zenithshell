@@ -32,6 +32,7 @@ for cmd in zenithctl zenithshell
     complete -c $cmd -n "__fish_use_subcommand" -a notifications -d "Toggle notification history center"
     complete -c $cmd -n "__fish_use_subcommand" -a nc -d "Toggle notification history center (shorthand)"
     complete -c $cmd -n "__fish_use_subcommand" -a reminders -d "Toggle reminders manager"
+    complete -c $cmd -n "__fish_use_subcommand" -a reminder -d "Reminders manager & timer CLI"
     complete -c $cmd -n "__fish_use_subcommand" -a active-apps -d "Toggle active applications drawer"
     complete -c $cmd -n "__fish_use_subcommand" -a keybinds -d "Toggle Hyprland cheatsheet overlay"
     complete -c $cmd -n "__fish_use_subcommand" -a network -d "Open Wi-Fi / Network dialog"
@@ -72,6 +73,12 @@ for cmd in zenithctl zenithshell
 
     # --- Mic Subcommands ---
     complete -c $cmd -n "__fish_seen_subcommand_from mic" -a mute -d "Toggle microphone mute"
+
+    # --- Reminder Subcommands ---
+    complete -c $cmd -n "__fish_seen_subcommand_from reminder reminders" -a list -d "List active scheduled reminders"
+    complete -c $cmd -n "__fish_seen_subcommand_from reminder reminders" -a add -d "Schedule a reminder (title minutes)"
+    complete -c $cmd -n "__fish_seen_subcommand_from reminder reminders" -a clear -d "Clear all scheduled reminders"
+    complete -c $cmd -n "__fish_seen_subcommand_from reminder reminders" -a toggle -d "Toggle reminders GUI overlay"
 
     # --- Clipboard Subcommands ---
     complete -c $cmd -n "__fish_seen_subcommand_from clipboard clip" -a clear -d "Wipe clipboard history"

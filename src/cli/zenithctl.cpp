@@ -60,6 +60,12 @@ void print_help() {
     std::cout << "  " << C_GREEN << "volume mute" << C_RESET << "            Toggle audio sink mute\n";
     std::cout << "  " << C_GREEN << "mic mute" << C_RESET << "               Toggle microphone mute\n\n";
 
+    std::cout << C_BOLD << "REMINDER COMMANDS:\n" << C_RESET;
+    std::cout << "  " << C_GREEN << "reminder list" << C_RESET << "                 List active reminders and countdowns\n";
+    std::cout << "  " << C_GREEN << "reminder add <title> <mins>" << C_RESET << "   Schedule a reminder (e.g. \"Tea break\" 15)\n";
+    std::cout << "  " << C_GREEN << "reminder clear" << C_RESET << "                Clear all scheduled reminders\n";
+    std::cout << "  " << C_GREEN << "reminder toggle" << C_RESET << "               Toggle reminder GUI overlay\n\n";
+
     std::cout << C_BOLD << "CLIPBOARD COMMANDS:\n" << C_RESET;
     std::cout << "  " << C_GREEN << "clipboard" << C_RESET << "               Toggle clipboard history overlay (SUPER + V)\n";
     std::cout << "  " << C_GREEN << "clipboard clear" << C_RESET << "         Clear all persistent clipboard history\n";
@@ -152,7 +158,7 @@ bool ZenithCtl::should_handle(int argc, char** argv) {
         if (cmd == "launcher" || cmd == "spotlight") return true;
         if (cmd == "control-center" || cmd == "cc") return true;
         if (cmd == "notifications" || cmd == "nc") return true;
-        if (cmd == "reminders") return true;
+        if (cmd == "reminder" || cmd == "reminders") return true;
         if (cmd == "active-apps") return true;
         if (cmd == "keybinds") return true;
         if (cmd == "network") return true;
@@ -185,7 +191,7 @@ int ZenithCtl::run(int argc, char** argv) {
     if (args[0] == "__complete") {
         std::string target = (args.size() > 1) ? args[1] : "commands";
         if (target == "commands") {
-            std::cout << "wallpaper\ntheme\nbrightness\nbri\nvolume\nvol\nmic\nclipboard\nclip\ntoggle\nbar\nlauncher\nspotlight\ncontrol-center\ncc\nnotifications\nnc\nreminders\nactive-apps\nkeybinds\nnetwork\naudio\npower\nstats\nreload\nhelp\nversion\n";
+            std::cout << "wallpaper\ntheme\nbrightness\nbri\nvolume\nvol\nmic\nreminder\nreminders\nclipboard\nclip\ntoggle\nbar\nlauncher\nspotlight\ncontrol-center\ncc\nnotifications\nnc\nactive-apps\nkeybinds\nnetwork\naudio\npower\nstats\nreload\nhelp\nversion\n";
             return 0;
         } else if (target == "themes") {
             GVariant* res = call_method("ListThemes");
@@ -557,6 +563,82 @@ int ZenithCtl::run(int argc, char** argv) {
         }
         std::cout << C_GREEN << "✔ " << C_RESET << "Microphone " << (muted ? C_YELLOW : C_GREEN) << (muted ? "muted" : "unmuted") << C_RESET << "\n";
         return 0;
+    }
+
+    // --- Reminder Commands ---
+    if (args[0] == "reminder" || args[0] == "reminders") {
+        if (args.size() == 1 || args[1] == "list") {
+            GVariant* res = call_method("ListReminders");
+            if (!res) return 1;
+            const char* json_str = nullptr;
+            g_variant_get(res, "(&s)", &json_str);
+            if (json_str) {
+                try {
+                    auto j = json::parse(json_str);
+                    if (!j.is_array() || j.empty()) {
+                        std::cout << C_DIM << "No active reminders or timers.\n" << C_RESET;
+                    } else {
+                        std::cout << C_BOLD << C_CYAN << "Active Reminders (" << j.size() << "):" << C_RESET << "\n";
+                        for (size_t i = 0; i < j.size(); ++i) {
+                            std::string title = j[i].value("title", "Untitled");
+                            int64_t secs = j[i].value("seconds_left", 0);
+                            int rem_hours = secs / 3600;
+                            int rem_mins = (secs % 3600) / 60;
+                            int rem_s = secs % 60;
+                            char tbuf[48];
+                            if (rem_hours > 0) {
+                                snprintf(tbuf, sizeof(tbuf), "%dh %dm left", rem_hours, rem_mins);
+                            } else if (rem_mins > 0) {
+                                snprintf(tbuf, sizeof(tbuf), "%dm %ds left", rem_mins, rem_s);
+                            } else {
+                                snprintf(tbuf, sizeof(tbuf), "%ds left", rem_s);
+                            }
+                            std::cout << "  " << C_GREEN << "• " << C_RESET << C_BOLD << title << C_RESET
+                                      << " (" << C_YELLOW << tbuf << C_RESET << ")\n";
+                        }
+                    }
+                } catch (...) {
+                    std::cout << json_str << "\n";
+                }
+            }
+            g_variant_unref(res);
+            return 0;
+        }
+
+        std::string sub = args[1];
+        if (sub == "clear" || sub == "wipe") {
+            GVariant* res = call_method("ClearReminders");
+            if (res) g_variant_unref(res);
+            std::cout << C_GREEN << "✔ " << C_RESET << "All reminders cleared\n";
+            return 0;
+        } else if (sub == "toggle" || sub == "show" || sub == "overlay") {
+            GVariant* res = call_method("ToggleReminders");
+            if (res) g_variant_unref(res);
+            return 0;
+        } else if (sub == "add" || args.size() > 2) {
+            std::string title;
+            int minutes = 1;
+            if (sub == "add") {
+                if (args.size() < 3) {
+                    std::cerr << C_RED << "Usage: " << C_RESET << "zenithctl reminder add <title> <minutes>\n";
+                    return 1;
+                }
+                title = args[2];
+                if (args.size() > 3) {
+                    try { minutes = std::stoi(args[3]); } catch (...) {}
+                }
+            } else {
+                title = sub;
+                try { minutes = std::stoi(args[2]); } catch (...) {}
+            }
+
+            if (minutes <= 0) minutes = 1;
+            GVariant* res = call_method("AddReminder", g_variant_new("(si)", title.c_str(), minutes));
+            if (res) g_variant_unref(res);
+            std::cout << C_GREEN << "✔ " << C_RESET << "Reminder scheduled: " << C_BOLD << "\"" << title << "\""
+                      << C_RESET << " in " << C_CYAN << minutes << " minute(s)" << C_RESET << "\n";
+            return 0;
+        }
     }
 
     // --- Clipboard Commands ---

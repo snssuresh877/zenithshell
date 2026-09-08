@@ -20,6 +20,8 @@ public:
     static void show();
     static void hide();
     static void add_reminder(const std::string& title, int minutes);
+    static void clear_all();
+    static std::vector<ReminderItem> get_active_reminders();
     static void render_list();
     static void save_to_disk();
     static void load_from_disk();

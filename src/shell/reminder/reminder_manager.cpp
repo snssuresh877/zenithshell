@@ -287,7 +287,28 @@ void ReminderManager::add_reminder(const std::string& title, int minutes) {
 
     reminders.push_back({title, target, false});
     save_to_disk();
-    render_list();
+    if (window && gtk_widget_get_visible(window)) {
+        render_list();
+    }
+}
+
+void ReminderManager::clear_all() {
+    reminders.clear();
+    save_to_disk();
+    if (window && gtk_widget_get_visible(window)) {
+        render_list();
+    }
+}
+
+std::vector<ReminderItem> ReminderManager::get_active_reminders() {
+    std::vector<ReminderItem> active;
+    auto now = std::chrono::system_clock::now();
+    for (const auto& r : reminders) {
+        if (!r.triggered && r.target_time > now) {
+            active.push_back(r);
+        }
+    }
+    return active;
 }
 
 void ReminderManager::render_list() {
@@ -379,8 +400,8 @@ gboolean ReminderManager::check_reminders(gpointer) {
             r.triggered = true;
             updated = true;
 
-            // Trigger visual desktop notification
-            system(("notify-send -u critical -i appointment-soon '󰔟 Reminder Alert' '" + r.title + "' 2>/dev/null &").c_str());
+            // Trigger in-process visual desktop notification
+            NotificationManager::send_notification("Reminders", "appointment-soon", "󰔟 Reminder Alert", r.title, 8000);
 
             // Play notification sound chime
             system("canberra-gtk-play -i complete 2>/dev/null || paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga 2>/dev/null &");

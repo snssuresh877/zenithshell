@@ -15,9 +15,12 @@
 #include "system/backlight_manager.hpp"
 #include "pipewire/audio_manager.hpp"
 #include "shell/osd/osd_window.hpp"
+#include <nlohmann/json.hpp>
 #include <iostream>
 #include <sstream>
 #include <cstring>
+
+using json = nlohmann::json;
 
 namespace zenith {
 
@@ -107,6 +110,14 @@ static const gchar introspection_xml[] =
     "      <arg type='s' name='type' direction='in'/>"
     "      <arg type='i' name='val' direction='in'/>"
     "    </method>"
+    "    <method name='AddReminder'>"
+    "      <arg type='s' name='title' direction='in'/>"
+    "      <arg type='i' name='minutes' direction='in'/>"
+    "    </method>"
+    "    <method name='ListReminders'>"
+    "      <arg type='s' name='json_reminders' direction='out'/>"
+    "    </method>"
+    "    <method name='ClearReminders'/>"
     "    <method name='GetStats'>"
     "      <arg type='s' name='json_stats' direction='out'/>"
     "    </method>"
@@ -414,6 +425,39 @@ void DBusService::handle_method_call(GDBusConnection*,
             OSDWindow::show_mic(val, false);
         }
         g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "AddReminder") {
+        const char* title = nullptr;
+        gint mins = 1;
+        g_variant_get(parameters, "(&si)", &title, &mins);
+        if (title && *title && mins > 0) {
+            std::string t = title;
+            g_idle_add([](gpointer data) -> gboolean {
+                auto* p = static_cast<std::pair<std::string, int>*>(data);
+                ReminderManager::add_reminder(p->first, p->second);
+                delete p;
+                return FALSE;
+            }, new std::pair<std::string, int>(t, mins));
+        }
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "ClearReminders") {
+        g_idle_add([](gpointer) -> gboolean {
+            ReminderManager::clear_all();
+            return FALSE;
+        }, nullptr);
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "ListReminders") {
+        auto active = ReminderManager::get_active_reminders();
+        auto now = std::chrono::system_clock::now();
+        json j = json::array();
+        for (const auto& r : active) {
+            auto secs_left = std::chrono::duration_cast<std::chrono::seconds>(r.target_time - now).count();
+            j.push_back({
+                {"title", r.title},
+                {"seconds_left", std::max<int64_t>(0, secs_left)}
+            });
+        }
+        std::string json_str = j.dump();
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(s)", json_str.c_str()));
     } else if (method == "GetStats") {
         SysStats stats = SysMonitor::get_stats();
         int vol = AudioManager::get_volume();
