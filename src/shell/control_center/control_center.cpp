@@ -4,6 +4,7 @@
 #include "system/backlight_manager.hpp"
 #include "theme/theme_engine.hpp"
 #include "compositors/hyprland_ipc.hpp"
+#include "dbus/notification_manager.hpp"
 #include "gtk3_compat.hpp"
 #include <gtk-layer-shell/gtk-layer-shell.h>
 #include <cairo.h>
@@ -131,7 +132,7 @@ bool ControlCenter::is_night_light_active() {
 }
 
 bool ControlCenter::is_focus_dnd_active() {
-    return false;
+    return NotificationManager::is_dnd_enabled();
 }
 
 void ControlCenter::switch_to_view(const char* view_name) {
@@ -377,19 +378,23 @@ GtkWidget* ControlCenter::create_main_page() {
     GtkWidget* f_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
     GtkWidget* f_title = gtk_label_new("󰌵 Focus");
     gtk_widget_add_css_class(f_title, "cc-mode-title");
-    focus_sub_lbl = gtk_label_new("OFF");
+    bool dnd_init = NotificationManager::is_dnd_enabled();
+    focus_sub_lbl = gtk_label_new(dnd_init ? "ON" : "OFF");
     gtk_widget_add_css_class(focus_sub_lbl, "cc-mode-sub");
+    if (dnd_init) {
+        gtk_widget_add_css_class(focus_btn, "active");
+    }
     gtk_box_pack_start(GTK_BOX(f_box), f_title, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(f_box), focus_sub_lbl, FALSE, FALSE, 0);
     gtk_container_add(GTK_CONTAINER(focus_btn), f_box);
     g_signal_connect(focus_btn, "clicked", G_CALLBACK(+[](GtkButton* btn, gpointer) {
-        system("$HOME/.config/hypr/scripts/ui/toggle_dnd.sh 2>/dev/null &");
-        if (gtk_widget_has_css_class(GTK_WIDGET(btn), "active")) {
-            gtk_widget_remove_css_class(GTK_WIDGET(btn), "active");
-            gtk_label_set_text(GTK_LABEL(focus_sub_lbl), "OFF");
-        } else {
+        bool dnd = NotificationManager::toggle_dnd();
+        if (dnd) {
             gtk_widget_add_css_class(GTK_WIDGET(btn), "active");
             gtk_label_set_text(GTK_LABEL(focus_sub_lbl), "ON");
+        } else {
+            gtk_widget_remove_css_class(GTK_WIDGET(btn), "active");
+            gtk_label_set_text(GTK_LABEL(focus_sub_lbl), "OFF");
         }
     }), nullptr);
 
@@ -1250,6 +1255,14 @@ void ControlCenter::refresh_data() {
         gtk_label_set_text(GTK_LABEL(dark_sub_lbl), d ? "ON" : "OFF");
         if (d) gtk_widget_add_css_class(dark_btn, "active");
         else gtk_widget_remove_css_class(dark_btn, "active");
+    }
+
+    // Focus / DND Status
+    if (focus_btn && focus_sub_lbl) {
+        bool dnd = NotificationManager::is_dnd_enabled();
+        gtk_label_set_text(GTK_LABEL(focus_sub_lbl), dnd ? "ON" : "OFF");
+        if (dnd) gtk_widget_add_css_class(focus_btn, "active");
+        else gtk_widget_remove_css_class(focus_btn, "active");
     }
 }
 

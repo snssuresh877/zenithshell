@@ -159,22 +159,46 @@ GtkWidget* BarWindow::create(GtkApplication* app, const Config& config) {
 
     auto update_notif_ui = [notif_btn, notif_icon, notif_badge]() {
         int count = NotificationManager::get_count();
-        if (count > 0) {
+        bool dnd = NotificationManager::is_dnd_enabled();
+
+        if (dnd) {
+            gtk_label_set_text(GTK_LABEL(notif_icon), "󰂛");
+            if (count > 0) {
+                char buf[32];
+                snprintf(buf, sizeof(buf), "%d", count);
+                gtk_label_set_text(GTK_LABEL(notif_badge), buf);
+            } else {
+                gtk_label_set_text(GTK_LABEL(notif_badge), "DND");
+            }
+            gtk_widget_add_css_class(notif_btn, "dnd-active");
+            gtk_widget_remove_css_class(notif_btn, "has-notifications");
+            gtk_widget_set_visible(notif_btn, TRUE);
+        } else if (count > 0) {
             gtk_label_set_text(GTK_LABEL(notif_icon), "󰂞");
             char buf[32];
             snprintf(buf, sizeof(buf), "%d", count);
             gtk_label_set_text(GTK_LABEL(notif_badge), buf);
+            gtk_widget_remove_css_class(notif_btn, "dnd-active");
             gtk_widget_add_css_class(notif_btn, "has-notifications");
             gtk_widget_set_visible(notif_btn, TRUE);
         } else {
             gtk_label_set_text(GTK_LABEL(notif_icon), "󰂚");
             gtk_label_set_text(GTK_LABEL(notif_badge), "");
+            gtk_widget_remove_css_class(notif_btn, "dnd-active");
             gtk_widget_remove_css_class(notif_btn, "has-notifications");
             gtk_widget_set_visible(notif_btn, FALSE);
         }
     };
 
     NotificationManager::set_history_changed_callback(update_notif_ui);
+    NotificationManager::add_dnd_changed_callback([update_notif_ui](bool) {
+        g_idle_add([](gpointer data) -> gboolean {
+            auto* fn = static_cast<std::function<void()>*>(data);
+            (*fn)();
+            delete fn;
+            return FALSE;
+        }, new std::function<void()>(update_notif_ui));
+    });
     update_notif_ui();
 
     // 4. Control Center Trigger Button (32x32px, radius 20, icon 󰍜)

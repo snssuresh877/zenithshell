@@ -13,6 +13,8 @@ guint NotificationManager::owner_id = 0;
 uint32_t NotificationManager::next_id = 1;
 std::vector<NotificationItem> NotificationManager::history;
 std::function<void()> NotificationManager::history_cb = nullptr;
+bool NotificationManager::dnd_enabled = false;
+std::vector<NotificationManager::DndChangedCallback> NotificationManager::dnd_callbacks;
 
 static const gchar introspection_xml[] =
     "<node>"
@@ -199,15 +201,24 @@ uint32_t NotificationManager::send_notification(const std::string& app_name,
     if (history.size() > 50) history.pop_back();
 
     int timeout = (timeout_ms > 0) ? timeout_ms : 5000;
-    g_idle_add([](gpointer data) -> gboolean {
-        auto* p = static_cast<std::pair<NotificationItem, int>*>(data);
-        NotificationManager::show_toast(p->first, p->second);
-        if (NotificationManager::history_cb) {
-            NotificationManager::history_cb();
-        }
-        delete p;
-        return FALSE;
-    }, new std::pair<NotificationItem, int>(item, timeout));
+    if (!dnd_enabled) {
+        g_idle_add([](gpointer data) -> gboolean {
+            auto* p = static_cast<std::pair<NotificationItem, int>*>(data);
+            NotificationManager::show_toast(p->first, p->second);
+            if (NotificationManager::history_cb) {
+                NotificationManager::history_cb();
+            }
+            delete p;
+            return FALSE;
+        }, new std::pair<NotificationItem, int>(item, timeout));
+    } else {
+        g_idle_add([](gpointer) -> gboolean {
+            if (NotificationManager::history_cb) {
+                NotificationManager::history_cb();
+            }
+            return FALSE;
+        }, nullptr);
+    }
 
     return id;
 }
@@ -302,15 +313,24 @@ void NotificationManager::handle_method_call(GDBusConnection*,
         if (history.size() > 50) history.pop_back();
 
         int timeout = (expire_timeout > 0) ? expire_timeout : 5000;
-        g_idle_add([](gpointer data) -> gboolean {
-            auto* p = static_cast<std::pair<NotificationItem, int>*>(data);
-            NotificationManager::show_toast(p->first, p->second);
-            if (NotificationManager::history_cb) {
-                NotificationManager::history_cb();
-            }
-            delete p;
-            return FALSE;
-        }, new std::pair<NotificationItem, int>(item, timeout));
+        if (!dnd_enabled) {
+            g_idle_add([](gpointer data) -> gboolean {
+                auto* p = static_cast<std::pair<NotificationItem, int>*>(data);
+                NotificationManager::show_toast(p->first, p->second);
+                if (NotificationManager::history_cb) {
+                    NotificationManager::history_cb();
+                }
+                delete p;
+                return FALSE;
+            }, new std::pair<NotificationItem, int>(item, timeout));
+        } else {
+            g_idle_add([](gpointer) -> gboolean {
+                if (NotificationManager::history_cb) {
+                    NotificationManager::history_cb();
+                }
+                return FALSE;
+            }, nullptr);
+        }
 
         g_dbus_method_invocation_return_value(invocation, g_variant_new("(u)", id));
     } else if (method == "CloseNotification") {
@@ -350,6 +370,27 @@ void NotificationManager::remove_notification(uint32_t id) {
 
 void NotificationManager::set_history_changed_callback(std::function<void()> cb) {
     history_cb = cb;
+}
+
+bool NotificationManager::is_dnd_enabled() {
+    return dnd_enabled;
+}
+
+void NotificationManager::set_dnd_enabled(bool enabled) {
+    if (dnd_enabled == enabled) return;
+    dnd_enabled = enabled;
+    for (const auto& cb : dnd_callbacks) {
+        if (cb) cb(dnd_enabled);
+    }
+}
+
+bool NotificationManager::toggle_dnd() {
+    set_dnd_enabled(!dnd_enabled);
+    return dnd_enabled;
+}
+
+void NotificationManager::add_dnd_changed_callback(DndChangedCallback cb) {
+    dnd_callbacks.push_back(std::move(cb));
 }
 
 } // namespace zenith

@@ -1223,6 +1223,19 @@ window.spotlight-window {
     border-color: @zenith_accent;
 }
 
+.notif-pill.dnd-active {
+    background-color: rgba(239, 83, 80, 0.18);
+    border-color: #ef5350;
+}
+
+.notif-pill.dnd-active .notif-pill-icon {
+    color: #ef5350;
+}
+
+.notif-pill.dnd-active .notif-pill-badge {
+    color: #ff8a80;
+}
+
 .notif-pill-icon {
     color: @zenith_accent;
     font-size: 12px;

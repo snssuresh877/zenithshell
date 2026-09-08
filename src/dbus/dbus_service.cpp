@@ -16,6 +16,7 @@
 #include "pipewire/audio_manager.hpp"
 #include "shell/osd/osd_window.hpp"
 #include "dbus/mpris_player.hpp"
+#include "dbus/notification_manager.hpp"
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <sstream>
@@ -127,6 +128,16 @@ static const gchar introspection_xml[] =
     "    <method name='MediaStop'/>"
     "    <method name='GetMediaInfo'>"
     "      <arg type='s' name='json_info' direction='out'/>"
+    "    </method>"
+    "    <method name='ToggleDND'>"
+    "      <arg type='b' name='enabled' direction='out'/>"
+    "    </method>"
+    "    <method name='SetDND'>"
+    "      <arg type='b' name='enable' direction='in'/>"
+    "      <arg type='b' name='enabled' direction='out'/>"
+    "    </method>"
+    "    <method name='GetDND'>"
+    "      <arg type='b' name='enabled' direction='out'/>"
     "    </method>"
     "    <method name='GetStats'>"
     "      <arg type='s' name='json_stats' direction='out'/>"
@@ -505,6 +516,17 @@ void DBusService::handle_method_call(GDBusConnection*,
         };
         std::string json_str = j.dump();
         g_dbus_method_invocation_return_value(invocation, g_variant_new("(s)", json_str.c_str()));
+    } else if (method == "ToggleDND") {
+        bool dnd = NotificationManager::toggle_dnd();
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(b)", dnd));
+    } else if (method == "SetDND") {
+        gboolean val = FALSE;
+        g_variant_get(parameters, "(b)", &val);
+        NotificationManager::set_dnd_enabled(val);
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(b)", (bool)val));
+    } else if (method == "GetDND") {
+        bool dnd = NotificationManager::is_dnd_enabled();
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(b)", dnd));
     } else if (method == "GetStats") {
         SysStats stats = SysMonitor::get_stats();
         int vol = AudioManager::get_volume();

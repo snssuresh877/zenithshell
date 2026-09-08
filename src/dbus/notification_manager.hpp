@@ -34,6 +34,13 @@ public:
                                       const std::string& body,
                                       int timeout_ms = 5000);
 
+    // Native Do Not Disturb (DND) Control
+    static bool is_dnd_enabled();
+    static void set_dnd_enabled(bool enabled);
+    static bool toggle_dnd();
+    using DndChangedCallback = std::function<void(bool)>;
+    static void add_dnd_changed_callback(DndChangedCallback cb);
+
 private:
     static GtkApplication* gtk_app;
     static GDBusNodeInfo* introspection_data;
@@ -41,6 +48,8 @@ private:
     static uint32_t next_id;
     static std::vector<NotificationItem> history;
     static std::function<void()> history_cb;
+    static bool dnd_enabled;
+    static std::vector<DndChangedCallback> dnd_callbacks;
 
     static void on_bus_acquired(GDBusConnection* connection, const gchar* name, gpointer user_data);
     static void on_name_acquired(GDBusConnection* connection, const gchar* name, gpointer user_data);

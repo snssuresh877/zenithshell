@@ -34,6 +34,7 @@ _zenithctl() {
                 'mic:Microphone mute toggle'
                 'media:Native D-Bus MPRIS media playback control'
                 'mpris:Native D-Bus MPRIS media playback control (shorthand)'
+                'dnd:Toggle Do Not Disturb mode'
                 'reminder:Reminders manager & timer CLI'
                 'clipboard:Clipboard history & overlay'
                 'clip:Clipboard history (shorthand)'
@@ -88,6 +89,10 @@ _zenithctl() {
                 media|mpris)
                     _arguments \
                         '1: :(play-pause toggle next prev previous play pause stop status info current)'
+                    ;;
+                dnd)
+                    _arguments \
+                        '1: :(toggle on off status enable disable get)'
                     ;;
                 reminder|reminders)
                     _arguments \

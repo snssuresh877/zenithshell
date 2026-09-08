@@ -71,6 +71,12 @@ void print_help() {
     std::cout << "  " << C_GREEN << "media stop" << C_RESET << "                    Stop playback\n";
     std::cout << "  " << C_GREEN << "media status" << C_RESET << " | " << C_GREEN << "info" << C_RESET << "          Show detailed playback info & player name\n\n";
 
+    std::cout << C_BOLD << "DO NOT DISTURB (DND):\n" << C_RESET;
+    std::cout << "  " << C_GREEN << "dnd" << C_RESET << " | " << C_GREEN << "dnd toggle" << C_RESET << "           Toggle Do Not Disturb mode\n";
+    std::cout << "  " << C_GREEN << "dnd on" << C_RESET << " | " << C_GREEN << "dnd enable" << C_RESET << "             Enable Do Not Disturb mode (suppress toasts)\n";
+    std::cout << "  " << C_GREEN << "dnd off" << C_RESET << " | " << C_GREEN << "dnd disable" << C_RESET << "          Disable Do Not Disturb mode\n";
+    std::cout << "  " << C_GREEN << "dnd status" << C_RESET << " | " << C_GREEN << "dnd get" << C_RESET << "             Display current DND status\n\n";
+
     std::cout << C_BOLD << "REMINDER COMMANDS:\n" << C_RESET;
     std::cout << "  " << C_GREEN << "reminder list" << C_RESET << "                 List active reminders and countdowns\n";
     std::cout << "  " << C_GREEN << "reminder add <title> <mins>" << C_RESET << "   Schedule a reminder (e.g. \"Tea break\" 15)\n";
@@ -166,6 +172,7 @@ bool ZenithCtl::should_handle(int argc, char** argv) {
         if (cmd == "volume" || cmd == "vol") return true;
         if (cmd == "mic") return true;
         if (cmd == "media" || cmd == "mpris") return true;
+        if (cmd == "dnd") return true;
         if (cmd == "clipboard" || cmd == "clip") return true;
         if (cmd == "toggle") return true;
         if (cmd == "bar" || cmd == "topbar") return true;
@@ -205,7 +212,7 @@ int ZenithCtl::run(int argc, char** argv) {
     if (args[0] == "__complete") {
         std::string target = (args.size() > 1) ? args[1] : "commands";
         if (target == "commands") {
-            std::cout << "wallpaper\ntheme\nbrightness\nbri\nvolume\nvol\nmic\nmedia\nmpris\nreminder\nreminders\nclipboard\nclip\ntoggle\nbar\nlauncher\nspotlight\ncontrol-center\ncc\nnotifications\nnc\nactive-apps\nkeybinds\nnetwork\naudio\npower\nstats\nreload\nhelp\nversion\n";
+            std::cout << "wallpaper\ntheme\nbrightness\nbri\nvolume\nvol\nmic\nmedia\nmpris\ndnd\nreminder\nreminders\nclipboard\nclip\ntoggle\nbar\nlauncher\nspotlight\ncontrol-center\ncc\nnotifications\nnc\nactive-apps\nkeybinds\nnetwork\naudio\npower\nstats\nreload\nhelp\nversion\n";
             return 0;
         } else if (target == "themes") {
             GVariant* res = call_method("ListThemes");
@@ -228,6 +235,9 @@ int ZenithCtl::run(int argc, char** argv) {
             return 0;
         } else if (target == "media") {
             std::cout << "play-pause\nnext\nprev\nprevious\nplay\npause\nstop\nstatus\ninfo\ncurrent\n";
+            return 0;
+        } else if (target == "dnd") {
+            std::cout << "toggle\non\noff\nstatus\nenable\ndisable\nget\n";
             return 0;
         } else if (target == "modules") {
             std::cout << "bar\nlauncher\nspotlight\ncontrol-center\ncc\nnotifications\nnc\nreminders\nactive-apps\nkeybinds\nnetwork\naudio\npower\nclipboard\n";
@@ -688,6 +698,58 @@ int ZenithCtl::run(int argc, char** argv) {
         } else {
             std::cerr << C_RED << "Unknown media subcommand: " << C_RESET << sub << "\n";
             std::cerr << "Usage: zenithctl media [play-pause|next|prev|play|pause|stop|status]\n";
+            return 1;
+        }
+    }
+
+    // --- Do Not Disturb (DND) Commands ---
+    if (args[0] == "dnd") {
+        std::string sub = (args.size() > 1) ? args[1] : "toggle";
+        if (sub == "toggle") {
+            gboolean active = FALSE;
+            GVariant* res = call_method("ToggleDND");
+            if (res) {
+                g_variant_get(res, "(b)", &active);
+                g_variant_unref(res);
+                std::cout << C_GREEN << "✔ " << C_RESET << "Do Not Disturb (DND) turned "
+                          << (active ? C_YELLOW : C_GREEN) << (active ? "ON" : "OFF") << C_RESET << "\n";
+                return 0;
+            } else {
+                return 1;
+            }
+        } else if (sub == "on" || sub == "enable" || sub == "1" || sub == "true") {
+            GVariant* res = call_method("SetDND", g_variant_new("(b)", TRUE));
+            if (res) {
+                g_variant_unref(res);
+                std::cout << C_GREEN << "✔ " << C_RESET << "Do Not Disturb (DND) enabled\n";
+                return 0;
+            } else {
+                return 1;
+            }
+        } else if (sub == "off" || sub == "disable" || sub == "0" || sub == "false") {
+            GVariant* res = call_method("SetDND", g_variant_new("(b)", FALSE));
+            if (res) {
+                g_variant_unref(res);
+                std::cout << C_GREEN << "✔ " << C_RESET << "Do Not Disturb (DND) disabled\n";
+                return 0;
+            } else {
+                return 1;
+            }
+        } else if (sub == "status" || sub == "get" || sub == "current") {
+            gboolean active = FALSE;
+            GVariant* res = call_method("GetDND");
+            if (res) {
+                g_variant_get(res, "(b)", &active);
+                g_variant_unref(res);
+                std::cout << C_BOLD << "Do Not Disturb (DND): " << (active ? C_YELLOW : C_GREEN)
+                          << (active ? "ON" : "OFF") << C_RESET << "\n";
+                return 0;
+            } else {
+                return 1;
+            }
+        } else {
+            std::cerr << C_RED << "Unknown dnd subcommand: " << C_RESET << sub << "\n";
+            std::cerr << "Usage: zenithctl dnd [toggle|on|off|status]\n";
             return 1;
         }
     }

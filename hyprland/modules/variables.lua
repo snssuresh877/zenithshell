@@ -114,13 +114,13 @@ Launchers = {
 
 Notifications = {
 
-	daemon = "swaync",
+	daemon = "zenithshell",
 
-	toggleDND = "swaync-client -d -sw",
+	toggleDND = "zenithctl dnd toggle 2>/dev/null || swaync-client -d -sw",
 
-	dismissAll = "swaync-client -C",
+	dismissAll = "zenithctl notifications 2>/dev/null || swaync-client -C",
 
-	restore = "swaync-client -t -sw",
+	restore = "zenithctl notifications 2>/dev/null || swaync-client -t -sw",
 }
 
 ------------------------------------------------------------

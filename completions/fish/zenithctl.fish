@@ -23,6 +23,7 @@ for cmd in zenithctl zenithshell
     complete -c $cmd -n "__fish_use_subcommand" -a mic -d "Microphone mute toggle"
     complete -c $cmd -n "__fish_use_subcommand" -a media -d "Native D-Bus MPRIS media playback control"
     complete -c $cmd -n "__fish_use_subcommand" -a mpris -d "Native D-Bus MPRIS media playback control (shorthand)"
+    complete -c $cmd -n "__fish_use_subcommand" -a dnd -d "Toggle Do Not Disturb mode (suppress toasts)"
     complete -c $cmd -n "__fish_use_subcommand" -a clipboard -d "Clipboard history & overlay"
     complete -c $cmd -n "__fish_use_subcommand" -a clip -d "Clipboard history (shorthand)"
     complete -c $cmd -n "__fish_use_subcommand" -a toggle -d "Toggle shell modules & overlays"
@@ -88,6 +89,14 @@ for cmd in zenithctl zenithshell
     complete -c $cmd -n "__fish_seen_subcommand_from media mpris" -a status -d "Show active track and artist"
     complete -c $cmd -n "__fish_seen_subcommand_from media mpris" -a info -d "Show detailed media info"
     complete -c $cmd -n "__fish_seen_subcommand_from media mpris" -a current -d "Show current track"
+
+    # --- DND Subcommands ---
+    complete -c $cmd -n "__fish_seen_subcommand_from dnd" -a toggle -d "Toggle Do Not Disturb mode"
+    complete -c $cmd -n "__fish_seen_subcommand_from dnd" -a on -d "Enable Do Not Disturb mode"
+    complete -c $cmd -n "__fish_seen_subcommand_from dnd" -a off -d "Disable Do Not Disturb mode"
+    complete -c $cmd -n "__fish_seen_subcommand_from dnd" -a status -d "Show current DND status"
+    complete -c $cmd -n "__fish_seen_subcommand_from dnd" -a enable -d "Enable Do Not Disturb mode"
+    complete -c $cmd -n "__fish_seen_subcommand_from dnd" -a disable -d "Disable Do Not Disturb mode"
 
     # --- Reminder Subcommands ---
     complete -c $cmd -n "__fish_seen_subcommand_from reminder reminders" -a list -d "List active scheduled reminders"
