@@ -201,7 +201,8 @@ if [ "$INSTALL_WORKSTATION_TOOLS" -eq 1 ]; then
             sudo systemctl enable --now udisks2.service 2>/dev/null || true
             ;;
         ubuntu|debian|pop)
-            sudo apt install -y btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip-full wl-clipboard network-manager network-manager-gnome udisks2 dosfstools ntfs-3g exfatprogs pavucontrol playerctl blueman 2>/dev/null || true
+            sudo apt install -y btop fd-find ripgrep jq fzf bat zip unzip p7zip-full wl-clipboard network-manager network-manager-gnome udisks2 dosfstools ntfs-3g exfatprogs pavucontrol playerctl blueman 2>/dev/null || true
+            sudo apt install -y zoxide eza yazi 2>/dev/null || true
             sudo systemctl enable --now udisks2.service 2>/dev/null || true
             ;;
     esac
@@ -273,7 +274,8 @@ if [ "$INSTALL_POWER" -eq 1 ]; then
             systemctl --user enable --now hyprpolkitagent.service 2>/dev/null || true
             ;;
         ubuntu|debian|pop)
-            sudo apt install -y hypridle hyprlock brightnessctl 2>/dev/null || true
+            sudo apt install -y brightnessctl 2>/dev/null || true
+            sudo apt install -y hypridle hyprlock 2>/dev/null || true
             ;;
     esac
     echo -e "${GREEN}✔ Power, Polkit authentication & Idle management verified!${RESET}\n"

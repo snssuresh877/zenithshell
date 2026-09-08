@@ -393,6 +393,18 @@ The installer will automatically:
 
 ---
 
+### 🍥 Option 3: Dedicated Debian & Ubuntu Installer
+
+If you are running **Debian 12 (Bookworm)**, **Debian 13 (Trixie)**, **Debian Sid**, or **Ubuntu / Pop!_OS**:
+
+```bash
+chmod +x ./install-debian.sh
+./install-debian.sh
+```
+This dedicated script automatically handles Debian APT package names, PEP 668 Python environments (`pipx` / `pywal`), Starship prompt installation, and native C++20 compilation.
+
+---
+
 ### 🔧 Method 2: Manual Compilation
 
 ```bash
