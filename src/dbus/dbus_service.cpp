@@ -15,6 +15,7 @@
 #include "system/backlight_manager.hpp"
 #include "pipewire/audio_manager.hpp"
 #include "shell/osd/osd_window.hpp"
+#include "dbus/mpris_player.hpp"
 #include <nlohmann/json.hpp>
 #include <iostream>
 #include <sstream>
@@ -118,6 +119,15 @@ static const gchar introspection_xml[] =
     "      <arg type='s' name='json_reminders' direction='out'/>"
     "    </method>"
     "    <method name='ClearReminders'/>"
+    "    <method name='MediaPlayPause'/>"
+    "    <method name='MediaNext'/>"
+    "    <method name='MediaPrevious'/>"
+    "    <method name='MediaPlay'/>"
+    "    <method name='MediaPause'/>"
+    "    <method name='MediaStop'/>"
+    "    <method name='GetMediaInfo'>"
+    "      <arg type='s' name='json_info' direction='out'/>"
+    "    </method>"
     "    <method name='GetStats'>"
     "      <arg type='s' name='json_stats' direction='out'/>"
     "    </method>"
@@ -457,6 +467,42 @@ void DBusService::handle_method_call(GDBusConnection*,
                 {"seconds_left", std::max<int64_t>(0, secs_left)}
             });
         }
+        std::string json_str = j.dump();
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(s)", json_str.c_str()));
+    } else if (method == "MediaPlayPause") {
+        MprisPlayer::play_pause();
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "MediaNext") {
+        MprisPlayer::next();
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "MediaPrevious") {
+        MprisPlayer::previous();
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "MediaPlay") {
+        MprisPlayer::play();
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "MediaPause") {
+        MprisPlayer::pause();
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "MediaStop") {
+        MprisPlayer::stop();
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "GetMediaInfo") {
+        MediaInfo inf = MprisPlayer::get_info();
+        json j = {
+            {"player", inf.player_name},
+            {"bus", inf.bus_name},
+            {"title", inf.title},
+            {"artist", inf.artist},
+            {"album", inf.album},
+            {"art_url", inf.art_url},
+            {"status", inf.status},
+            {"is_playing", inf.is_playing},
+            {"can_go_next", inf.can_go_next},
+            {"can_go_prev", inf.can_go_prev},
+            {"can_play", inf.can_play},
+            {"can_pause", inf.can_pause}
+        };
         std::string json_str = j.dump();
         g_dbus_method_invocation_return_value(invocation, g_variant_new("(s)", json_str.c_str()));
     } else if (method == "GetStats") {

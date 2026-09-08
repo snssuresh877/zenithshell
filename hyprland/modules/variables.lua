@@ -180,11 +180,11 @@ Session = {
 
 Media = {
 
-	playPause = "playerctl play-pause",
+	playPause = "zenithctl media play-pause 2>/dev/null || playerctl play-pause",
 
-	next = "playerctl next",
+	next = "zenithctl media next 2>/dev/null || playerctl next",
 
-	previous = "playerctl previous",
+	previous = "zenithctl media prev 2>/dev/null || playerctl previous",
 }
 
 ------------------------------------------------------------

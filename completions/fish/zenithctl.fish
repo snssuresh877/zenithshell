@@ -21,6 +21,8 @@ for cmd in zenithctl zenithshell
     complete -c $cmd -n "__fish_use_subcommand" -a volume -d "Audio volume & PipeWire control"
     complete -c $cmd -n "__fish_use_subcommand" -a vol -d "Audio volume (shorthand)"
     complete -c $cmd -n "__fish_use_subcommand" -a mic -d "Microphone mute toggle"
+    complete -c $cmd -n "__fish_use_subcommand" -a media -d "Native D-Bus MPRIS media playback control"
+    complete -c $cmd -n "__fish_use_subcommand" -a mpris -d "Native D-Bus MPRIS media playback control (shorthand)"
     complete -c $cmd -n "__fish_use_subcommand" -a clipboard -d "Clipboard history & overlay"
     complete -c $cmd -n "__fish_use_subcommand" -a clip -d "Clipboard history (shorthand)"
     complete -c $cmd -n "__fish_use_subcommand" -a toggle -d "Toggle shell modules & overlays"
@@ -73,6 +75,19 @@ for cmd in zenithctl zenithshell
 
     # --- Mic Subcommands ---
     complete -c $cmd -n "__fish_seen_subcommand_from mic" -a mute -d "Toggle microphone mute"
+
+    # --- Media Subcommands ---
+    complete -c $cmd -n "__fish_seen_subcommand_from media mpris" -a play-pause -d "Toggle play/pause"
+    complete -c $cmd -n "__fish_seen_subcommand_from media mpris" -a toggle -d "Toggle play/pause"
+    complete -c $cmd -n "__fish_seen_subcommand_from media mpris" -a next -d "Skip to next track"
+    complete -c $cmd -n "__fish_seen_subcommand_from media mpris" -a prev -d "Return to previous track"
+    complete -c $cmd -n "__fish_seen_subcommand_from media mpris" -a previous -d "Return to previous track"
+    complete -c $cmd -n "__fish_seen_subcommand_from media mpris" -a play -d "Resume playback"
+    complete -c $cmd -n "__fish_seen_subcommand_from media mpris" -a pause -d "Pause playback"
+    complete -c $cmd -n "__fish_seen_subcommand_from media mpris" -a stop -d "Stop playback"
+    complete -c $cmd -n "__fish_seen_subcommand_from media mpris" -a status -d "Show active track and artist"
+    complete -c $cmd -n "__fish_seen_subcommand_from media mpris" -a info -d "Show detailed media info"
+    complete -c $cmd -n "__fish_seen_subcommand_from media mpris" -a current -d "Show current track"
 
     # --- Reminder Subcommands ---
     complete -c $cmd -n "__fish_seen_subcommand_from reminder reminders" -a list -d "List active scheduled reminders"

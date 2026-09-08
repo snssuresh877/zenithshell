@@ -2,6 +2,7 @@
 #include "system/backlight_manager.hpp"
 #include "theme/theme_engine.hpp"
 #include "pipewire/audio_manager.hpp"
+#include "dbus/mpris_player.hpp"
 #include <gio/gio.h>
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -59,6 +60,16 @@ void print_help() {
     std::cout << "  " << C_GREEN << "volume down [step]" << C_RESET << "     Decrease volume (default -5%)\n";
     std::cout << "  " << C_GREEN << "volume mute" << C_RESET << "            Toggle audio sink mute\n";
     std::cout << "  " << C_GREEN << "mic mute" << C_RESET << "               Toggle microphone mute\n\n";
+
+    std::cout << C_BOLD << "MEDIA COMMANDS (NATIVE D-BUS MPRIS):\n" << C_RESET;
+    std::cout << "  " << C_GREEN << "media" << C_RESET << " | " << C_GREEN << "mpris" << C_RESET << "                   Show current playing track and artist\n";
+    std::cout << "  " << C_GREEN << "media play-pause" << C_RESET << " | " << C_GREEN << "toggle" << C_RESET << "      Toggle play / pause on active media player\n";
+    std::cout << "  " << C_GREEN << "media next" << C_RESET << "                    Skip to next track\n";
+    std::cout << "  " << C_GREEN << "media prev" << C_RESET << " | " << C_GREEN << "previous" << C_RESET << "          Return to previous track\n";
+    std::cout << "  " << C_GREEN << "media play" << C_RESET << "                    Resume playback\n";
+    std::cout << "  " << C_GREEN << "media pause" << C_RESET << "                   Pause playback\n";
+    std::cout << "  " << C_GREEN << "media stop" << C_RESET << "                    Stop playback\n";
+    std::cout << "  " << C_GREEN << "media status" << C_RESET << " | " << C_GREEN << "info" << C_RESET << "          Show detailed playback info & player name\n\n";
 
     std::cout << C_BOLD << "REMINDER COMMANDS:\n" << C_RESET;
     std::cout << "  " << C_GREEN << "reminder list" << C_RESET << "                 List active reminders and countdowns\n";
@@ -154,6 +165,7 @@ bool ZenithCtl::should_handle(int argc, char** argv) {
         if (cmd == "brightness" || cmd == "bri") return true;
         if (cmd == "volume" || cmd == "vol") return true;
         if (cmd == "mic") return true;
+        if (cmd == "media" || cmd == "mpris") return true;
         if (cmd == "clipboard" || cmd == "clip") return true;
         if (cmd == "toggle") return true;
         if (cmd == "bar" || cmd == "topbar") return true;
@@ -193,7 +205,7 @@ int ZenithCtl::run(int argc, char** argv) {
     if (args[0] == "__complete") {
         std::string target = (args.size() > 1) ? args[1] : "commands";
         if (target == "commands") {
-            std::cout << "wallpaper\ntheme\nbrightness\nbri\nvolume\nvol\nmic\nreminder\nreminders\nclipboard\nclip\ntoggle\nbar\nlauncher\nspotlight\ncontrol-center\ncc\nnotifications\nnc\nactive-apps\nkeybinds\nnetwork\naudio\npower\nstats\nreload\nhelp\nversion\n";
+            std::cout << "wallpaper\ntheme\nbrightness\nbri\nvolume\nvol\nmic\nmedia\nmpris\nreminder\nreminders\nclipboard\nclip\ntoggle\nbar\nlauncher\nspotlight\ncontrol-center\ncc\nnotifications\nnc\nactive-apps\nkeybinds\nnetwork\naudio\npower\nstats\nreload\nhelp\nversion\n";
             return 0;
         } else if (target == "themes") {
             GVariant* res = call_method("ListThemes");
@@ -213,6 +225,9 @@ int ZenithCtl::run(int argc, char** argv) {
             for (const auto& t : themes) {
                 std::cout << t << "\n";
             }
+            return 0;
+        } else if (target == "media") {
+            std::cout << "play-pause\nnext\nprev\nprevious\nplay\npause\nstop\nstatus\ninfo\ncurrent\n";
             return 0;
         } else if (target == "modules") {
             std::cout << "bar\nlauncher\nspotlight\ncontrol-center\ncc\nnotifications\nnc\nreminders\nactive-apps\nkeybinds\nnetwork\naudio\npower\nclipboard\n";
@@ -570,6 +585,111 @@ int ZenithCtl::run(int argc, char** argv) {
         }
         std::cout << C_GREEN << "✔ " << C_RESET << "Microphone " << (muted ? C_YELLOW : C_GREEN) << (muted ? "muted" : "unmuted") << C_RESET << "\n";
         return 0;
+    }
+
+    // --- Media & MPRIS Commands ---
+    if (args[0] == "media" || args[0] == "mpris") {
+        std::string sub = (args.size() > 1) ? args[1] : "status";
+        if (sub == "play-pause" || sub == "toggle") {
+            GVariant* res = call_method("MediaPlayPause", nullptr, false);
+            if (res) {
+                g_variant_unref(res);
+            } else {
+                MprisPlayer::play_pause();
+            }
+            std::cout << C_GREEN << "✔ " << C_RESET << "Media toggled (Play/Pause)\n";
+            return 0;
+        } else if (sub == "next") {
+            GVariant* res = call_method("MediaNext", nullptr, false);
+            if (res) {
+                g_variant_unref(res);
+            } else {
+                MprisPlayer::next();
+            }
+            std::cout << C_GREEN << "✔ " << C_RESET << "Media next track\n";
+            return 0;
+        } else if (sub == "prev" || sub == "previous") {
+            GVariant* res = call_method("MediaPrevious", nullptr, false);
+            if (res) {
+                g_variant_unref(res);
+            } else {
+                MprisPlayer::previous();
+            }
+            std::cout << C_GREEN << "✔ " << C_RESET << "Media previous track\n";
+            return 0;
+        } else if (sub == "play") {
+            GVariant* res = call_method("MediaPlay", nullptr, false);
+            if (res) {
+                g_variant_unref(res);
+            } else {
+                MprisPlayer::play();
+            }
+            std::cout << C_GREEN << "✔ " << C_RESET << "Media playback started\n";
+            return 0;
+        } else if (sub == "pause") {
+            GVariant* res = call_method("MediaPause", nullptr, false);
+            if (res) {
+                g_variant_unref(res);
+            } else {
+                MprisPlayer::pause();
+            }
+            std::cout << C_GREEN << "✔ " << C_RESET << "Media playback paused\n";
+            return 0;
+        } else if (sub == "stop") {
+            GVariant* res = call_method("MediaStop", nullptr, false);
+            if (res) {
+                g_variant_unref(res);
+            } else {
+                MprisPlayer::stop();
+            }
+            std::cout << C_GREEN << "✔ " << C_RESET << "Media playback stopped\n";
+            return 0;
+        } else if (sub == "status" || sub == "info" || sub == "current" || sub == "get") {
+            MediaInfo inf;
+            GVariant* res = call_method("GetMediaInfo", nullptr, false);
+            if (res) {
+                const char* json_str = nullptr;
+                g_variant_get(res, "(&s)", &json_str);
+                if (json_str) {
+                    try {
+                        auto j = json::parse(json_str);
+                        inf.title = j.value("title", "");
+                        inf.artist = j.value("artist", "");
+                        inf.album = j.value("album", "");
+                        inf.status = j.value("status", "Stopped");
+                        inf.player_name = j.value("player", "");
+                        inf.is_playing = j.value("is_playing", false);
+                    } catch (...) {}
+                }
+                g_variant_unref(res);
+            } else {
+                inf = MprisPlayer::get_info();
+            }
+
+            if (inf.title.empty() && inf.artist.empty()) {
+                std::cout << C_DIM << "No active media playing\n" << C_RESET;
+                return 0;
+            }
+
+            std::cout << C_BOLD << (inf.is_playing ? C_GREEN : C_YELLOW)
+                      << (inf.is_playing ? "▶ Playing: " : "⏸ Paused: ") << C_RESET
+                      << C_BOLD << inf.title << C_RESET;
+            if (!inf.artist.empty()) {
+                std::cout << " by " << C_CYAN << inf.artist << C_RESET;
+            }
+            if (!inf.album.empty()) {
+                std::cout << " (" << C_DIM << inf.album << C_RESET << ")";
+            }
+            if (!inf.player_name.empty()) {
+                std::cout << " [" << C_DIM << inf.player_name << C_RESET << "]";
+            }
+            std::cout << "\n";
+            return 0;
+        } else {
+            std::cerr << C_RED << "Unknown media subcommand: " << C_RESET << sub << "\n";
+            std::cerr << "Usage: zenithctl media [play-pause|next|prev|play|pause|stop|status]\n";
+            return 1;
+        }
     }
 
     // --- Reminder Commands ---

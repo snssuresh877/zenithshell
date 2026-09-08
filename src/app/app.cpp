@@ -19,6 +19,7 @@
 #include "shell/power/power_menu.hpp"
 #include "shell/wallpaper/wallpaper_engine.hpp"
 #include "shell/osd/osd_window.hpp"
+#include "dbus/mpris_player.hpp"
 #include <iostream>
 
 namespace zenith {
@@ -87,6 +88,9 @@ void App::on_activate(GtkApplication* app, gpointer user_data) {
 
     // Initialize Central DBus Service (dev.zenith.Shell)
     DBusService::instance().init();
+
+    // Initialize Native D-Bus MPRIS Media Watcher
+    MprisPlayer::init();
 
     // Initialize Spotlight & Overlays
     SpotlightSearch::init(app);
