@@ -56,6 +56,15 @@ static const gchar introspection_xml[] =
     "    <method name='SetWallpaperDir'>"
     "      <arg type='s' name='dir_path' direction='in'/>"
     "    </method>"
+    "    <method name='GetTheme'>"
+    "      <arg type='s' name='theme_name' direction='out'/>"
+    "    </method>"
+    "    <method name='ListThemes'>"
+    "      <arg type='as' name='themes' direction='out'/>"
+    "    </method>"
+    "    <method name='GetWallpaper'>"
+    "      <arg type='s' name='wallpaper_path' direction='out'/>"
+    "    </method>"
     "    <method name='GetStats'>"
     "      <arg type='s' name='json_stats' direction='out'/>"
     "    </method>"
@@ -283,6 +292,20 @@ void DBusService::handle_method_call(GDBusConnection*,
             }, strdup(path.c_str()));
         }
         g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "GetTheme") {
+        std::string theme = ThemeEngine::get_current_theme().name;
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(s)", theme.c_str()));
+    } else if (method == "ListThemes") {
+        auto themes = ThemeEngine::get_available_themes();
+        GVariantBuilder builder;
+        g_variant_builder_init(&builder, G_VARIANT_TYPE("as"));
+        for (const auto& t : themes) {
+            g_variant_builder_add(&builder, "s", t.c_str());
+        }
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(as)", &builder));
+    } else if (method == "GetWallpaper") {
+        std::string wp = ThemeEngine::get_current_wallpaper_path();
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(s)", wp.c_str()));
     } else if (method == "GetStats") {
         SysStats stats = SysMonitor::get_stats();
         int vol = AudioManager::get_volume();

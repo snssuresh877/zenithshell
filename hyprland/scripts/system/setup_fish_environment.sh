@@ -148,9 +148,9 @@ alias frp="rg --column --line-number --no-heading --color=always --smart-case --
 
 alias zenith='$HOME/.local/bin/zenithshell &'
 alias zenith-restart='pkill -9 -f zenithshell; and sleep 0.4; and setsid $HOME/.local/bin/zenithshell >/tmp/zenithshell.log 2>&1 &'
-alias zenith-stats='gdbus call --session --dest dev.zenith.Shell --object-path /dev/zenith/Shell --method dev.zenith.Shell.GetStats'
-alias zenith-theme='gdbus call --session --dest dev.zenith.Shell --object-path /dev/zenith/Shell --method dev.zenith.Shell.ToggleTheme'
-alias zenith-wall='gdbus call --session --dest dev.zenith.Shell --object-path /dev/zenith/Shell --method dev.zenith.Shell.NextWallpaper'
+alias zenith-stats='zenithctl stats'
+alias zenith-theme='zenithctl theme next'
+alias zenith-wall='zenithctl wallpaper cycle'
 alias yazi='yazi'
 
 # =========================================================

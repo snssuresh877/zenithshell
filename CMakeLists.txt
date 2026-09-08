@@ -82,6 +82,7 @@ set(SOURCES
     src/shell/keybinds/keybinds_overlay.cpp
     src/shell/power/power_menu.cpp
     src/shell/wallpaper/wallpaper_engine.cpp
+    src/cli/zenithctl.cpp
 )
 
 add_executable(zenithshell ${SOURCES})
@@ -97,5 +98,6 @@ target_link_libraries(zenithshell PRIVATE
 # Standard Install Target
 include(GNUInstallDirs)
 install(TARGETS zenithshell DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(CODE "execute_process(COMMAND \${CMAKE_COMMAND} -E create_symlink zenithshell \$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}/zenithctl)")
 install(FILES config.json style.css DESTINATION ${CMAKE_INSTALL_DATADIR}/zenithshell)
 install(FILES zenithshell.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)

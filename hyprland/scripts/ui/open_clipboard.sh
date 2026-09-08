@@ -9,7 +9,7 @@ if [ -f "$STATE_FILE" ]; then
 fi
 
 if [ "$MODE" = "zenithshell" ]; then
-    gdbus call --session --dest dev.zenith.Shell --object-path /dev/zenith/Shell --method dev.zenith.Shell.ToggleClipboard >/dev/null 2>&1 || (cliphist list | rofi -dmenu -p "Clipboard" | cliphist decode | wl-copy)
+    zenithctl clipboard >/dev/null 2>&1 || (cliphist list | rofi -dmenu -p "Clipboard" | cliphist decode | wl-copy 2>/dev/null)
 else
-    cliphist list | rofi -dmenu -p "Clipboard" | cliphist decode | wl-copy
+    cliphist list | rofi -dmenu -p "Clipboard" | cliphist decode | wl-copy 2>/dev/null
 fi

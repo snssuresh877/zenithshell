@@ -4,6 +4,15 @@ set -e
 
 WALLPAPER_DIR="$HOME/Pictures/wallpapers"
 
+# Check if ZenithShell native wallpaper engine is active
+if command -v zenithctl >/dev/null 2>&1; then
+  if zenithctl wallpaper cycle 2>/dev/null; then
+    notify-send "Wallpaper changed" "$(zenithctl wallpaper current 2>/dev/null | xargs basename)"
+    exit 0
+  fi
+fi
+
+# Fallback to external tools if ZenithShell is not active
 # Ensure wallpaper daemon exists
 pgrep -x awww-daemon >/dev/null || awww-daemon &
 
