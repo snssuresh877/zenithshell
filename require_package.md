@@ -35,7 +35,7 @@ cd ~/Projects/zenithshell
 | **Audio Infrastructure** | `pipewire`, `wireplumber`, `pipewire-audio`, `pipewire-alsa`, `pipewire-pulse`, `pipewire-jack`, `pavucontrol`, `playerctl` | PipeWire low-latency audio, real-time volume routing, GUI mixer (`SUPER + P`), hardware media keys. |
 | **Network & Bluetooth** | `networkmanager` (`nmcli`), `network-manager-applet` (`nm-connection-editor`), `bluez`, `bluez-utils`, `blueman` | Control Center background Wi-Fi scanning (`nmcli`), advanced network dialog, and Bluetooth pairing. |
 | **Backlight & Power Management** | `brightnessctl`, `hypridle`, `hyprlock`, `hyprshade` | Hardware backlight slider, Wayland lock screen (`SUPER + L`), idle sleep, and night light shaders. |
-| **Wallpaper & Theming** | `awww` (or `swww`), `python-pywal`, `nwg-look`, `bibata-cursor-theme`, `papirus-icon-theme` | Animated wallpaper transitions, dynamic color palette extraction, GTK & cursor themes. |
+| **Wallpaper & Theming** | `awww` (or `swww`), `nwg-look`, `bibata-cursor-theme`, `papirus-icon-theme` | Animated wallpaper transitions, inbuilt native C++ dynamic palette extractor (zero Python/pywal dependency!), GTK & cursor themes. |
 | **Clipboard History** | `cliphist`, `wl-clipboard`, `wl-clip-persist` | `SUPER + V` native Zenith clipboard overlay with search and close-persistence. |
 | **Screenshots & Capture** | `grim`, `slurp`, `swappy`, `libnotify`, `jq` | `Print` (window), `SHIFT + Print` (interactive area), instant editor, and desktop notifications. |
 | **Color Picker & Recording** | `hyprpicker`, `wf-recorder` | `SUPER + SHIFT + C` pixel color sampler, `SUPER + SHIFT + R` instant Wayland screen recorder. |
@@ -65,7 +65,7 @@ sudo pacman -S --needed \
     pipewire wireplumber pipewire-audio pipewire-alsa pipewire-pulse pipewire-jack pavucontrol playerctl \
     networkmanager network-manager-applet bluez bluez-utils blueman \
     brightnessctl hypridle hyprlock hyprshade \
-    python-pywal nwg-look bibata-cursor-theme papirus-icon-theme \
+    nwg-look bibata-cursor-theme papirus-icon-theme \
     cliphist wl-clipboard wl-clip-persist \
     grim slurp swappy hyprpicker wf-recorder tesseract tesseract-data-eng libnotify jq \
     foot kitty fish starship \
@@ -110,7 +110,7 @@ sudo dnf install -y \
     pipewire wireplumber pavucontrol playerctl \
     NetworkManager network-manager-applet bluez blueman \
     brightnessctl hypridle hyprlock \
-    python3-pywal wl-clipboard \
+    wl-clipboard \
     grim slurp wf-recorder tesseract \
     foot kitty fish btop ripgrep fzf zoxide eza bat p7zip \
     ffmpegthumbnailer ImageMagick chafa \
@@ -134,16 +134,13 @@ sudo apt install -y \
     pipewire wireplumber pavucontrol playerctl \
     network-manager network-manager-gnome bluez blueman \
     brightnessctl hypridle hyprlock \
-    python3-pip wl-clipboard \
+    wl-clipboard \
     grim slurp wf-recorder tesseract-ocr \
     foot kitty fish btop ripgrep fzf zoxide eza bat p7zip-full \
     ffmpegthumbnailer imagemagick chafa \
     fonts-noto fonts-noto-cjk fonts-noto-color-emoji \
     fonts-liberation fonts-carlito fonts-caladea \
     libreoffice
-
-# Install pywal via pip
-pip3 install --user pywal 2>/dev/null || true
 ```
 
 > [!NOTE]

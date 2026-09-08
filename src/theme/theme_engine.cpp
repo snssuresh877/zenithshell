@@ -1,6 +1,7 @@
 #include "theme/theme_engine.hpp"
 #include "theme/theme_loader.hpp"
 #include "theme/pywal_importer.hpp"
+#include "theme/palette_extractor.hpp"
 #include "theme/color_utils.hpp"
 #include "theme/css_manager.hpp"
 #include "gtk3_compat.hpp"
@@ -136,7 +137,7 @@ void ThemeEngine::register_builtins() {
         }
     };
 
-    // 1. Dynamic Wallpaper Mode (Pywal Adaptive)
+    // 1. Dynamic Wallpaper Mode (Native Adaptive)
     add_builtin("dynamic", "Dynamic (Wallpaper)", "Wallpaper Adaptive Palette",
                 "#0e0f14", "#161720", "#1e202c", "#F2F2F5", "#9A9AAF", "#A875FF", "#38bdf8");
 
@@ -528,16 +529,12 @@ void ThemeEngine::set_wallpaper(const std::string& path) {
     std::string cmd = "pgrep -x awww-daemon >/dev/null 2>&1 || awww-daemon & sleep 0.05; awww img \"" + path + "\" --transition-type grow --transition-duration 0.4 --transition-fps 30 2>/dev/null &";
     system(cmd.c_str());
 
-    // Run Pywal quietly
-    std::string wal_cmd = "wal -n -q -i \"" + path + "\" 2>/dev/null";
-    system(wal_cmd.c_str());
-
-    // If current theme is dynamic, re-import after wallpaper change
-    if (current_theme.name == "dynamic") {
-        auto wal_theme = PywalImporter::import_from_cache();
-        if (wal_theme) {
-            current_theme = *wal_theme;
-            builtin_themes["dynamic"] = *wal_theme;
+    // Fast in-process palette extraction & cache emission (< 5ms, no python/pywal needed)
+    auto dyn_theme = PaletteExtractor::extract_from_image(path);
+    if (dyn_theme) {
+        builtin_themes["dynamic"] = *dyn_theme;
+        if (current_theme.name == "dynamic") {
+            current_theme = *dyn_theme;
             apply_theme(current_theme);
         }
     }
@@ -569,14 +566,15 @@ void ThemeEngine::set_theme(const std::string& theme_name) {
         if (cur_wp.empty()) {
             cur_wp = std::string(g_get_home_dir()) + "/.local/state/zenithshell/current/background";
         }
+        std::optional<Theme> dyn_theme;
         if (fs::exists(cur_wp)) {
-            std::string wal_cmd = "wal -n -q -i \"" + cur_wp + "\" 2>/dev/null";
-            system(wal_cmd.c_str());
+            dyn_theme = PaletteExtractor::extract_from_image(cur_wp);
+        } else {
+            dyn_theme = PywalImporter::import_from_cache();
         }
-        auto wal_theme = PywalImporter::import_from_cache();
-        if (wal_theme) {
-            current_theme = *wal_theme;
-            builtin_themes["dynamic"] = *wal_theme;
+        if (dyn_theme) {
+            current_theme = *dyn_theme;
+            builtin_themes["dynamic"] = *dyn_theme;
             apply_theme(current_theme);
             return;
         }

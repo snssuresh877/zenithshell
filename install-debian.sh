@@ -99,19 +99,8 @@ sudo systemctl enable --now udisks2.service 2>/dev/null || true
 echo -e "${CYAN}Checking availability of Wayland idle, lock, and terminal packages in APT...${RESET}"
 sudo apt install -y hypridle hyprlock hyprland foot kitty fish btop ripgrep fd-find fzf zoxide 2>/dev/null || true
 
-# --- 5. Setup Python Pywal (Handling PEP 668 on Debian 12+) ---
-echo -e "\n${BLUE}▶ [4/5] Installing Python Pywal for dynamic theme extraction...${RESET}"
-if command -v pipx >/dev/null 2>&1; then
-    pipx install pywal 2>/dev/null || true
-else
-    sudo apt install -y pipx 2>/dev/null || true
-    if command -v pipx >/dev/null 2>&1; then
-        pipx install pywal 2>/dev/null || true
-    else
-        sudo apt install -y python3-pip 2>/dev/null || true
-        pip3 install --user --break-system-packages pywal 2>/dev/null || pip3 install --user pywal 2>/dev/null || true
-    fi
-fi
+# --- 5. Dynamic Theming (Native C++ Inbuilt Extractor) ---
+echo -e "\n${BLUE}▶ [4/5] Dynamic Palette Extractor is built-in natively in C++ (Zero Python/Pywal dependency)...${RESET}"
 
 # Ensure ~/.local/bin is in PATH
 mkdir -p "$HOME/.local/bin"

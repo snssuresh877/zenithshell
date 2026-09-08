@@ -64,6 +64,7 @@ set(SOURCES
     src/theme/theme_engine.cpp
     src/theme/theme_loader.cpp
     src/theme/pywal_importer.cpp
+    src/theme/palette_extractor.cpp
     src/theme/css_manager.cpp
     src/shell/bar/bar_window.cpp
     src/shell/bar/workspace_widget.cpp
