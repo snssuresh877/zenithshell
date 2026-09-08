@@ -146,6 +146,9 @@ sudo apt install -y \
 pip3 install --user pywal 2>/dev/null || true
 ```
 
+> [!NOTE]
+> **Debian Users**: See the dedicated [**`DEBIAN_GUIDE.md`**](DEBIAN_GUIDE.md) for full details on running Hyprland on Debian 12 & 13, PEP 668 Python workarounds, automated installation (`./install-debian.sh`), and package mappings.
+
 ---
 
 ## 🔍 Critical Pain Points Solved

@@ -59,6 +59,7 @@ Designed as a high-performance, aesthetically refined replacement for heavy web/
 - [Hyprland Keybinding Integration](#-hyprland-keybinding-integration)
 - [Build & Installation](#-build--installation)
 - [Required Packages Guide (require_package.md)](require_package.md)
+- [Debian & Ubuntu Setup Guide (DEBIAN_GUIDE.md)](DEBIAN_GUIDE.md)
 
 ---
 
@@ -402,6 +403,9 @@ chmod +x ./install-debian.sh
 ./install-debian.sh
 ```
 This dedicated script automatically handles Debian APT package names, PEP 668 Python environments (`pipx` / `pywal`), Starship prompt installation, and native C++20 compilation.
+
+> [!TIP]
+> **Complete Debian Walkthrough**: See [**`DEBIAN_GUIDE.md`**](DEBIAN_GUIDE.md) for step-by-step instructions on running Hyprland on Debian 12 & 13, complete APT package translation, font setups, and systemd services.
 
 ---
 
