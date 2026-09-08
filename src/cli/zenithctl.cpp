@@ -385,11 +385,16 @@ int ZenithCtl::run(int argc, char** argv) {
             } else if (args.size() > 2) {
                 try { delta = std::stoi(args[2]); } catch (...) {}
             }
+            int cur = -1;
             GVariant* res = call_method("IncreaseBrightness", g_variant_new("(i)", delta));
-            if (res) g_variant_unref(res);
-            else BacklightManager::increase_brightness(delta);
+            if (res) {
+                g_variant_get(res, "(i)", &cur);
+                g_variant_unref(res);
+            } else {
+                BacklightManager::increase_brightness(delta);
+                cur = BacklightManager::get_brightness_percent();
+            }
 
-            int cur = BacklightManager::get_brightness_percent();
             std::cout << C_GREEN << "✔ " << C_RESET << "Brightness: " << C_BOLD << cur << "%" << C_RESET
                       << " (+" << delta << "%)\n";
             return 0;
@@ -400,11 +405,16 @@ int ZenithCtl::run(int argc, char** argv) {
             } else if (args.size() > 2) {
                 try { delta = std::stoi(args[2]); } catch (...) {}
             }
+            int cur = -1;
             GVariant* res = call_method("DecreaseBrightness", g_variant_new("(i)", delta));
-            if (res) g_variant_unref(res);
-            else BacklightManager::decrease_brightness(delta);
+            if (res) {
+                g_variant_get(res, "(i)", &cur);
+                g_variant_unref(res);
+            } else {
+                BacklightManager::decrease_brightness(delta);
+                cur = BacklightManager::get_brightness_percent();
+            }
 
-            int cur = BacklightManager::get_brightness_percent();
             std::cout << C_GREEN << "✔ " << C_RESET << "Brightness: " << C_BOLD << cur << "%" << C_RESET
                       << " (-" << delta << "%)\n";
             return 0;
@@ -419,11 +429,17 @@ int ZenithCtl::run(int argc, char** argv) {
                 std::cerr << C_RED << "Error: " << C_RESET << "Invalid brightness percentage: " << val_str << "\n";
                 return 1;
             }
+            int cur = pct;
             GVariant* res = call_method("SetBrightness", g_variant_new("(i)", pct));
-            if (res) g_variant_unref(res);
-            else BacklightManager::set_brightness_percent(pct);
+            if (res) {
+                g_variant_get(res, "(i)", &cur);
+                g_variant_unref(res);
+            } else {
+                BacklightManager::set_brightness_percent(pct);
+                cur = BacklightManager::get_brightness_percent();
+            }
 
-            std::cout << C_GREEN << "✔ " << C_RESET << "Brightness set: " << C_BOLD << pct << "%" << C_RESET << "\n";
+            std::cout << C_GREEN << "✔ " << C_RESET << "Brightness set: " << C_BOLD << cur << "%" << C_RESET << "\n";
             return 0;
         }
     }
@@ -437,6 +453,7 @@ int ZenithCtl::run(int argc, char** argv) {
                 g_variant_get(res, "(i)", &val);
                 g_variant_unref(res);
             } else {
+                AudioManager::update();
                 val = AudioManager::get_volume();
             }
             std::cout << val << "%\n";
@@ -445,10 +462,17 @@ int ZenithCtl::run(int argc, char** argv) {
 
         std::string sub = args[1];
         if (sub == "mute" || sub == "toggle-mute") {
+            gboolean muted = FALSE;
             GVariant* res = call_method("ToggleVolumeMute");
-            if (res) g_variant_unref(res);
-            else AudioManager::toggle_mute();
-            std::cout << C_GREEN << "✔ " << C_RESET << "Volume mute toggled\n";
+            if (res) {
+                g_variant_get(res, "(b)", &muted);
+                g_variant_unref(res);
+            } else {
+                AudioManager::update();
+                AudioManager::toggle_mute();
+                muted = AudioManager::is_muted();
+            }
+            std::cout << C_GREEN << "✔ " << C_RESET << "Volume " << (muted ? C_YELLOW : C_GREEN) << (muted ? "muted" : "unmuted") << C_RESET << "\n";
             return 0;
         } else if (sub == "up" || sub == "+" || (sub.size() > 1 && sub[0] == '+')) {
             int delta = 5;
@@ -457,11 +481,18 @@ int ZenithCtl::run(int argc, char** argv) {
             } else if (args.size() > 2) {
                 try { delta = std::stoi(args[2]); } catch (...) {}
             }
+            int cur = -1;
             GVariant* res = call_method("IncreaseVolume", g_variant_new("(i)", delta));
-            if (res) g_variant_unref(res);
-            else AudioManager::set_volume(AudioManager::get_volume() + delta);
+            if (res) {
+                g_variant_get(res, "(i)", &cur);
+                g_variant_unref(res);
+            } else {
+                AudioManager::update();
+                int now = AudioManager::get_volume();
+                cur = std::clamp(now + delta, 0, 150);
+                AudioManager::set_volume(cur);
+            }
 
-            int cur = AudioManager::get_volume();
             std::cout << C_GREEN << "✔ " << C_RESET << "Volume: " << C_BOLD << cur << "%" << C_RESET
                       << " (+" << delta << "%)\n";
             return 0;
@@ -472,11 +503,18 @@ int ZenithCtl::run(int argc, char** argv) {
             } else if (args.size() > 2) {
                 try { delta = std::stoi(args[2]); } catch (...) {}
             }
+            int cur = -1;
             GVariant* res = call_method("DecreaseVolume", g_variant_new("(i)", delta));
-            if (res) g_variant_unref(res);
-            else AudioManager::set_volume(AudioManager::get_volume() - delta);
+            if (res) {
+                g_variant_get(res, "(i)", &cur);
+                g_variant_unref(res);
+            } else {
+                AudioManager::update();
+                int now = AudioManager::get_volume();
+                cur = std::clamp(now - delta, 0, 150);
+                AudioManager::set_volume(cur);
+            }
 
-            int cur = AudioManager::get_volume();
             std::cout << C_GREEN << "✔ " << C_RESET << "Volume: " << C_BOLD << cur << "%" << C_RESET
                       << " (-" << delta << "%)\n";
             return 0;
@@ -491,21 +529,33 @@ int ZenithCtl::run(int argc, char** argv) {
                 std::cerr << C_RED << "Error: " << C_RESET << "Invalid volume percentage: " << val_str << "\n";
                 return 1;
             }
+            int cur = pct;
             GVariant* res = call_method("SetVolume", g_variant_new("(i)", pct));
-            if (res) g_variant_unref(res);
-            else AudioManager::set_volume(pct);
+            if (res) {
+                g_variant_get(res, "(i)", &cur);
+                g_variant_unref(res);
+            } else {
+                AudioManager::set_volume(pct);
+            }
 
-            std::cout << C_GREEN << "✔ " << C_RESET << "Volume set: " << C_BOLD << pct << "%" << C_RESET << "\n";
+            std::cout << C_GREEN << "✔ " << C_RESET << "Volume set: " << C_BOLD << cur << "%" << C_RESET << "\n";
             return 0;
         }
     }
 
     // --- Mic Commands ---
     if (args[0] == "mic") {
+        gboolean muted = FALSE;
         GVariant* res = call_method("ToggleMicMute");
-        if (res) g_variant_unref(res);
-        else AudioManager::toggle_mic_mute();
-        std::cout << C_GREEN << "✔ " << C_RESET << "Microphone mute toggled\n";
+        if (res) {
+            g_variant_get(res, "(b)", &muted);
+            g_variant_unref(res);
+        } else {
+            AudioManager::update();
+            AudioManager::toggle_mic_mute();
+            muted = AudioManager::is_mic_muted();
+        }
+        std::cout << C_GREEN << "✔ " << C_RESET << "Microphone " << (muted ? C_YELLOW : C_GREEN) << (muted ? "muted" : "unmuted") << C_RESET << "\n";
         return 0;
     }
 

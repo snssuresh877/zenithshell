@@ -72,27 +72,37 @@ static const gchar introspection_xml[] =
     "    </method>"
     "    <method name='SetBrightness'>"
     "      <arg type='i' name='percent' direction='in'/>"
+    "      <arg type='i' name='new_brightness' direction='out'/>"
     "    </method>"
     "    <method name='IncreaseBrightness'>"
     "      <arg type='i' name='delta' direction='in'/>"
+    "      <arg type='i' name='new_brightness' direction='out'/>"
     "    </method>"
     "    <method name='DecreaseBrightness'>"
     "      <arg type='i' name='delta' direction='in'/>"
+    "      <arg type='i' name='new_brightness' direction='out'/>"
     "    </method>"
     "    <method name='GetVolume'>"
     "      <arg type='i' name='percent' direction='out'/>"
     "    </method>"
     "    <method name='SetVolume'>"
     "      <arg type='i' name='percent' direction='in'/>"
+    "      <arg type='i' name='new_volume' direction='out'/>"
     "    </method>"
     "    <method name='IncreaseVolume'>"
     "      <arg type='i' name='delta' direction='in'/>"
+    "      <arg type='i' name='new_volume' direction='out'/>"
     "    </method>"
     "    <method name='DecreaseVolume'>"
     "      <arg type='i' name='delta' direction='in'/>"
+    "      <arg type='i' name='new_volume' direction='out'/>"
     "    </method>"
-    "    <method name='ToggleVolumeMute'/>"
-    "    <method name='ToggleMicMute'/>"
+    "    <method name='ToggleVolumeMute'>"
+    "      <arg type='b' name='muted' direction='out'/>"
+    "    </method>"
+    "    <method name='ToggleMicMute'>"
+    "      <arg type='b' name='muted' direction='out'/>"
+    "    </method>"
     "    <method name='ShowOSD'>"
     "      <arg type='s' name='type' direction='in'/>"
     "      <arg type='i' name='val' direction='in'/>"
@@ -345,46 +355,52 @@ void DBusService::handle_method_call(GDBusConnection*,
         gint val = 0;
         g_variant_get(parameters, "(i)", &val);
         BacklightManager::set_brightness_percent(val);
-        OSDWindow::show_brightness(val);
-        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+        int cur = BacklightManager::get_brightness_percent();
+        OSDWindow::show_brightness(cur);
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(i)", cur));
     } else if (method == "IncreaseBrightness") {
         gint delta = 5;
         g_variant_get(parameters, "(i)", &delta);
         BacklightManager::increase_brightness(delta);
-        OSDWindow::show_brightness(BacklightManager::get_brightness_percent());
-        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+        int cur = BacklightManager::get_brightness_percent();
+        OSDWindow::show_brightness(cur);
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(i)", cur));
     } else if (method == "DecreaseBrightness") {
         gint delta = 5;
         g_variant_get(parameters, "(i)", &delta);
         BacklightManager::decrease_brightness(delta);
-        OSDWindow::show_brightness(BacklightManager::get_brightness_percent());
-        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+        int cur = BacklightManager::get_brightness_percent();
+        OSDWindow::show_brightness(cur);
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(i)", cur));
     } else if (method == "GetVolume") {
         int v = AudioManager::get_volume();
         g_dbus_method_invocation_return_value(invocation, g_variant_new("(i)", v));
     } else if (method == "SetVolume") {
         gint val = 0;
         g_variant_get(parameters, "(i)", &val);
-        AudioManager::set_volume(val);
-        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+        int new_vol = std::clamp(val, 0, 150);
+        AudioManager::set_volume(new_vol);
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(i)", new_vol));
     } else if (method == "IncreaseVolume") {
         gint delta = 5;
         g_variant_get(parameters, "(i)", &delta);
         int cur = AudioManager::get_volume();
-        AudioManager::set_volume(cur + delta);
-        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+        int new_vol = std::clamp(cur + delta, 0, 150);
+        AudioManager::set_volume(new_vol);
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(i)", new_vol));
     } else if (method == "DecreaseVolume") {
         gint delta = 5;
         g_variant_get(parameters, "(i)", &delta);
         int cur = AudioManager::get_volume();
-        AudioManager::set_volume(cur - delta);
-        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+        int new_vol = std::clamp(cur - delta, 0, 150);
+        AudioManager::set_volume(new_vol);
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(i)", new_vol));
     } else if (method == "ToggleVolumeMute") {
         AudioManager::toggle_mute();
-        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(b)", AudioManager::is_muted()));
     } else if (method == "ToggleMicMute") {
         AudioManager::toggle_mic_mute();
-        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(b)", AudioManager::is_mic_muted()));
     } else if (method == "ShowOSD") {
         const char* type_str = nullptr;
         gint val = 0;
