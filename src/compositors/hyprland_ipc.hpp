@@ -25,14 +25,24 @@ public:
     void set_window_title_callback(WindowTitleCallback cb) { add_window_title_callback(cb); }
     void set_window_event_callback(WindowEventCallback cb) { add_window_event_callback(cb); }
     
+    // Direct Socket IPC methods (zero subprocess overhead)
+    static std::string request(const std::string& cmd);
+    static std::string query_json(const std::string& endpoint);
+    static bool dispatch(const std::string& cmd);
+
     static void switch_workspace(int workspace_id);
     static void switch_workspace_relative(int delta);
+    static void focus_window(const std::string& target);
+    static void close_window(const std::string& address);
+    static int get_active_workspace_id();
+    static std::string get_clients_json();
 
 private:
     HyprlandIPC() = default;
     ~HyprlandIPC();
 
-    std::string socket_path;
+    std::string event_socket_path;
+    std::string req_socket_path;
     bool running = false;
     std::thread ipc_thread;
 

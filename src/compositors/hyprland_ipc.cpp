@@ -37,34 +37,129 @@ void HyprlandIPC::init() {
         return;
     }
 
-    socket_path = std::string(xdg_runtime) + "/hypr/" + his + "/.socket2.sock";
+    event_socket_path = std::string(xdg_runtime) + "/hypr/" + his + "/.socket2.sock";
+    req_socket_path = std::string(xdg_runtime) + "/hypr/" + his + "/.socket.sock";
     running = true;
     ipc_thread = std::thread(&HyprlandIPC::listen_loop, this);
-    std::cout << "[HyprlandIPC] Connected to Hyprland socket at " << socket_path << std::endl;
+    std::cout << "[HyprlandIPC] Connected to Hyprland event socket at " << event_socket_path << std::endl;
 
-    // Query initial active workspace
+    // Query initial active workspace directly via request socket (zero subprocesses)
     g_idle_add([](gpointer) -> gboolean {
-        std::array<char, 512> buffer;
-        std::string result;
-        std::unique_ptr<FILE, decltype(&pclose)> pipe(popen("hyprctl activeworkspace -j 2>/dev/null", "r"), pclose);
-        if (pipe) {
-            while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
-                result += buffer.data();
-            }
-        }
-        if (!result.empty()) {
-            try {
-                auto j = json::parse(result);
-                if (j.contains("id")) {
-                    int ws_id = j["id"];
-                    for (const auto& cb : HyprlandIPC::instance().workspace_cbs) {
-                        if (cb) cb(ws_id);
-                    }
-                }
-            } catch (...) {}
+        int ws_id = HyprlandIPC::get_active_workspace_id();
+        for (const auto& cb : HyprlandIPC::instance().workspace_cbs) {
+            if (cb) cb(ws_id);
         }
         return FALSE;
     }, nullptr);
+}
+
+std::string HyprlandIPC::request(const std::string& cmd) {
+    const char* his = std::getenv("HYPRLAND_INSTANCE_SIGNATURE");
+    const char* xdg_runtime = std::getenv("XDG_RUNTIME_DIR");
+    if (!his || !xdg_runtime) return "";
+
+    std::string sock_p = std::string(xdg_runtime) + "/hypr/" + his + "/.socket.sock";
+
+    int sock = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (sock < 0) return "";
+
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof(tv));
+    setsockopt(sock, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof(tv));
+
+    struct sockaddr_un addr;
+    std::memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    std::strncpy(addr.sun_path, sock_p.c_str(), sizeof(addr.sun_path) - 1);
+
+    if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        close(sock);
+        return "";
+    }
+
+    if (write(sock, cmd.data(), cmd.size()) < 0) {
+        close(sock);
+        return "";
+    }
+
+    std::string response;
+    char buffer[4096];
+    ssize_t bytes = 0;
+    while ((bytes = read(sock, buffer, sizeof(buffer))) > 0) {
+        response.append(buffer, bytes);
+    }
+
+    close(sock);
+    return response;
+}
+
+std::string HyprlandIPC::query_json(const std::string& endpoint) {
+    return request("j/" + endpoint);
+}
+
+bool HyprlandIPC::dispatch(const std::string& cmd) {
+    std::string resp = request("dispatch " + cmd);
+    return resp.find("ok") != std::string::npos;
+}
+
+void HyprlandIPC::switch_workspace(int id) {
+    // 1. Try Lua dispatcher
+    if (dispatch("hl.dsp.focus({workspace=\"" + std::to_string(id) + "\"})")) return;
+    // 2. Try standard Hyprland dispatcher
+    if (dispatch("workspace " + std::to_string(id))) return;
+    // 3. Fallback
+    std::string cmd = "hyprctl dispatch workspace " + std::to_string(id) + " 2>/dev/null &";
+    system(cmd.c_str());
+}
+
+void HyprlandIPC::switch_workspace_relative(int delta) {
+    std::string delta_str = (delta > 0) ? "e+1" : "e-1";
+    // 1. Try Lua dispatcher
+    if (dispatch("hl.dsp.focus({workspace=\"" + delta_str + "\"})")) return;
+    // 2. Try standard Hyprland dispatcher
+    if (dispatch("workspace " + delta_str)) return;
+    // 3. Fallback
+    std::string cmd = "hyprctl dispatch workspace " + delta_str + " 2>/dev/null &";
+    system(cmd.c_str());
+}
+
+void HyprlandIPC::focus_window(const std::string& target) {
+    if (target.empty()) return;
+    // 1. Try Lua dispatcher
+    if (dispatch("hl.dsp.focus({window=\"" + target + "\"})")) return;
+    // 2. Try standard Hyprland dispatcher
+    if (dispatch("focuswindow " + target)) return;
+    // 3. Fallback
+    std::string cmd = "hyprctl dispatch focuswindow " + target + " 2>/dev/null &";
+    system(cmd.c_str());
+}
+
+void HyprlandIPC::close_window(const std::string& address) {
+    if (address.empty()) return;
+    // 1. Try Lua dispatcher
+    if (dispatch("hl.dsp.window.close({address=\"" + address + "\"})")) return;
+    // 2. Try standard Hyprland dispatcher
+    if (dispatch("closewindow address:" + address)) return;
+    // 3. Fallback
+    std::string cmd = "hyprctl dispatch closewindow address:" + address + " 2>/dev/null &";
+    system(cmd.c_str());
+}
+
+int HyprlandIPC::get_active_workspace_id() {
+    std::string res = query_json("activeworkspace");
+    if (!res.empty()) {
+        try {
+            auto j = json::parse(res);
+            if (j.contains("id")) return j["id"].get<int>();
+        } catch (...) {}
+    }
+    return 1;
+}
+
+std::string HyprlandIPC::get_clients_json() {
+    return query_json("clients");
 }
 
 void HyprlandIPC::add_workspace_callback(WorkspaceCallback cb) {
@@ -79,17 +174,6 @@ void HyprlandIPC::add_window_event_callback(WindowEventCallback cb) {
     window_event_cbs.push_back(cb);
 }
 
-void HyprlandIPC::switch_workspace(int id) {
-    std::string cmd = "hyprctl dispatch 'hl.dsp.focus({workspace=\"" + std::to_string(id) + "\"})' 2>/dev/null &";
-    system(cmd.c_str());
-}
-
-void HyprlandIPC::switch_workspace_relative(int delta) {
-    std::string delta_str = (delta > 0) ? "e+1" : "e-1";
-    std::string cmd = "hyprctl dispatch 'hl.dsp.focus({workspace=\"" + delta_str + "\"})' 2>/dev/null &";
-    system(cmd.c_str());
-}
-
 void HyprlandIPC::listen_loop() {
     while (running) {
         int sock = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -101,7 +185,7 @@ void HyprlandIPC::listen_loop() {
         struct sockaddr_un addr;
         std::memset(&addr, 0, sizeof(addr));
         addr.sun_family = AF_UNIX;
-        std::strncpy(addr.sun_path, socket_path.c_str(), sizeof(addr.sun_path) - 1);
+        std::strncpy(addr.sun_path, event_socket_path.c_str(), sizeof(addr.sun_path) - 1);
 
         if (connect(sock, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
             close(sock);

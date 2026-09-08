@@ -1,4 +1,5 @@
 #include "shell/tray/system_tray_manager.hpp"
+#include "compositors/hyprland_ipc.hpp"
 #include "gtk3_compat.hpp"
 #include <iostream>
 #include <filesystem>
@@ -337,8 +338,7 @@ void SystemTrayManager::activate_item(const std::string& service, const std::str
     }
 
     // 3. Focus corresponding window in Hyprland if it appears
-    std::string focus_cmd = "hyprctl dispatch 'hl.dsp.focus({window=\"class:" + app_service + "\"})' 2>/dev/null &";
-    system(focus_cmd.c_str());
+    HyprlandIPC::focus_window("class:" + app_service);
 
     std::cout << "[SystemTrayManager] Activated tray item & application: " << service << " (" << app_service << ")" << std::endl;
 }

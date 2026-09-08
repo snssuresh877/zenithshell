@@ -156,14 +156,17 @@ void ActiveAppsDrawer::load_desktop_apps_cache() {
 std::vector<AppClientInfo> ActiveAppsDrawer::fetch_clients() {
     std::vector<AppClientInfo> clients;
 
-    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen("hyprctl clients -j 2>/dev/null", "r"), pclose);
-    if (!pipe) return clients;
-
-    std::string json_str;
-    char buffer[512];
-    while (fgets(buffer, sizeof(buffer), pipe.get()) != nullptr) {
-        json_str += buffer;
+    std::string json_str = HyprlandIPC::get_clients_json();
+    if (json_str.empty()) {
+        std::unique_ptr<FILE, decltype(&pclose)> pipe(popen("hyprctl clients -j 2>/dev/null", "r"), pclose);
+        if (pipe) {
+            char buffer[512];
+            while (fgets(buffer, sizeof(buffer), pipe.get()) != nullptr) {
+                json_str += buffer;
+            }
+        }
     }
+    if (json_str.empty()) return clients;
 
     size_t pos = 0;
     while ((pos = json_str.find("\"address\":", pos)) != std::string::npos) {
@@ -881,14 +884,12 @@ void ActiveAppsDrawer::build_client_item(const AppClientInfo& client) {
 
 void ActiveAppsDrawer::focus_client(const std::string& address) {
     if (address.empty()) return;
-    std::string cmd = "hyprctl dispatch 'hl.dsp.focus({window=\"address:" + address + "\"})' 2>/dev/null &";
-    system(cmd.c_str());
+    HyprlandIPC::focus_window("address:" + address);
 }
 
 void ActiveAppsDrawer::close_client(const std::string& address) {
     if (address.empty()) return;
-    std::string cmd = "hyprctl dispatch 'hl.dsp.window.close({address=\"" + address + "\"})' 2>/dev/null &";
-    system(cmd.c_str());
+    HyprlandIPC::close_window(address);
 }
 
 void ActiveAppsDrawer::kill_process(pid_t pid) {
