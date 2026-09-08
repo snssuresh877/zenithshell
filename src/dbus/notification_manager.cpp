@@ -216,7 +216,8 @@ void NotificationManager::on_bus_acquired(GDBusConnection* connection, const gch
     static const GDBusInterfaceVTable interface_vtable = {
         NotificationManager::handle_method_call,
         nullptr,
-        nullptr
+        nullptr,
+        { 0 }
     };
 
     GError* error = nullptr;

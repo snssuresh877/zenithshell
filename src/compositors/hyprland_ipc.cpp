@@ -110,8 +110,8 @@ void HyprlandIPC::switch_workspace(int id) {
     // 2. Try standard Hyprland dispatcher
     if (dispatch("workspace " + std::to_string(id))) return;
     // 3. Fallback
-    std::string cmd = "hyprctl dispatch workspace " + std::to_string(id) + " 2>/dev/null &";
-    system(cmd.c_str());
+    std::string cmd = "hyprctl dispatch workspace " + std::to_string(id);
+    g_spawn_command_line_async(cmd.c_str(), nullptr);
 }
 
 void HyprlandIPC::switch_workspace_relative(int delta) {
@@ -121,8 +121,8 @@ void HyprlandIPC::switch_workspace_relative(int delta) {
     // 2. Try standard Hyprland dispatcher
     if (dispatch("workspace " + delta_str)) return;
     // 3. Fallback
-    std::string cmd = "hyprctl dispatch workspace " + delta_str + " 2>/dev/null &";
-    system(cmd.c_str());
+    std::string cmd = "hyprctl dispatch workspace " + delta_str;
+    g_spawn_command_line_async(cmd.c_str(), nullptr);
 }
 
 void HyprlandIPC::focus_window(const std::string& target) {
@@ -132,8 +132,8 @@ void HyprlandIPC::focus_window(const std::string& target) {
     // 2. Try standard Hyprland dispatcher
     if (dispatch("focuswindow " + target)) return;
     // 3. Fallback
-    std::string cmd = "hyprctl dispatch focuswindow " + target + " 2>/dev/null &";
-    system(cmd.c_str());
+    std::string cmd = "hyprctl dispatch focuswindow " + target;
+    g_spawn_command_line_async(cmd.c_str(), nullptr);
 }
 
 void HyprlandIPC::close_window(const std::string& address) {
@@ -143,8 +143,8 @@ void HyprlandIPC::close_window(const std::string& address) {
     // 2. Try standard Hyprland dispatcher
     if (dispatch("closewindow address:" + address)) return;
     // 3. Fallback
-    std::string cmd = "hyprctl dispatch closewindow address:" + address + " 2>/dev/null &";
-    system(cmd.c_str());
+    std::string cmd = "hyprctl dispatch closewindow address:" + address;
+    g_spawn_command_line_async(cmd.c_str(), nullptr);
 }
 
 void HyprlandIPC::exit() {
@@ -153,7 +153,7 @@ void HyprlandIPC::exit() {
     // 2. Try standard Hyprland dispatcher
     if (dispatch("exit")) return;
     // 3. Fallback
-    system("hyprctl dispatch exit 2>/dev/null &");
+    g_spawn_command_line_async("hyprctl dispatch exit", nullptr);
 }
 
 bool HyprlandIPC::send_command(const std::string& cmd) {

@@ -102,7 +102,7 @@ GDBusConnection* get_dbus_connection() {
     return conn;
 }
 
-GVariant* call_method(const char* method_name, GVariant* parameters = nullptr) {
+GVariant* call_method(const char* method_name, GVariant* parameters = nullptr, bool show_error = true) {
     GDBusConnection* conn = get_dbus_connection();
     if (!conn) return nullptr;
 
@@ -122,8 +122,10 @@ GVariant* call_method(const char* method_name, GVariant* parameters = nullptr) {
     );
 
     if (error) {
-        std::cerr << C_RED << "[zenithctl] Error: " << C_RESET << error->message << "\n";
-        std::cerr << C_YELLOW << "Tip: Ensure ZenithShell daemon is running ('zenithshell &')\n" << C_RESET;
+        if (show_error) {
+            std::cerr << C_RED << "[zenithctl] Error: " << C_RESET << error->message << "\n";
+            std::cerr << C_YELLOW << "Tip: Ensure ZenithShell daemon is running ('zenithshell &')\n" << C_RESET;
+        }
         g_error_free(error);
     }
 
@@ -224,9 +226,14 @@ int ZenithCtl::run(int argc, char** argv) {
         std::string input((std::istreambuf_iterator<char>(std::cin)), std::istreambuf_iterator<char>());
         if (input.empty()) return 0;
 
-        GVariant* res = call_method("StoreClipboard", g_variant_new("(s)", input.c_str()));
-        if (!res) return 1;
-        g_variant_unref(res);
+        for (int attempt = 0; attempt < 5; ++attempt) {
+            GVariant* res = call_method("StoreClipboard", g_variant_new("(s)", input.c_str()), attempt == 4);
+            if (res) {
+                g_variant_unref(res);
+                return 0;
+            }
+            g_usleep(200000); // Wait 200ms
+        }
         return 0;
     }
 

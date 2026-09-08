@@ -165,7 +165,8 @@ void DBusService::on_bus_acquired(GDBusConnection* connection, const gchar*, gpo
     static const GDBusInterfaceVTable vtable = {
         handle_method_call,
         nullptr,
-        nullptr
+        nullptr,
+        { 0 }
     };
 
     GError* error = nullptr;

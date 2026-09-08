@@ -403,8 +403,8 @@ gboolean ReminderManager::check_reminders(gpointer) {
             // Trigger in-process visual desktop notification
             NotificationManager::send_notification("Reminders", "appointment-soon", "󰔟 Reminder Alert", r.title, 8000);
 
-            // Play notification sound chime
-            system("canberra-gtk-play -i complete 2>/dev/null || paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null || paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga 2>/dev/null &");
+            // Play notification sound chime asynchronously
+            g_spawn_command_line_async("canberra-gtk-play -i complete || paplay /usr/share/sounds/freedesktop/stereo/complete.oga || paplay /usr/share/sounds/freedesktop/stereo/alarm-clock-elapsed.oga", nullptr);
         }
     }
 
