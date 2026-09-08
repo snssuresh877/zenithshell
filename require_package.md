@@ -1,243 +1,178 @@
-# 📦 ZenithShell: Required Packages & Dependencies
+# 📦 ZenithShell & Hyprland: Complete Package & Dependency Guide
 
-This document provides the complete list of system packages, development headers, runtime utilities, and recommended fonts required to build and run **ZenithShell** across major Linux distributions.
-
----
-
-## 📑 Quick Package Overview
-
-| Category | Primary Packages | Purpose |
-|---|---|---|
-| **Compiler & Build System** | `gcc` / `g++` (≥ 11), `cmake` (≥ 3.20), `ninja`, `pkg-config` | C++20 compilation & build orchestration |
-| **GUI & Layer Shell** | `gtk3`, `gtk-layer-shell`, `glib2`, `cairo`, `pango` | Native Wayland floating UI & layer shell rendering |
-| **JSON Parser** | `nlohmann-json` | Parsing `config.json` |
-| **Audio Infrastructure** | `pipewire`, `wireplumber` (`wpctl`) | PipeWire volume & audio routing |
-| **Network & Bluetooth** | `networkmanager` (`nmcli`), `network-manager-applet` (`nm-connection-editor`), `bluez`, `bluez-utils` (`bluetoothctl`) | Background Wi-Fi scanning (`nmcli`), network dialog (`nm-connection-editor`) & Bluetooth control |
-| **Hardware Controls** | `brightnessctl` | Display backlight range control |
-| **Wallpaper & Theming** | `awww` (or `swww`), `python-pywal` | Animated wallpaper transitions & dynamic color extraction |
-| **Clipboard History** | `cliphist`, `wl-clipboard`, `wl-clip-persist` | `SUPER + V` Zenith native clipboard overlay with history & persistence |
-| **Screenshots & Capture** | `grim`, `slurp`, `swappy` | `Print` (window), `SHIFT + Print` (area), interactive editor |
-| **Color Picker** | `hyprpicker` | `SUPER + SHIFT + C` screen hex/rgb sampler to clipboard |
-| **Screen Recording** | `wf-recorder` | `SUPER + SHIFT + R` instant Wayland area/screen recording |
-| **OCR Text Grab** | `tesseract`, `tesseract-data-eng` | `SUPER + SHIFT + T` select any screen text and copy to clipboard |
-| **Security & Authentication** | `hyprpolkitagent` | Native Wayland PolicyKit authorization modal agent |
-| **Pro Workstation Tools** | `yazi`, `btop`, `cosmic-files`, `fd`, `ripgrep`, `jq`, `fzf`, `zoxide`, `eza`, `bat`, `zip`, `unzip`, `p7zip` | High-end terminal, file management, and instant directory navigation |
+This document is the definitive master reference for setting up **ZenithShell** and a fully featured **Hyprland** workstation. Whether you are **reinstalling Arch Linux from scratch** or a new user wanting a turn-key experience with zero missing packages, broken scripts, or mounting issues, this guide covers everything.
 
 ---
 
-## ⚡ Automated 1-Click Setup (Single Confirmation)
+## ⚡ 1-Click Automated Setup (Single Confirmation)
 
-You can install and configure the entire workstation with a single confirmation:
+If you already have a working Arch, Fedora, or Ubuntu installation, you can install the entire workstation, dotfiles, and dependencies with a single command:
 
 ```bash
-# Automated 1-Click Turn-Key Setup
+# Clone the repository
+git clone https://github.com/snssuresh877/zenithshell.git ~/Projects/zenithshell
+cd ~/Projects/zenithshell
+
+# Interactive setup (press ENTER to install all recommended components)
 ./setup-workstation.sh
 
-# Or unattended mode (accepts all recommended defaults automatically)
+# Or 100% unattended mode (auto-accepts all defaults)
 ./setup-workstation.sh -y
 ```
 
 ---
 
-## 🐧 Manual One-Line Install Commands by Distribution
+## 📑 Complete Package Overview by Function
 
-### 1. Arch Linux / Manjaro / EndeavourOS / CachyOS
+| Category | Recommended Packages (Arch Linux) | Purpose & Feature Tied to It |
+|---|---|---|
+| **Kernel Resilience** | `kernel-modules-hook` | **Prevents broken USB drives / modules** when `pacman` updates the kernel before reboot. |
+| **Compiler & Build System** | `base-devel`, `cmake`, `ninja`, `pkgconf` | C++20 compilation & build orchestration for ZenithShell. |
+| **GUI & Layer Shell** | `gtk3`, `gtk-layer-shell`, `glib2`, `cairo`, `pango`, `nlohmann-json` | Native Wayland floating UI, layer shell anchoring, vector graphics, JSON config. |
+| **Compositor & Wayland Portals** | `hyprland`, `xdg-desktop-portal-hyprland`, `xdg-desktop-portal-gtk`, `qt5-wayland`, `qt6-wayland` | Core Wayland compositor, screen sharing, file pickers, and Qt/GTK integration. |
+| **Security & Authentication** | `hyprpolkitagent` | Native Wayland PolicyKit agent for privilege escalation modals (`pkexec` / system). |
+| **Storage & USB Flash Drives** | `udisks2`, `dosfstools`, `ntfs-3g`, `exfatprogs`, `gvfs`, `gvfs-mtp` | Auto-detects & mounts FAT32, NTFS, and exFAT pendrives, phones, and external disks in file managers. |
+| **Audio Infrastructure** | `pipewire`, `wireplumber`, `pipewire-audio`, `pipewire-alsa`, `pipewire-pulse`, `pipewire-jack`, `pavucontrol`, `playerctl` | PipeWire low-latency audio, real-time volume routing, GUI mixer (`SUPER + P`), hardware media keys. |
+| **Network & Bluetooth** | `networkmanager` (`nmcli`), `network-manager-applet` (`nm-connection-editor`), `bluez`, `bluez-utils`, `blueman` | Control Center background Wi-Fi scanning (`nmcli`), advanced network dialog, and Bluetooth pairing. |
+| **Backlight & Power Management** | `brightnessctl`, `hypridle`, `hyprlock`, `hyprshade` | Hardware backlight slider, Wayland lock screen (`SUPER + L`), idle sleep, and night light shaders. |
+| **Wallpaper & Theming** | `awww` (or `swww`), `python-pywal`, `nwg-look`, `bibata-cursor-theme`, `papirus-icon-theme` | Animated wallpaper transitions, dynamic color palette extraction, GTK & cursor themes. |
+| **Clipboard History** | `cliphist`, `wl-clipboard`, `wl-clip-persist` | `SUPER + V` native Zenith clipboard overlay with search and close-persistence. |
+| **Screenshots & Capture** | `grim`, `slurp`, `swappy`, `libnotify`, `jq` | `Print` (window), `SHIFT + Print` (interactive area), instant editor, and desktop notifications. |
+| **Color Picker & Recording** | `hyprpicker`, `wf-recorder` | `SUPER + SHIFT + C` pixel color sampler, `SUPER + SHIFT + R` instant Wayland screen recorder. |
+| **OCR Text Grab** | `tesseract`, `tesseract-data-eng` | `SUPER + SHIFT + T` select any screen text and copy words directly to clipboard. |
+| **Terminals & Shell** | `foot`, `kitty`, `fish`, `starship` | Ultra-fast Foot (`SUPER + RETURN`), GPU Kitty (`SUPER + SHIFT + RETURN`), Fish shell, and Starship prompt. |
+| **Modern CLI & File Managers** | `cosmic-files`, `yazi`, `btop`, `fd`, `ripgrep`, `fzf`, `zoxide`, `eza`, `bat`, `zip`, `unzip`, `p7zip` | Cosmic GUI file manager (`SUPER + E`), Yazi TUI (`SUPER + SHIFT + E`), BTOP monitor (`SUPER + ESC`). |
+| **Yazi Previewers** | `imagemagick`, `ffmpegthumbnailer`, `poppler`, `chafa` | High-resolution terminal image, video, and PDF previews in Yazi. |
+| **Office & Metric Fonts** | `libreoffice-fresh`, `ttf-jetbrains-mono-nerd`, `noto-fonts`, `noto-fonts-cjk`, `noto-fonts-emoji`, `ttf-carlito`, `ttf-caladea`, `ttf-liberation` | 100% Microsoft Excel/Word/PowerPoint formatting compatibility (Calibri/Cambria replacement) + Nerd Font symbols. |
+
+---
+
+## 🐧 Arch Linux: Fresh Install Master Commands
+
+If you just completed a base Arch Linux installation, run these two commands to install all packages and enable essential services:
+
+### Step 1: Install All Essential Packages via Pacman
 
 ```bash
-# Build toolchain and development headers
 sudo pacman -S --needed \
-    base-devel \
-    cmake \
-    ninja \
-    pkgconf \
-    gtk3 \
-    gtk-layer-shell \
-    cairo \
-    pango \
-    glib2 \
-    nlohmann-json
-
-# Runtime utilities, audio, network, theming, polkit, clipboard, and capture tools
-sudo pacman -S --needed \
-    pipewire \
-    wireplumber \
-    networkmanager \
-    network-manager-applet \
-    bluez \
-    bluez-utils \
-    brightnessctl \
-    python-pywal \
-    cliphist \
-    wl-clipboard \
-    wl-clip-persist \
-    grim \
-    slurp \
-    swappy \
-    hyprpicker \
-    wf-recorder \
-    tesseract \
-    tesseract-data-eng \
+    base-devel cmake ninja pkgconf git \
+    linux-headers \
+    kernel-modules-hook \
+    hyprland xdg-desktop-portal-hyprland xdg-desktop-portal-gtk qt5-wayland qt6-wayland \
+    gtk3 gtk-layer-shell cairo pango glib2 nlohmann-json \
     hyprpolkitagent \
-    hyprshade \
-    yazi \
-    btop \
-    fd \
-    ripgrep \
-    jq \
-    fzf \
-    zoxide \
-    eza \
-    bat \
-    zip \
-    unzip \
-    p7zip \
-    imagemagick \
-    ffmpegthumbnailer \
-    poppler \
-    chafa \
-    ttf-jetbrains-mono-nerd \
-    papirus-icon-theme
+    udisks2 dosfstools ntfs-3g exfatprogs gvfs gvfs-mtp \
+    pipewire wireplumber pipewire-audio pipewire-alsa pipewire-pulse pipewire-jack pavucontrol playerctl \
+    networkmanager network-manager-applet bluez bluez-utils blueman \
+    brightnessctl hypridle hyprlock hyprshade \
+    python-pywal nwg-look bibata-cursor-theme papirus-icon-theme \
+    cliphist wl-clipboard wl-clip-persist \
+    grim slurp swappy hyprpicker wf-recorder tesseract tesseract-data-eng libnotify jq \
+    foot kitty fish starship \
+    yazi btop fd ripgrep fzf zoxide eza bat zip unzip p7zip \
+    imagemagick ffmpegthumbnailer poppler chafa \
+    ttf-jetbrains-mono-nerd noto-fonts noto-fonts-cjk noto-fonts-emoji \
+    ttf-carlito ttf-caladea ttf-liberation \
+    libreoffice-fresh
+```
+
+*(Note: Install `awww` or `swww` and `cosmic-files` from the AUR via `yay -S awww cosmic-files`)*.
+
+---
+
+### Step 2: Enable Core System Services
+
+```bash
+# System services
+sudo systemctl enable --now NetworkManager
+sudo systemctl enable --now bluetooth
+sudo systemctl enable --now linux-modules-cleanup.service
+sudo systemctl enable --now udisks2.service
+
+# User services (Polkit & Audio)
+systemctl --user enable --now hyprpolkitagent.service
+systemctl --user enable --now pipewire.service wireplumber.service
 ```
 
 ---
 
-### 2. Fedora / RHEL
+## 🎩 Fedora / RHEL Install Command
 
 ```bash
-# Build toolchain and development headers
+# Build toolchain & development headers
 sudo dnf groupinstall -y "Development Tools"
 sudo dnf install -y \
-    gcc-c++ \
-    cmake \
-    ninja-build \
-    pkgconf-pkg-config \
-    gtk3-devel \
-    gtk-layer-shell-devel \
-    cairo-devel \
-    pango-devel \
-    glib2-devel \
-    json-devel
-
-# Runtime utilities & tools
-sudo dnf install -y \
-    pipewire \
-    wireplumber \
-    NetworkManager \
-    network-manager-applet \
-    bluez \
-    brightnessctl \
-    python3-pywal \
-    wl-clipboard \
-    google-noto-sans-fonts \
-    fira-code-fonts
+    gcc-c++ cmake ninja-build pkgconf-pkg-config \
+    gtk3-devel gtk-layer-shell-devel cairo-devel pango-devel glib2-devel json-devel \
+    hyprland xdg-desktop-portal-hyprland xdg-desktop-portal-gtk \
+    hyprpolkitagent \
+    udisks2 dosfstools ntfs-3g exfatprogs gvfs gvfs-mtp \
+    pipewire wireplumber pavucontrol playerctl \
+    NetworkManager network-manager-applet bluez blueman \
+    brightnessctl hypridle hyprlock \
+    python3-pywal wl-clipboard \
+    grim slurp wf-recorder tesseract \
+    foot kitty fish btop ripgrep fzf zoxide eza bat p7zip \
+    ffmpegthumbnailer ImageMagick chafa \
+    google-noto-sans-fonts fira-code-fonts \
+    liberation-fonts google-carlito-fonts google-caladea-fonts \
+    libreoffice
 ```
 
 ---
 
-### 3. Ubuntu / Debian / Pop!_OS (22.04 / 24.04+)
+## 📦 Ubuntu / Debian / Pop!_OS Install Command
 
 ```bash
-# Build toolchain and development headers
+# Build toolchain & development headers
 sudo apt update
 sudo apt install -y \
-    build-essential \
-    cmake \
-    ninja-build \
-    pkg-config \
-    libgtk-3-dev \
-    libgtk-layer-shell-dev \
-    libcairo2-dev \
-    libpango1.0-dev \
-    libglib2.0-dev \
-    nlohmann-json3-dev
+    build-essential cmake ninja-build pkg-config \
+    libgtk-3-dev libgtk-layer-shell-dev libcairo2-dev libpango1.0-dev libglib2.0-dev nlohmann-json3-dev \
+    hyprland xdg-desktop-portal-hyprland xdg-desktop-portal-gtk \
+    udisks2 dosfstools ntfs-3g exfatprogs gvfs gvfs-backends \
+    pipewire wireplumber pavucontrol playerctl \
+    network-manager network-manager-gnome bluez blueman \
+    brightnessctl hypridle hyprlock \
+    python3-pip wl-clipboard \
+    grim slurp wf-recorder tesseract-ocr \
+    foot kitty fish btop ripgrep fzf zoxide eza bat p7zip-full \
+    ffmpegthumbnailer imagemagick chafa \
+    fonts-noto fonts-noto-cjk fonts-noto-color-emoji \
+    fonts-liberation fonts-carlito fonts-caladea \
+    libreoffice
 
-# Runtime utilities & tools
-sudo apt install -y \
-    pipewire \
-    wireplumber \
-    network-manager \
-    network-manager-gnome \
-    bluez \
-    brightnessctl \
-    python3-pip \
-    wl-clipboard \
-    fonts-noto
-
-# Install pywal via pipx / pip
-pip3 install --user pywal
+# Install pywal via pip
+pip3 install --user pywal 2>/dev/null || true
 ```
 
 ---
 
-## 🔍 Detailed Package Descriptions
+## 🔍 Critical Pain Points Solved
 
-### 🛠️ Build-Time Dependencies
+### 1. 🛡️ Kernel Updates Breaking USB Flash Drives (`kernel-modules-hook`)
+* **The Issue:** On Arch Linux, when `pacman -Syu` updates the kernel (e.g. `6.18.49-1-lts` to `6.18.49-3-lts`), it immediately deletes the old modules directory. If you plug in a USB pendrive, external drive, or new hardware before rebooting, the kernel fails to load `usb-storage` or filesystem drivers, leaving `/dev/sdb` uncreated.
+* **The Solution:** `kernel-modules-hook` preserves the running kernel's modules in `/usr/lib/modules/` until the next reboot, ensuring USB drives and new modules load flawlessly at all times.
 
-1. **`gtk3` (`gtk+-3.0`)**:
-   - Provides core GTK3 widgets, CSS styling engine, event handling, and window containers.
-2. **`gtk-layer-shell` (`gtk-layer-shell-0`)**:
-   - Wayland `wlr-layer-shell` protocol client for GTK. Enables anchoring to screen edges, exclusive desktop margins (so windows don't overlap the topbar), and transparent overlay backdrops.
-3. **`cairo` & `pango`**:
-   - Hardware-accelerated 2D vector drawing and advanced typography / font glyph layout.
-4. **`nlohmann-json`**:
-   - Modern, single-header C++ JSON parser for reading `config.json`.
+### 2. 🔌 USB Flash Drive Auto-Mounting (`udisks2`, `dosfstools`, `ntfs-3g`, `exfatprogs`)
+* Provides full read/write support for Windows FAT32, NTFS, and modern exFAT USB flash drives and SD cards directly inside **Cosmic Files** and **Yazi**.
 
----
+### 3. 📶 Background Wi-Fi & Advanced Network Dialog
+* ZenithShell's Control Center Wi-Fi drawer communicates with `nmcli` in the background for zero-RAM wireless scanning.
+* When advanced setup is required (static IP, enterprise 802.1X, VPNs, hidden SSIDs), `nm-connection-editor` (from `network-manager-applet`) is launched on demand.
 
-### ⚙️ Runtime Daemons & Tools
-
-1. **`wireplumber` (`wpctl`)**:
-   - ZenithShell invokes `wpctl get-volume @DEFAULT_AUDIO_SINK@`, `wpctl set-volume`, and `wpctl status` for real-time sink/source routing and volume levels.
-2. **`networkmanager` (`nmcli`) & `network-manager-applet` (`nm-connection-editor`)**:
-   - ZenithShell's Control Center Wi-Fi drawer invokes `nmcli` in the background (`nmcli -t -f SSID,SIGNAL,SECURITY dev wifi list` and `nmcli dev wifi connect`) for zero-overhead background scanning and wireless association. In addition, `nm-connection-editor` (provided by `network-manager-applet` / `network-manager-gnome`) is called when opening advanced network settings (static IP, enterprise 802.1X, VPNs, and hidden SSIDs).
-3. **`brightnessctl`**:
-   - Controls backlight hardware (`brightnessctl s <percent>%` / `brightnessctl g`).
-4. **`awww` / `swww`**:
-   - Wayland animated wallpaper daemon used by `ThemeEngine::set_wallpaper()` for smooth fade/grow transitions.
-5. **`python-pywal` (`wal`)**:
-   - Extracts 16-color palettes from wallpapers into `~/.cache/wal/colors.json` for **Dynamic (Wallpaper)** mode.
-6. **`cliphist` & `wl-clipboard`**:
-   - Powers the fast clipboard history manager overlay (`Super+V`).
-7. **`hyprshade`**:
-   - Toggles blue-light filters / Night Light mode in Hyprland from the Control Center Quick Modes grid.
-
----
-
-## 🔤 Icon & Font Recommendations
-
-To render all status symbols and category glyphs correctly, install at least one Nerd Font:
-- **JetBrains Mono Nerd Font** (`ttf-jetbrains-mono-nerd`) (Recommended)
-- **Fira Code Nerd Font** (`ttf-firacode-nerd`)
-- **MesloLGS Nerd Font** (`ttf-meslo-nerd-font-powerlevel10k`)
-
----
-
-## 📊 LibreOffice MS Office & Excel Precision Compatibility
-
-To open, edit, and save Microsoft Excel (`.xlsx`), Word (`.docx`), and PowerPoint (`.pptx`) documents without breaking fonts, column widths, tables, or formatting:
-
-### 1. Essential Metric-Identical & Microsoft Fonts
-Install Google's metric-compatible drop-in replacements for standard Microsoft fonts:
-- **`Carlito`** (`ttf-carlito` / `google-carlito-fonts` / `fonts-carlito`): 1:1 metric replacement for **Calibri**.
-- **`Caladea`** (`ttf-caladea` / `google-caladea-fonts` / `fonts-caladea`): 1:1 metric replacement for **Cambria**.
-- **`Liberation`** (`ttf-liberation` / `fonts-liberation`): 1:1 metric replacements for **Arial**, **Times New Roman**, and **Courier New**.
-- **`ttf-ms-fonts`** / **`ttf-mscorefonts-installer`**: Original Microsoft TrueType core fonts.
-
-### 2. One-Click Automated Setup
-Run the automated optimizer script:
-```bash
-~/.config/hypr/scripts/apps/setup-libreoffice-excel.sh
-```
-This script automatically:
-1. Sets default save filters to **Excel 2007-365 (`.xlsx`)**, **Word 2007-365 (`.docx`)**, and **PowerPoint (`.pptx`)**.
-2. Disables alien format warnings for clean saving.
-3. Enables document font embedding and high-DPI Skia hardware rendering.
+### 4. 📊 100% Microsoft Excel & Word Document Precision (`setup-libreoffice-excel.sh`)
+* Metric-compatible fonts (`Carlito` for Calibri, `Caladea` for Cambria, `Liberation` for Arial/Times) ensure that spreadsheets, tables, and documents opened in LibreOffice maintain exact column widths, margins, and formatting identical to Microsoft Office 365 on Windows.
+* Automated optimizer script located at:
+  ```bash
+  ~/.config/hypr/scripts/apps/setup-libreoffice-excel.sh
+  ```
 
 ---
 
 ## 🚀 Verification Command
 
-To quickly verify that all required build dependencies are installed and detectable by `pkg-config`:
+To verify that your C++ build dependencies are satisfied:
 
 ```bash
 pkg-config --exists gtk+-3.0 gtk-layer-shell-0 glib-2.0 cairo pango && echo "✅ All C++ build dependencies are satisfied!" || echo "❌ Missing some dependencies"

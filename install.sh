@@ -63,11 +63,15 @@ install_dependencies() {
                     sudo pacman -S --needed --noconfirm \
                         base-devel cmake ninja pkgconf \
                         gtk3 gtk-layer-shell cairo pango glib2 nlohmann-json \
-                        pipewire wireplumber networkmanager network-manager-applet bluez bluez-utils \
-                        brightnessctl python-pywal cliphist wl-clipboard wl-clip-persist \
-                        grim slurp swappy hyprpicker wf-recorder tesseract tesseract-data-eng \
-                        yazi btop fd ripgrep jq fzf zoxide eza bat zip unzip p7zip \
+                        pipewire wireplumber networkmanager network-manager-applet bluez bluez-utils blueman \
+                        brightnessctl hypridle hyprlock hyprshade \
+                        udisks2 dosfstools ntfs-3g exfatprogs pavucontrol playerctl kernel-modules-hook \
+                        python-pywal cliphist wl-clipboard wl-clip-persist \
+                        grim slurp swappy hyprpicker wf-recorder tesseract tesseract-data-eng libnotify jq \
+                        yazi btop fd ripgrep fzf zoxide eza bat zip unzip p7zip \
                         hyprpolkitagent ttf-jetbrains-mono-nerd papirus-icon-theme
+                    sudo systemctl enable --now linux-modules-cleanup.service 2>/dev/null || true
+                    sudo systemctl enable --now udisks2.service 2>/dev/null || true
                     ;;
                 fedora|rhel)
                     echo -e "${CYAN}Installing dependencies via dnf...${RESET}"
@@ -75,10 +79,12 @@ install_dependencies() {
                     sudo dnf install -y \
                         gcc-c++ cmake ninja-build pkgconf-pkg-config \
                         gtk3-devel gtk-layer-shell-devel cairo-devel pango-devel glib2-devel json-devel \
-                        pipewire wireplumber NetworkManager network-manager-applet bluez brightnessctl \
+                        pipewire wireplumber NetworkManager network-manager-applet bluez blueman brightnessctl \
+                        hypridle hyprlock udisks2 dosfstools ntfs-3g exfatprogs pavucontrol playerctl \
                         python3-pywal wl-clipboard \
-                        grim slurp wf-recorder tesseract \
+                        grim slurp wf-recorder tesseract libnotify jq \
                         google-noto-sans-fonts fira-code-fonts
+                    sudo systemctl enable --now udisks2.service 2>/dev/null || true
                     ;;
                 ubuntu|debian|pop)
                     echo -e "${CYAN}Installing dependencies via apt...${RESET}"
@@ -86,9 +92,11 @@ install_dependencies() {
                     sudo apt install -y \
                         build-essential cmake ninja-build pkg-config \
                         libgtk-3-dev libgtk-layer-shell-dev libcairo2-dev libpango1.0-dev libglib2.0-dev nlohmann-json3-dev \
-                        pipewire wireplumber network-manager network-manager-gnome bluez brightnessctl python3-pip wl-clipboard \
-                        grim slurp wf-recorder tesseract-ocr \
+                        pipewire wireplumber network-manager network-manager-gnome bluez blueman brightnessctl \
+                        hypridle hyprlock udisks2 dosfstools ntfs-3g exfatprogs pavucontrol playerctl python3-pip wl-clipboard \
+                        grim slurp wf-recorder tesseract-ocr libnotify-bin jq \
                         fonts-noto
+                    sudo systemctl enable --now udisks2.service 2>/dev/null || true
                     pip3 install --user pywal 2>/dev/null || true
                     ;;
                 *)

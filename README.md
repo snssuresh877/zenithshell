@@ -371,6 +371,9 @@ cd ~/Projects/zenithshell
 ./setup-workstation.sh
 ```
 
+> [!TIP]
+> **Fresh Arch Linux Install?** See [**`require_package.md`**](require_package.md) for the complete, all-in-one package list, system services (`systemctl`), and critical runtime utilities.
+
 ---
 
 ### ⚡ Option 2: Core ZenithShell Installer (Shell & Themes Only)

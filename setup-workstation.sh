@@ -192,13 +192,17 @@ if [ "$INSTALL_WORKSTATION_TOOLS" -eq 1 ]; then
     echo -e "${BLUE}▶ [4/7] Checking CLI Power Utilities, Clipboard, BTOP, GTK Settings & File Managers...${RESET}"
     case "$DISTRO" in
         arch|manjaro|endeavouros|cachyos)
-            sudo pacman -S --needed --noconfirm yazi btop fd ripgrep jq fzf zoxide eza bat zip unzip p7zip cliphist wl-clipboard wl-clip-persist networkmanager network-manager-applet 2>/dev/null || true
+            sudo pacman -S --needed --noconfirm yazi btop fd ripgrep jq fzf zoxide eza bat zip unzip p7zip cliphist wl-clipboard wl-clip-persist networkmanager network-manager-applet udisks2 dosfstools ntfs-3g exfatprogs pavucontrol playerctl kernel-modules-hook blueman 2>/dev/null || true
+            sudo systemctl enable --now linux-modules-cleanup.service 2>/dev/null || true
+            sudo systemctl enable --now udisks2.service 2>/dev/null || true
             ;;
         fedora|rhel)
-            sudo dnf install -y yazi btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip wl-clipboard NetworkManager network-manager-applet 2>/dev/null || true
+            sudo dnf install -y yazi btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip wl-clipboard NetworkManager network-manager-applet udisks2 dosfstools ntfs-3g exfatprogs pavucontrol playerctl blueman 2>/dev/null || true
+            sudo systemctl enable --now udisks2.service 2>/dev/null || true
             ;;
         ubuntu|debian|pop)
-            sudo apt install -y btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip-full wl-clipboard network-manager network-manager-gnome 2>/dev/null || true
+            sudo apt install -y btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip-full wl-clipboard network-manager network-manager-gnome udisks2 dosfstools ntfs-3g exfatprogs pavucontrol playerctl blueman 2>/dev/null || true
+            sudo systemctl enable --now udisks2.service 2>/dev/null || true
             ;;
     esac
 
@@ -235,13 +239,13 @@ if [ "$INSTALL_MEDIA_TOOLS" -eq 1 ]; then
     echo -e "${BLUE}▶ [5/7] Checking Screen Recording, OCR Text Capture & Screenshot Utilities...${RESET}"
     case "$DISTRO" in
         arch|manjaro|endeavouros|cachyos)
-            sudo pacman -S --needed --noconfirm wf-recorder tesseract tesseract-data-eng slurp grim swappy hyprpicker ffmpegthumbnailer imagemagick chafa 2>/dev/null || true
+            sudo pacman -S --needed --noconfirm wf-recorder tesseract tesseract-data-eng slurp grim swappy hyprpicker ffmpegthumbnailer imagemagick chafa libnotify jq 2>/dev/null || true
             ;;
         fedora|rhel)
-            sudo dnf install -y wf-recorder tesseract slurp grim ffmpegthumbnailer ImageMagick chafa 2>/dev/null || true
+            sudo dnf install -y wf-recorder tesseract slurp grim ffmpegthumbnailer ImageMagick chafa libnotify jq 2>/dev/null || true
             ;;
         ubuntu|debian|pop)
-            sudo apt install -y wf-recorder tesseract-ocr slurp grim ffmpegthumbnailer imagemagick chafa 2>/dev/null || true
+            sudo apt install -y wf-recorder tesseract-ocr slurp grim ffmpegthumbnailer imagemagick chafa libnotify-bin jq 2>/dev/null || true
             ;;
     esac
     echo -e "${GREEN}✔ Media, Screenshot, Screen Recording & OCR utilities ready!${RESET}\n"
@@ -261,7 +265,7 @@ if [ "$INSTALL_POWER" -eq 1 ]; then
     echo -e "${BLUE}▶ [7/7] Verifying Power Management, Polkit Agent & Idle Daemon...${RESET}"
     case "$DISTRO" in
         arch|manjaro|endeavouros|cachyos)
-            sudo pacman -S --needed --noconfirm hypridle hyprlock hyprpolkitagent brightnessctl 2>/dev/null || true
+            sudo pacman -S --needed --noconfirm hypridle hyprlock hyprpolkitagent brightnessctl hyprshade 2>/dev/null || true
             systemctl --user enable --now hyprpolkitagent.service 2>/dev/null || true
             ;;
         fedora|rhel)
