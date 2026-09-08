@@ -18,6 +18,7 @@
 #include "shell/control_center/wifi_manager.hpp"
 #include "shell/power/power_menu.hpp"
 #include "shell/wallpaper/wallpaper_engine.hpp"
+#include "shell/osd/osd_window.hpp"
 #include <iostream>
 
 namespace zenith {
@@ -97,6 +98,7 @@ void App::on_activate(GtkApplication* app, gpointer user_data) {
     KeybindsOverlay::init(app);
     WifiManager::init(app);
     PowerMenu::init(app);
+    OSDWindow::init(app);
 
     // Create Main Bar Window
     BarWindow::create(app, self->config);

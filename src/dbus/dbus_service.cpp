@@ -14,6 +14,7 @@
 #include "system/sys_monitor.hpp"
 #include "system/backlight_manager.hpp"
 #include "pipewire/audio_manager.hpp"
+#include "shell/osd/osd_window.hpp"
 #include <iostream>
 #include <sstream>
 #include <cstring>
@@ -77,6 +78,24 @@ static const gchar introspection_xml[] =
     "    </method>"
     "    <method name='DecreaseBrightness'>"
     "      <arg type='i' name='delta' direction='in'/>"
+    "    </method>"
+    "    <method name='GetVolume'>"
+    "      <arg type='i' name='percent' direction='out'/>"
+    "    </method>"
+    "    <method name='SetVolume'>"
+    "      <arg type='i' name='percent' direction='in'/>"
+    "    </method>"
+    "    <method name='IncreaseVolume'>"
+    "      <arg type='i' name='delta' direction='in'/>"
+    "    </method>"
+    "    <method name='DecreaseVolume'>"
+    "      <arg type='i' name='delta' direction='in'/>"
+    "    </method>"
+    "    <method name='ToggleVolumeMute'/>"
+    "    <method name='ToggleMicMute'/>"
+    "    <method name='ShowOSD'>"
+    "      <arg type='s' name='type' direction='in'/>"
+    "      <arg type='i' name='val' direction='in'/>"
     "    </method>"
     "    <method name='GetStats'>"
     "      <arg type='s' name='json_stats' direction='out'/>"
@@ -326,16 +345,58 @@ void DBusService::handle_method_call(GDBusConnection*,
         gint val = 0;
         g_variant_get(parameters, "(i)", &val);
         BacklightManager::set_brightness_percent(val);
+        OSDWindow::show_brightness(val);
         g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
     } else if (method == "IncreaseBrightness") {
         gint delta = 5;
         g_variant_get(parameters, "(i)", &delta);
         BacklightManager::increase_brightness(delta);
+        OSDWindow::show_brightness(BacklightManager::get_brightness_percent());
         g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
     } else if (method == "DecreaseBrightness") {
         gint delta = 5;
         g_variant_get(parameters, "(i)", &delta);
         BacklightManager::decrease_brightness(delta);
+        OSDWindow::show_brightness(BacklightManager::get_brightness_percent());
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "GetVolume") {
+        int v = AudioManager::get_volume();
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(i)", v));
+    } else if (method == "SetVolume") {
+        gint val = 0;
+        g_variant_get(parameters, "(i)", &val);
+        AudioManager::set_volume(val);
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "IncreaseVolume") {
+        gint delta = 5;
+        g_variant_get(parameters, "(i)", &delta);
+        int cur = AudioManager::get_volume();
+        AudioManager::set_volume(cur + delta);
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "DecreaseVolume") {
+        gint delta = 5;
+        g_variant_get(parameters, "(i)", &delta);
+        int cur = AudioManager::get_volume();
+        AudioManager::set_volume(cur - delta);
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "ToggleVolumeMute") {
+        AudioManager::toggle_mute();
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "ToggleMicMute") {
+        AudioManager::toggle_mic_mute();
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "ShowOSD") {
+        const char* type_str = nullptr;
+        gint val = 0;
+        g_variant_get(parameters, "(&si)", &type_str, &val);
+        std::string t = type_str ? type_str : "";
+        if (t == "volume" || t == "vol") {
+            OSDWindow::show_volume(val, false);
+        } else if (t == "brightness" || t == "bri") {
+            OSDWindow::show_brightness(val);
+        } else if (t == "mic") {
+            OSDWindow::show_mic(val, false);
+        }
         g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
     } else if (method == "GetStats") {
         SysStats stats = SysMonitor::get_stats();

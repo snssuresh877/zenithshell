@@ -29,6 +29,9 @@ _zenithctl() {
                 'theme:Theming engine & color extraction'
                 'brightness:Hardware screen backlight control'
                 'bri:Hardware screen backlight control (shorthand)'
+                'volume:Audio volume & PipeWire control'
+                'vol:Audio volume (shorthand)'
+                'mic:Microphone mute toggle'
                 'clipboard:Clipboard history & overlay'
                 'clip:Clipboard history (shorthand)'
                 'toggle:Toggle shell modules & overlays'
@@ -70,6 +73,14 @@ _zenithctl() {
                 brightness|bri)
                     _arguments \
                         '1: :(set up down current)'
+                    ;;
+                volume|vol)
+                    _arguments \
+                        '1: :(set up down mute current)'
+                    ;;
+                mic)
+                    _arguments \
+                        '1: :(mute)'
                     ;;
                 clipboard|clip)
                     _arguments \

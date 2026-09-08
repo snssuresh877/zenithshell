@@ -82,6 +82,7 @@ set(SOURCES
     src/shell/keybinds/keybinds_overlay.cpp
     src/shell/power/power_menu.cpp
     src/shell/wallpaper/wallpaper_engine.cpp
+    src/shell/osd/osd_window.cpp
     src/cli/zenithctl.cpp
     src/system/backlight_manager.cpp
 )

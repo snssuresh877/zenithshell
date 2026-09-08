@@ -1,6 +1,7 @@
 #include "cli/zenithctl.hpp"
 #include "system/backlight_manager.hpp"
 #include "theme/theme_engine.hpp"
+#include "pipewire/audio_manager.hpp"
 #include <gio/gio.h>
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -50,6 +51,14 @@ void print_help() {
     std::cout << "  " << C_GREEN << "brightness set <pct>" << C_RESET << "   Set screen brightness percentage (e.g. 75)\n";
     std::cout << "  " << C_GREEN << "brightness up [step]" << C_RESET << "   Increase screen brightness (default +5%)\n";
     std::cout << "  " << C_GREEN << "brightness down [step]" << C_RESET << " Decrease screen brightness (default -5%)\n\n";
+
+    std::cout << C_BOLD << "VOLUME & AUDIO COMMANDS (PIPEWIRE / WIREPLUMBER):\n" << C_RESET;
+    std::cout << "  " << C_GREEN << "volume" << C_RESET << " | " << C_GREEN << "vol" << C_RESET << "                 Get current volume percentage\n";
+    std::cout << "  " << C_GREEN << "volume set <pct>" << C_RESET << "       Set volume percentage (e.g. 70)\n";
+    std::cout << "  " << C_GREEN << "volume up [step]" << C_RESET << "       Increase volume (default +5%)\n";
+    std::cout << "  " << C_GREEN << "volume down [step]" << C_RESET << "     Decrease volume (default -5%)\n";
+    std::cout << "  " << C_GREEN << "volume mute" << C_RESET << "            Toggle audio sink mute\n";
+    std::cout << "  " << C_GREEN << "mic mute" << C_RESET << "               Toggle microphone mute\n\n";
 
     std::cout << C_BOLD << "CLIPBOARD COMMANDS:\n" << C_RESET;
     std::cout << "  " << C_GREEN << "clipboard" << C_RESET << "               Toggle clipboard history overlay (SUPER + V)\n";
@@ -135,6 +144,8 @@ bool ZenithCtl::should_handle(int argc, char** argv) {
         if (cmd == "wallpaper" || cmd == "wp") return true;
         if (cmd == "theme") return true;
         if (cmd == "brightness" || cmd == "bri") return true;
+        if (cmd == "volume" || cmd == "vol") return true;
+        if (cmd == "mic") return true;
         if (cmd == "clipboard" || cmd == "clip") return true;
         if (cmd == "toggle") return true;
         if (cmd == "bar" || cmd == "topbar") return true;
@@ -174,7 +185,7 @@ int ZenithCtl::run(int argc, char** argv) {
     if (args[0] == "__complete") {
         std::string target = (args.size() > 1) ? args[1] : "commands";
         if (target == "commands") {
-            std::cout << "wallpaper\ntheme\nbrightness\nbri\nclipboard\nclip\ntoggle\nbar\nlauncher\nspotlight\ncontrol-center\ncc\nnotifications\nnc\nreminders\nactive-apps\nkeybinds\nnetwork\naudio\npower\nstats\nreload\nhelp\nversion\n";
+            std::cout << "wallpaper\ntheme\nbrightness\nbri\nvolume\nvol\nmic\nclipboard\nclip\ntoggle\nbar\nlauncher\nspotlight\ncontrol-center\ncc\nnotifications\nnc\nreminders\nactive-apps\nkeybinds\nnetwork\naudio\npower\nstats\nreload\nhelp\nversion\n";
             return 0;
         } else if (target == "themes") {
             GVariant* res = call_method("ListThemes");
@@ -415,6 +426,87 @@ int ZenithCtl::run(int argc, char** argv) {
             std::cout << C_GREEN << "✔ " << C_RESET << "Brightness set: " << C_BOLD << pct << "%" << C_RESET << "\n";
             return 0;
         }
+    }
+
+    // --- Volume Commands ---
+    if (args[0] == "volume" || args[0] == "vol") {
+        if (args.size() == 1 || args[1] == "get" || args[1] == "current") {
+            int val = -1;
+            GVariant* res = call_method("GetVolume");
+            if (res) {
+                g_variant_get(res, "(i)", &val);
+                g_variant_unref(res);
+            } else {
+                val = AudioManager::get_volume();
+            }
+            std::cout << val << "%\n";
+            return 0;
+        }
+
+        std::string sub = args[1];
+        if (sub == "mute" || sub == "toggle-mute") {
+            GVariant* res = call_method("ToggleVolumeMute");
+            if (res) g_variant_unref(res);
+            else AudioManager::toggle_mute();
+            std::cout << C_GREEN << "✔ " << C_RESET << "Volume mute toggled\n";
+            return 0;
+        } else if (sub == "up" || sub == "+" || (sub.size() > 1 && sub[0] == '+')) {
+            int delta = 5;
+            if (sub.size() > 1 && sub[0] == '+') {
+                try { delta = std::stoi(sub.substr(1)); } catch (...) {}
+            } else if (args.size() > 2) {
+                try { delta = std::stoi(args[2]); } catch (...) {}
+            }
+            GVariant* res = call_method("IncreaseVolume", g_variant_new("(i)", delta));
+            if (res) g_variant_unref(res);
+            else AudioManager::set_volume(AudioManager::get_volume() + delta);
+
+            int cur = AudioManager::get_volume();
+            std::cout << C_GREEN << "✔ " << C_RESET << "Volume: " << C_BOLD << cur << "%" << C_RESET
+                      << " (+" << delta << "%)\n";
+            return 0;
+        } else if (sub == "down" || sub == "-" || (sub.size() > 1 && sub[0] == '-')) {
+            int delta = 5;
+            if (sub.size() > 1 && sub[0] == '-') {
+                try { delta = std::stoi(sub.substr(1)); } catch (...) {}
+            } else if (args.size() > 2) {
+                try { delta = std::stoi(args[2]); } catch (...) {}
+            }
+            GVariant* res = call_method("DecreaseVolume", g_variant_new("(i)", delta));
+            if (res) g_variant_unref(res);
+            else AudioManager::set_volume(AudioManager::get_volume() - delta);
+
+            int cur = AudioManager::get_volume();
+            std::cout << C_GREEN << "✔ " << C_RESET << "Volume: " << C_BOLD << cur << "%" << C_RESET
+                      << " (-" << delta << "%)\n";
+            return 0;
+        } else {
+            // "set <pct>" or direct "<pct>"
+            std::string val_str = (sub == "set" && args.size() > 2) ? args[2] : sub;
+            if (!val_str.empty() && val_str.back() == '%') val_str.pop_back();
+            int pct = 50;
+            try {
+                pct = std::clamp(std::stoi(val_str), 0, 150);
+            } catch (...) {
+                std::cerr << C_RED << "Error: " << C_RESET << "Invalid volume percentage: " << val_str << "\n";
+                return 1;
+            }
+            GVariant* res = call_method("SetVolume", g_variant_new("(i)", pct));
+            if (res) g_variant_unref(res);
+            else AudioManager::set_volume(pct);
+
+            std::cout << C_GREEN << "✔ " << C_RESET << "Volume set: " << C_BOLD << pct << "%" << C_RESET << "\n";
+            return 0;
+        }
+    }
+
+    // --- Mic Commands ---
+    if (args[0] == "mic") {
+        GVariant* res = call_method("ToggleMicMute");
+        if (res) g_variant_unref(res);
+        else AudioManager::toggle_mic_mute();
+        std::cout << C_GREEN << "✔ " << C_RESET << "Microphone mute toggled\n";
+        return 0;
     }
 
     // --- Clipboard Commands ---

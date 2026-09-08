@@ -4,7 +4,7 @@ _zenithctl_completions() {
     local cur prev words cword
     _init_completion || return
 
-    local commands="wallpaper wp theme brightness bri clipboard clip toggle bar launcher spotlight control-center cc notifications nc reminders active-apps keybinds network audio power stats reload help version"
+    local commands="wallpaper wp theme brightness bri volume vol mic clipboard clip toggle bar launcher spotlight control-center cc notifications nc reminders active-apps keybinds network audio power stats reload help version"
 
     if [[ $cword -eq 1 ]]; then
         COMPREPLY=($(compgen -W "$commands" -- "$cur"))
@@ -34,6 +34,16 @@ _zenithctl_completions() {
         brightness|bri)
             if [[ $cword -eq 2 ]]; then
                 COMPREPLY=($(compgen -W "set up down current" -- "$cur"))
+            fi
+            ;;
+        volume|vol)
+            if [[ $cword -eq 2 ]]; then
+                COMPREPLY=($(compgen -W "set up down mute current" -- "$cur"))
+            fi
+            ;;
+        mic)
+            if [[ $cword -eq 2 ]]; then
+                COMPREPLY=($(compgen -W "mute" -- "$cur"))
             fi
             ;;
         clipboard|clip)

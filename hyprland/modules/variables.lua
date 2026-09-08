@@ -193,13 +193,13 @@ Media = {
 
 Audio = {
 
-	volumeUp = "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+",
+	volumeUp = "zenithctl vol +5 2>/dev/null || wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+",
 
-	volumeDown = "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
+	volumeDown = "zenithctl vol -5 2>/dev/null || wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-",
 
-	mute = "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+	mute = "zenithctl vol mute 2>/dev/null || wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
 
-	micMute = "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
+	micMute = "zenithctl mic mute 2>/dev/null || wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle",
 }
 
 ------------------------------------------------------------

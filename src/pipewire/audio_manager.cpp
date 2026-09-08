@@ -1,4 +1,5 @@
 #include "pipewire/audio_manager.hpp"
+#include "shell/osd/osd_window.hpp"
 #include <array>
 #include <memory>
 #include <cstdio>
@@ -51,11 +52,13 @@ void AudioManager::set_volume(int volume) {
     char cmd[64];
     snprintf(cmd, sizeof(cmd), "wpctl set-volume @DEFAULT_AUDIO_SINK@ %.2f 2>/dev/null &", v);
     system(cmd);
+    OSDWindow::show_volume(cached_volume, cached_muted);
 }
 
 void AudioManager::toggle_mute() {
     cached_muted = !cached_muted;
     system("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle 2>/dev/null &");
+    OSDWindow::show_volume(cached_volume, cached_muted);
 }
 
 int AudioManager::get_mic_volume() {
@@ -73,11 +76,13 @@ void AudioManager::set_mic_volume(int volume) {
     char cmd[64];
     snprintf(cmd, sizeof(cmd), "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ %.2f 2>/dev/null &", v);
     system(cmd);
+    OSDWindow::show_mic(cached_mic_volume, cached_mic_muted);
 }
 
 void AudioManager::toggle_mic_mute() {
     cached_mic_muted = !cached_mic_muted;
     system("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle 2>/dev/null &");
+    OSDWindow::show_mic(cached_mic_volume, cached_mic_muted);
 }
 
 std::string AudioManager::get_default_sink_name() {

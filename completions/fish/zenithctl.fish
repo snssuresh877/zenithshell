@@ -18,6 +18,9 @@ for cmd in zenithctl zenithshell
     complete -c $cmd -n "__fish_use_subcommand" -a theme -d "Theming engine & color extraction"
     complete -c $cmd -n "__fish_use_subcommand" -a brightness -d "Hardware screen backlight control"
     complete -c $cmd -n "__fish_use_subcommand" -a bri -d "Hardware screen backlight control (shorthand)"
+    complete -c $cmd -n "__fish_use_subcommand" -a volume -d "Audio volume & PipeWire control"
+    complete -c $cmd -n "__fish_use_subcommand" -a vol -d "Audio volume (shorthand)"
+    complete -c $cmd -n "__fish_use_subcommand" -a mic -d "Microphone mute toggle"
     complete -c $cmd -n "__fish_use_subcommand" -a clipboard -d "Clipboard history & overlay"
     complete -c $cmd -n "__fish_use_subcommand" -a clip -d "Clipboard history (shorthand)"
     complete -c $cmd -n "__fish_use_subcommand" -a toggle -d "Toggle shell modules & overlays"
@@ -59,6 +62,16 @@ for cmd in zenithctl zenithshell
     complete -c $cmd -n "__fish_seen_subcommand_from brightness bri" -a up -d "Increase brightness"
     complete -c $cmd -n "__fish_seen_subcommand_from brightness bri" -a down -d "Decrease brightness"
     complete -c $cmd -n "__fish_seen_subcommand_from brightness bri" -a current -d "Print current brightness percentage"
+
+    # --- Volume Subcommands ---
+    complete -c $cmd -n "__fish_seen_subcommand_from volume vol" -a set -d "Set volume percentage"
+    complete -c $cmd -n "__fish_seen_subcommand_from volume vol" -a up -d "Increase volume"
+    complete -c $cmd -n "__fish_seen_subcommand_from volume vol" -a down -d "Decrease volume"
+    complete -c $cmd -n "__fish_seen_subcommand_from volume vol" -a mute -d "Toggle audio mute"
+    complete -c $cmd -n "__fish_seen_subcommand_from volume vol" -a current -d "Print current volume percentage"
+
+    # --- Mic Subcommands ---
+    complete -c $cmd -n "__fish_seen_subcommand_from mic" -a mute -d "Toggle microphone mute"
 
     # --- Clipboard Subcommands ---
     complete -c $cmd -n "__fish_seen_subcommand_from clipboard clip" -a clear -d "Wipe clipboard history"
