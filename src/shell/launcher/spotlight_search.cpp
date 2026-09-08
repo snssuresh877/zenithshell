@@ -10,6 +10,7 @@
 #include <cmath>
 #include <filesystem>
 #include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <unordered_set>
 
@@ -644,36 +645,217 @@ void SpotlightSearch::execute_result(const SearchResult& result) {
             system(cmd.c_str());
         }
     } else if (result.type == SearchResult::MATH) {
-        std::string cmd = "wl-copy '" + result.title + "' 2>/dev/null";
+        std::string copy_val = result.title;
+        if (copy_val.rfind("= ", 0) == 0) {
+            copy_val = copy_val.substr(2);
+        }
+        std::string cmd = "wl-copy '" + copy_val + "' 2>/dev/null";
         system(cmd.c_str());
+        std::string notif = "notify-send -u low 'Zenith Calculator' 'Copied " + copy_val + " to clipboard' 2>/dev/null &";
+        system(notif.c_str());
     }
 }
 
-std::string SpotlightSearch::evaluate_math(const std::string& expr) {
-    if (expr.empty()) return "";
-    bool has_math = false;
-    for (char c : expr) {
-        if (c == '+' || c == '-' || c == '*' || c == '/' || c == '^' || c == '%') {
-            has_math = true;
-            break;
+namespace {
+
+class SpotlightMathEvaluator {
+public:
+    static bool evaluate(const std::string& input, double& result) {
+        std::string expr;
+        for (char c : input) {
+            if (!std::isspace(static_cast<unsigned char>(c))) expr += c;
+        }
+        if (expr.empty()) return false;
+
+        // Check if there are any operators or math function prefixes
+        bool has_op = false;
+        for (char c : expr) {
+            if (c == '+' || c == '-' || c == '*' || c == '/' || c == '^' || c == '%' || c == '(') {
+                has_op = true; break;
+            }
+        }
+        if (!has_op) {
+            std::string lower = expr;
+            for (char& c : lower) c = std::tolower(static_cast<unsigned char>(c));
+            if (lower.rfind("sqrt(", 0) == 0 || lower.rfind("abs(", 0) == 0 ||
+                lower.rfind("sin(", 0) == 0 || lower.rfind("cos(", 0) == 0 ||
+                lower.rfind("tan(", 0) == 0 || lower.rfind("log(", 0) == 0 ||
+                lower.rfind("ln(", 0) == 0) {
+                has_op = true;
+            }
+        }
+        if (!has_op) return false;
+
+        size_t idx = 0;
+        try {
+            result = parse_expression(expr, idx);
+            if (idx != expr.size()) return false;
+            return !std::isnan(result) && !std::isinf(result);
+        } catch (...) {
+            return false;
         }
     }
-    if (!has_math) return "";
 
-    double a = 0, b = 0;
-    char op = 0;
-    if (sscanf(expr.c_str(), "%lf %c %lf", &a, &op, &b) == 3 || sscanf(expr.c_str(), "%lf%c%lf", &a, &op, &b) == 3) {
-        double res = 0;
-        if (op == '+') res = a + b;
-        else if (op == '-') res = a - b;
-        else if (op == '*') res = a * b;
-        else if (op == '/') res = (b != 0) ? a / b : 0;
-        else if (op == '^') res = pow(a, b);
-        else if (op == '%') res = (a * b) / 100.0;
-        
-        char buf[64];
-        snprintf(buf, sizeof(buf), "= %.4g", res);
-        return std::string(buf);
+    static std::string format_result(double val) {
+        if (std::isnan(val) || std::isinf(val)) return "";
+        if (std::floor(val) == val && std::abs(val) < 1e14) {
+            return std::to_string(static_cast<long long>(val));
+        }
+        std::ostringstream ss;
+        ss << std::setprecision(10) << val;
+        return ss.str();
+    }
+
+private:
+    static double parse_expression(const std::string& s, size_t& i) {
+        double val = parse_term(s, i);
+        while (i < s.size()) {
+            if (s[i] == '+') {
+                i++;
+                val += parse_term(s, i);
+            } else if (s[i] == '-') {
+                i++;
+                val -= parse_term(s, i);
+            } else {
+                break;
+            }
+        }
+        return val;
+    }
+
+    static double parse_term(const std::string& s, size_t& i) {
+        double val = parse_factor(s, i);
+        while (i < s.size()) {
+            if (s[i] == '*') {
+                i++;
+                val *= parse_factor(s, i);
+            } else if (s[i] == '/') {
+                i++;
+                double denom = parse_factor(s, i);
+                if (denom == 0) throw std::runtime_error("div0");
+                val /= denom;
+            } else if (s[i] == '%') {
+                if (i + 1 == s.size() || s[i+1] == '+' || s[i+1] == '-' || s[i+1] == '*' || s[i+1] == '/' || s[i+1] == ')') {
+                    i++;
+                    val /= 100.0;
+                } else {
+                    i++;
+                    double denom = parse_factor(s, i);
+                    if (denom == 0) throw std::runtime_error("div0");
+                    val = std::fmod(val, denom);
+                }
+            } else {
+                break;
+            }
+        }
+        return val;
+    }
+
+    static double parse_factor(const std::string& s, size_t& i) {
+        double val = parse_power(s, i);
+        if (i < s.size() && s[i] == '%') {
+            if (i + 1 == s.size() || s[i+1] == '+' || s[i+1] == '-' || s[i+1] == '*' || s[i+1] == '/' || s[i+1] == ')') {
+                i++;
+                val /= 100.0;
+            }
+        }
+        return val;
+    }
+
+    static double parse_power(const std::string& s, size_t& i) {
+        double val = parse_unary(s, i);
+        if (i < s.size() && s[i] == '^') {
+            i++;
+            double exp = parse_power(s, i);
+            val = std::pow(val, exp);
+        }
+        return val;
+    }
+
+    static double parse_unary(const std::string& s, size_t& i) {
+        if (i < s.size() && s[i] == '+') {
+            i++;
+            return parse_unary(s, i);
+        }
+        if (i < s.size() && s[i] == '-') {
+            i++;
+            return -parse_unary(s, i);
+        }
+        return parse_primary(s, i);
+    }
+
+    static double parse_primary(const std::string& s, size_t& i) {
+        if (i >= s.size()) throw std::runtime_error("eof");
+
+        if (s[i] == '(') {
+            i++;
+            double val = parse_expression(s, i);
+            if (i >= s.size() || s[i] != ')') throw std::runtime_error("unmatched paren");
+            i++;
+            return val;
+        }
+
+        if (std::isalpha(static_cast<unsigned char>(s[i]))) {
+            size_t start = i;
+            while (i < s.size() && std::isalpha(static_cast<unsigned char>(s[i]))) i++;
+            std::string name = s.substr(start, i - start);
+            for (auto& c : name) c = std::tolower(static_cast<unsigned char>(c));
+
+            if (name == "pi") return 3.14159265358979323846;
+            if (name == "e") return 2.71828182845904523536;
+
+            if (i < s.size() && s[i] == '(') {
+                i++;
+                double arg = parse_expression(s, i);
+                if (i >= s.size() || s[i] != ')') throw std::runtime_error("unmatched fn paren");
+                i++;
+                if (name == "sqrt") {
+                    if (arg < 0) throw std::runtime_error("sqrt neg");
+                    return std::sqrt(arg);
+                }
+                if (name == "abs") return std::abs(arg);
+                if (name == "sin") return std::sin(arg);
+                if (name == "cos") return std::cos(arg);
+                if (name == "tan") return std::tan(arg);
+                if (name == "log") {
+                    if (arg <= 0) throw std::runtime_error("log neg");
+                    return std::log10(arg);
+                }
+                if (name == "ln") {
+                    if (arg <= 0) throw std::runtime_error("ln neg");
+                    return std::log(arg);
+                }
+            }
+            throw std::runtime_error("unknown id");
+        }
+
+        if (std::isdigit(static_cast<unsigned char>(s[i])) || s[i] == '.') {
+            size_t start = i;
+            bool dot = false;
+            while (i < s.size() && (std::isdigit(static_cast<unsigned char>(s[i])) || s[i] == '.')) {
+                if (s[i] == '.') {
+                    if (dot) break;
+                    dot = true;
+                }
+                i++;
+            }
+            return std::stod(s.substr(start, i - start));
+        }
+
+        throw std::runtime_error("syntax");
+    }
+};
+
+} // anonymous namespace
+
+std::string SpotlightSearch::evaluate_math(const std::string& expr) {
+    if (expr.empty()) return "";
+    double result = 0;
+    if (SpotlightMathEvaluator::evaluate(expr, result)) {
+        std::string formatted = SpotlightMathEvaluator::format_result(result);
+        if (!formatted.empty()) {
+            return "= " + formatted;
+        }
     }
     return "";
 }
