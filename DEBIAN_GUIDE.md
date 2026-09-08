@@ -93,7 +93,7 @@ Here is how packages map from Arch Linux to Debian:
 | **Nerd Fonts** | `ttf-jetbrains-mono-nerd` | Standalone download | Download from Nerd Fonts releases. |
 | **Starship Prompt** | `starship` | Standalone binary | Installed via official install script. |
 | **TUI File Manager** | `yazi` | Standalone binary / cargo | Available in Sid or via GitHub binary. |
-| **Wallpaper Daemon** | `awww` or `swww` | `swaybg` or prebuilt `swww` | `swaybg` is in APT; `swww` via GitHub. |
+| **Wallpaper Engine** | Native C++ (`gtk-layer-shell`) | Built-in | Inbuilt 60fps Wayland transitions; zero external daemons (`awww`/`swww`). |
 | **PolicyKit Agent** | `hyprpolkitagent` | `polkit-kde-agent-1` | Available in APT (`/usr/lib/x86_64-linux-gnu/libexec/polkit-kde-authentication-agent-1`). |
 | **Lock Screen & Idle** | `hypridle`, `hyprlock` | `hypridle`, `hyprlock` (Trixie) or `swayidle`, `swaylock` (Bookworm) | Clean fallback for lock and sleep. |
 

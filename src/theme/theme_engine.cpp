@@ -2,6 +2,7 @@
 #include "theme/theme_loader.hpp"
 #include "theme/pywal_importer.hpp"
 #include "theme/palette_extractor.hpp"
+#include "shell/wallpaper/wallpaper_engine.hpp"
 #include "theme/color_utils.hpp"
 #include "theme/css_manager.hpp"
 #include "gtk3_compat.hpp"
@@ -525,9 +526,8 @@ void ThemeEngine::set_wallpaper(const std::string& path) {
         }
     }
 
-    // Apply wallpaper with awww daemon verification and transition
-    std::string cmd = "pgrep -x awww-daemon >/dev/null 2>&1 || awww-daemon & sleep 0.05; awww img \"" + path + "\" --transition-type grow --transition-duration 0.4 --transition-fps 30 2>/dev/null &";
-    system(cmd.c_str());
+    // Render wallpaper natively via Wayland layer-shell engine (no awww / swww needed)
+    WallpaperEngine::set_wallpaper(path);
 
     // Fast in-process palette extraction & cache emission (< 5ms, no python/pywal needed)
     auto dyn_theme = PaletteExtractor::extract_from_image(path);

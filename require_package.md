@@ -35,7 +35,7 @@ cd ~/Projects/zenithshell
 | **Audio Infrastructure** | `pipewire`, `wireplumber`, `pipewire-audio`, `pipewire-alsa`, `pipewire-pulse`, `pipewire-jack`, `pavucontrol`, `playerctl` | PipeWire low-latency audio, real-time volume routing, GUI mixer (`SUPER + P`), hardware media keys. |
 | **Network & Bluetooth** | `networkmanager` (`nmcli`), `network-manager-applet` (`nm-connection-editor`), `bluez`, `bluez-utils`, `blueman` | Control Center background Wi-Fi scanning (`nmcli`), advanced network dialog, and Bluetooth pairing. |
 | **Backlight & Power Management** | `brightnessctl`, `hypridle`, `hyprlock`, `hyprshade` | Hardware backlight slider, Wayland lock screen (`SUPER + L`), idle sleep, and night light shaders. |
-| **Wallpaper & Theming** | `awww` (or `swww`), `nwg-look`, `bibata-cursor-theme`, `papirus-icon-theme` | Animated wallpaper transitions, inbuilt native C++ dynamic palette extractor (zero Python/pywal dependency!), GTK & cursor themes. |
+| **Wallpaper & Theming** | Native C++ Layer-Shell, `nwg-look`, `bibata-cursor-theme`, `papirus-icon-theme` | Inbuilt 60fps Wayland wallpaper engine (zero `awww`/`swww` dependency!) & native dynamic palette extractor (zero Python/pywal dependency!). |
 | **Clipboard History** | `cliphist`, `wl-clipboard`, `wl-clip-persist` | `SUPER + V` native Zenith clipboard overlay with search and close-persistence. |
 | **Screenshots & Capture** | `grim`, `slurp`, `swappy`, `libnotify`, `jq` | `Print` (window), `SHIFT + Print` (interactive area), instant editor, and desktop notifications. |
 | **Color Picker & Recording** | `hyprpicker`, `wf-recorder` | `SUPER + SHIFT + C` pixel color sampler, `SUPER + SHIFT + R` instant Wayland screen recorder. |
@@ -76,7 +76,7 @@ sudo pacman -S --needed \
     libreoffice-fresh
 ```
 
-*(Note: Install `awww` or `swww` and `cosmic-files` from the AUR via `yay -S awww cosmic-files`)*.
+*(Note: If desired, install `cosmic-files` GUI file manager from the AUR via `yay -S cosmic-files`)*.
 
 ---
 

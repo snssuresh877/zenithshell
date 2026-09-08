@@ -81,6 +81,7 @@ set(SOURCES
     src/shell/tray/system_tray_manager.cpp
     src/shell/keybinds/keybinds_overlay.cpp
     src/shell/power/power_menu.cpp
+    src/shell/wallpaper/wallpaper_engine.cpp
 )
 
 add_executable(zenithshell ${SOURCES})

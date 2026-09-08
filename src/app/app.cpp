@@ -17,6 +17,7 @@
 #include "shell/keybinds/keybinds_overlay.hpp"
 #include "shell/control_center/wifi_manager.hpp"
 #include "shell/power/power_menu.hpp"
+#include "shell/wallpaper/wallpaper_engine.hpp"
 #include <iostream>
 
 namespace zenith {
@@ -65,8 +66,9 @@ void App::on_activate(GtkApplication* app, gpointer user_data) {
         );
     }
 
-    // Initialize CSS Styles & Universal Theme Engine
+    // Initialize CSS Styles, Native Wallpaper Engine & Universal Theme Engine
     CssManager::init(self->style_path);
+    WallpaperEngine::init(app);
     ThemeEngine::init(self->theme_name, self->config.wallpaper_dir);
 
     // Initialize DBus Notification Manager
