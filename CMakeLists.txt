@@ -83,6 +83,7 @@ set(SOURCES
     src/shell/power/power_menu.cpp
     src/shell/wallpaper/wallpaper_engine.cpp
     src/cli/zenithctl.cpp
+    src/system/backlight_manager.cpp
 )
 
 add_executable(zenithshell ${SOURCES})

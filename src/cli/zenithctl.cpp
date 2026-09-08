@@ -1,4 +1,5 @@
 #include "cli/zenithctl.hpp"
+#include "system/backlight_manager.hpp"
 #include <gio/gio.h>
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -42,6 +43,12 @@ void print_help() {
     std::cout << "  " << C_GREEN << "theme next" << C_RESET << "              Cycle to next available theme\n";
     std::cout << "  " << C_GREEN << "theme current" << C_RESET << "           Display current active theme\n";
     std::cout << "  " << C_GREEN << "theme list" << C_RESET << "              List all installed and built-in themes\n\n";
+
+    std::cout << C_BOLD << "BRIGHTNESS COMMANDS (SYSFS / LOGIN1):\n" << C_RESET;
+    std::cout << "  " << C_GREEN << "brightness" << C_RESET << " | " << C_GREEN << "bri" << C_RESET << "             Get current screen brightness percentage\n";
+    std::cout << "  " << C_GREEN << "brightness set <pct>" << C_RESET << "   Set screen brightness percentage (e.g. 75)\n";
+    std::cout << "  " << C_GREEN << "brightness up [step]" << C_RESET << "   Increase screen brightness (default +5%)\n";
+    std::cout << "  " << C_GREEN << "brightness down [step]" << C_RESET << " Decrease screen brightness (default -5%)\n\n";
 
     std::cout << C_BOLD << "CLIPBOARD COMMANDS:\n" << C_RESET;
     std::cout << "  " << C_GREEN << "clipboard" << C_RESET << "               Toggle clipboard history overlay (SUPER + V)\n";
@@ -125,6 +132,7 @@ bool ZenithCtl::should_handle(int argc, char** argv) {
         if (cmd == "-v" || cmd == "--version" || cmd == "version") return true;
         if (cmd == "wallpaper" || cmd == "wp") return true;
         if (cmd == "theme") return true;
+        if (cmd == "brightness" || cmd == "bri") return true;
         if (cmd == "clipboard" || cmd == "clip") return true;
         if (cmd == "toggle") return true;
         if (cmd == "bar" || cmd == "topbar") return true;
@@ -293,6 +301,72 @@ int ZenithCtl::run(int argc, char** argv) {
         }
     }
 
+    // --- Brightness Commands ---
+    if (args[0] == "brightness" || args[0] == "bri") {
+        if (args.size() == 1 || args[1] == "get" || args[1] == "current") {
+            int val = -1;
+            GVariant* res = call_method("GetBrightness");
+            if (res) {
+                g_variant_get(res, "(i)", &val);
+                g_variant_unref(res);
+            } else {
+                val = BacklightManager::get_brightness_percent();
+            }
+            std::cout << val << "%\n";
+            return 0;
+        }
+
+        std::string sub = args[1];
+        if (sub == "up" || sub == "+" || (sub.size() > 1 && sub[0] == '+')) {
+            int delta = 5;
+            if (sub.size() > 1 && sub[0] == '+') {
+                try { delta = std::stoi(sub.substr(1)); } catch (...) {}
+            } else if (args.size() > 2) {
+                try { delta = std::stoi(args[2]); } catch (...) {}
+            }
+            GVariant* res = call_method("IncreaseBrightness", g_variant_new("(i)", delta));
+            if (res) g_variant_unref(res);
+            else BacklightManager::increase_brightness(delta);
+
+            int cur = BacklightManager::get_brightness_percent();
+            std::cout << C_GREEN << "✔ " << C_RESET << "Brightness: " << C_BOLD << cur << "%" << C_RESET
+                      << " (+" << delta << "%)\n";
+            return 0;
+        } else if (sub == "down" || sub == "-" || (sub.size() > 1 && sub[0] == '-')) {
+            int delta = 5;
+            if (sub.size() > 1 && sub[0] == '-') {
+                try { delta = std::stoi(sub.substr(1)); } catch (...) {}
+            } else if (args.size() > 2) {
+                try { delta = std::stoi(args[2]); } catch (...) {}
+            }
+            GVariant* res = call_method("DecreaseBrightness", g_variant_new("(i)", delta));
+            if (res) g_variant_unref(res);
+            else BacklightManager::decrease_brightness(delta);
+
+            int cur = BacklightManager::get_brightness_percent();
+            std::cout << C_GREEN << "✔ " << C_RESET << "Brightness: " << C_BOLD << cur << "%" << C_RESET
+                      << " (-" << delta << "%)\n";
+            return 0;
+        } else {
+            // "set <pct>" or direct "<pct>"
+            std::string val_str = (sub == "set" && args.size() > 2) ? args[2] : sub;
+            if (!val_str.empty() && val_str.back() == '%') val_str.pop_back();
+            int pct = 50;
+            try {
+                pct = std::clamp(std::stoi(val_str), 1, 100);
+            } catch (...) {
+                std::cerr << C_RED << "Error: " << C_RESET << "Invalid brightness percentage: " << val_str << "\n";
+                return 1;
+            }
+            GVariant* res = call_method("SetBrightness", g_variant_new("(i)", pct));
+            if (res) g_variant_unref(res);
+            else BacklightManager::set_brightness_percent(pct);
+
+            std::cout << C_GREEN << "✔ " << C_RESET << "Brightness set: " << C_BOLD << pct << "%" << C_RESET << "\n";
+            return 0;
+        }
+    }
+
     // --- Clipboard Commands ---
     if (args[0] == "clipboard" || args[0] == "clip") {
         if (args.size() > 1 && (args[1] == "clear" || args[1] == "wipe")) {
@@ -393,6 +467,7 @@ int ZenithCtl::run(int argc, char** argv) {
                     std::cout << "  " << C_BOLD << "Network Speed:" << C_RESET << "   " << j.value("net_speed", "N/A") << "\n";
                     std::cout << "  " << C_BOLD << "Battery Level:" << C_RESET << "   " << j.value("battery_percent", 0) << "%\n";
                     std::cout << "  " << C_BOLD << "Volume:" << C_RESET << "          " << j.value("volume", 0) << "%\n";
+                    std::cout << "  " << C_BOLD << "Brightness:" << C_RESET << "      " << j.value("brightness", 0) << "%\n";
                     std::cout << "  " << C_BOLD << "Active Theme:" << C_RESET << "    " << C_GREEN << j.value("theme", "N/A") << C_RESET << "\n";
                 } catch (...) {
                     std::cout << json_str << "\n";

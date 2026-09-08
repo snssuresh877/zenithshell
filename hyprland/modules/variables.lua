@@ -208,9 +208,9 @@ Audio = {
 
 Brightness = {
 
-	up = "brightnessctl set 5%+",
+	up = "zenithctl bri +5 2>/dev/null || brightnessctl set 5%+",
 
-	down = "brightnessctl set 5%-",
+	down = "zenithctl bri -5 2>/dev/null || brightnessctl set 5%-",
 }
 
 ------------------------------------------------------------

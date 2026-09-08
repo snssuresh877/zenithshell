@@ -1,6 +1,7 @@
 #include "shell/control_center/control_center.hpp"
 #include "shell/control_center/wifi_manager.hpp"
 #include "pipewire/audio_manager.hpp"
+#include "system/backlight_manager.hpp"
 #include "theme/theme_engine.hpp"
 #include "gtk3_compat.hpp"
 #include <gtk-layer-shell/gtk-layer-shell.h>
@@ -116,32 +117,7 @@ bool ControlCenter::is_bluetooth_enabled() {
 }
 
 int ControlCenter::get_current_brightness() {
-    // 1. Read target brightness sysfs entry (NOT actual_brightness which fluctuates with ABM/hardware dimming)
-    glob_t glob_result;
-    if (glob("/sys/class/backlight/*/brightness", 0, nullptr, &glob_result) == 0 && glob_result.gl_pathc > 0) {
-        std::ifstream bri_f(glob_result.gl_pathv[0]);
-        std::string max_p = glob_result.gl_pathv[0];
-        size_t last_slash = max_p.find_last_of('/');
-        if (last_slash != std::string::npos) {
-            max_p = max_p.substr(0, last_slash) + "/max_brightness";
-        }
-        std::ifstream max_f(max_p);
-        long bri = 0, max = 1;
-        if (bri_f.is_open() && max_f.is_open()) {
-            bri_f >> bri;
-            max_f >> max;
-            globfree(&glob_result);
-            if (max > 0) return std::clamp(static_cast<int>((bri * 100) / max), 1, 100);
-        }
-        globfree(&glob_result);
-    }
-
-    // 2. Fallback to brightnessctl query
-    std::string br = exec_cmd_read("brightnessctl -m 2>/dev/null | cut -d, -f4 | tr -d '%'");
-    if (!br.empty()) {
-        try { return std::clamp(std::stoi(br), 1, 100); } catch (...) {}
-    }
-    return 80;
+    return BacklightManager::get_brightness_percent();
 }
 
 std::string ControlCenter::get_display_info() {
@@ -507,9 +483,7 @@ GtkWidget* ControlCenter::create_main_page() {
         if (brightness_val_lbl) {
             gtk_label_set_text(GTK_LABEL(brightness_val_lbl), (std::to_string(val) + "%").c_str());
         }
-        char cmd[64];
-        snprintf(cmd, sizeof(cmd), "brightnessctl set %d%% 2>/dev/null &", val);
-        system(cmd);
+        BacklightManager::set_brightness_percent(val);
     }), nullptr);
 
     gtk_box_pack_start(GTK_BOX(bri_vbox), bri_header, FALSE, FALSE, 0);

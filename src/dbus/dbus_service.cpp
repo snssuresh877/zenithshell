@@ -12,6 +12,7 @@
 #include "theme/theme_engine.hpp"
 #include "theme/css_manager.hpp"
 #include "system/sys_monitor.hpp"
+#include "system/backlight_manager.hpp"
 #include "pipewire/audio_manager.hpp"
 #include <iostream>
 #include <sstream>
@@ -64,6 +65,18 @@ static const gchar introspection_xml[] =
     "    </method>"
     "    <method name='GetWallpaper'>"
     "      <arg type='s' name='wallpaper_path' direction='out'/>"
+    "    </method>"
+    "    <method name='GetBrightness'>"
+    "      <arg type='i' name='percent' direction='out'/>"
+    "    </method>"
+    "    <method name='SetBrightness'>"
+    "      <arg type='i' name='percent' direction='in'/>"
+    "    </method>"
+    "    <method name='IncreaseBrightness'>"
+    "      <arg type='i' name='delta' direction='in'/>"
+    "    </method>"
+    "    <method name='DecreaseBrightness'>"
+    "      <arg type='i' name='delta' direction='in'/>"
     "    </method>"
     "    <method name='GetStats'>"
     "      <arg type='s' name='json_stats' direction='out'/>"
@@ -306,9 +319,28 @@ void DBusService::handle_method_call(GDBusConnection*,
     } else if (method == "GetWallpaper") {
         std::string wp = ThemeEngine::get_current_wallpaper_path();
         g_dbus_method_invocation_return_value(invocation, g_variant_new("(s)", wp.c_str()));
+    } else if (method == "GetBrightness") {
+        int b = BacklightManager::get_brightness_percent();
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("(i)", b));
+    } else if (method == "SetBrightness") {
+        gint val = 0;
+        g_variant_get(parameters, "(i)", &val);
+        BacklightManager::set_brightness_percent(val);
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "IncreaseBrightness") {
+        gint delta = 5;
+        g_variant_get(parameters, "(i)", &delta);
+        BacklightManager::increase_brightness(delta);
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
+    } else if (method == "DecreaseBrightness") {
+        gint delta = 5;
+        g_variant_get(parameters, "(i)", &delta);
+        BacklightManager::decrease_brightness(delta);
+        g_dbus_method_invocation_return_value(invocation, g_variant_new("()"));
     } else if (method == "GetStats") {
         SysStats stats = SysMonitor::get_stats();
         int vol = AudioManager::get_volume();
+        int bri = BacklightManager::get_brightness_percent();
         std::string theme = ThemeEngine::get_current_theme_name();
 
         std::ostringstream ss;
@@ -318,6 +350,7 @@ void DBusService::handle_method_call(GDBusConnection*,
            << "\"net_speed\":\"" << stats.net_speed_str << "\","
            << "\"battery_percent\":" << stats.battery_percent << ","
            << "\"volume\":" << vol << ","
+           << "\"brightness\":" << bri << ","
            << "\"theme\":\"" << theme << "\""
            << "}";
 
