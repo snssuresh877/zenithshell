@@ -3,6 +3,8 @@
 #include <gtk-layer-shell/gtk-layer-shell.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkkeysyms.h>
+#include <gio/gio.h>
+#include <filesystem>
 #include <iostream>
 #include <array>
 #include <memory>
@@ -12,6 +14,99 @@
 #include <unordered_set>
 #include <thread>
 #include <cairo.h>
+
+namespace fs = std::filesystem;
+
+namespace {
+
+GVariant* nm_call_method_sync(GDBusConnection* bus,
+                              const char* object_path,
+                              const char* interface_name,
+                              const char* method_name,
+                              GVariant* parameters,
+                              const GVariantType* reply_type) {
+    if (!bus || !object_path || !interface_name || !method_name) return nullptr;
+    GError* error = nullptr;
+    GVariant* res = g_dbus_connection_call_sync(
+        bus,
+        "org.freedesktop.NetworkManager",
+        object_path,
+        interface_name,
+        method_name,
+        parameters,
+        reply_type,
+        G_DBUS_CALL_FLAGS_NONE,
+        2000,
+        nullptr,
+        &error
+    );
+    if (error) {
+        g_error_free(error);
+        return nullptr;
+    }
+    return res;
+}
+
+GVariant* nm_get_all_props(GDBusConnection* bus, const char* object_path, const char* interface_name) {
+    GVariant* res = nm_call_method_sync(
+        bus,
+        object_path,
+        "org.freedesktop.DBus.Properties",
+        "GetAll",
+        g_variant_new("(s)", interface_name),
+        G_VARIANT_TYPE("(a{sv})")
+    );
+    if (!res) return nullptr;
+    GVariant* dict = g_variant_get_child_value(res, 0);
+    g_variant_unref(res);
+    return dict;
+}
+
+GVariant* nm_lookup_dict(GVariant* dict, const char* key) {
+    if (!dict) return nullptr;
+    return g_variant_lookup_value(dict, key, nullptr);
+}
+
+std::string nm_variant_to_string(GVariant* val, const std::string& fallback = "") {
+    if (!val) return fallback;
+    if (g_variant_is_of_type(val, G_VARIANT_TYPE_STRING) || g_variant_is_of_type(val, G_VARIANT_TYPE_OBJECT_PATH)) {
+        return g_variant_get_string(val, nullptr);
+    }
+    return fallback;
+}
+
+bool nm_variant_to_bool(GVariant* val, bool fallback = false) {
+    if (!val) return fallback;
+    if (g_variant_is_of_type(val, G_VARIANT_TYPE_BOOLEAN)) {
+        return g_variant_get_boolean(val);
+    }
+    return fallback;
+}
+
+uint32_t nm_variant_to_uint32(GVariant* val, uint32_t fallback = 0) {
+    if (!val) return fallback;
+    if (g_variant_is_of_type(val, G_VARIANT_TYPE_UINT32)) {
+        return g_variant_get_uint32(val);
+    }
+    if (g_variant_is_of_type(val, G_VARIANT_TYPE_BYTE)) {
+        return g_variant_get_byte(val);
+    }
+    return fallback;
+}
+
+std::string nm_bytes_to_string(GVariant* val) {
+    if (!val) return "";
+    if (g_variant_is_of_type(val, G_VARIANT_TYPE("ay"))) {
+        gsize n_bytes = 0;
+        const guint8* bytes = static_cast<const guint8*>(g_variant_get_fixed_array(val, &n_bytes, sizeof(guint8)));
+        if (bytes && n_bytes > 0) {
+            return std::string(reinterpret_cast<const char*>(bytes), n_bytes);
+        }
+    }
+    return "";
+}
+
+} // anonymous namespace
 
 namespace zenith {
 
@@ -420,106 +515,135 @@ void WifiManager::fetch_active_connection() {
         info.is_connected = false;
         info.iface = "wlan0";
         info.type = "wifi";
+        bool wifi_enabled = true;
 
-        // 1. Get default route device & gateway
-        FILE* fp = popen("ip route get 1.1.1.1 2>/dev/null", "r");
-        if (fp) {
-            char buf[256];
-            if (fgets(buf, sizeof(buf), fp)) {
-                std::string line(buf);
-                std::stringstream ss(line);
-                std::string token;
-                while (ss >> token) {
-                    if (token == "dev" && ss >> info.iface) {}
-                    if (token == "via" && ss >> info.gateway) {}
-                    if (token == "src" && ss >> info.ip_addr) {}
-                }
-                if (!info.iface.empty()) {
-                    info.is_connected = true;
-                }
-            }
-            pclose(fp);
-        }
+        GError* error = nullptr;
+        GDBusConnection* bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, &error);
+        if (bus) {
+            GVariant* nm_props = nm_get_all_props(bus, "/org/freedesktop/NetworkManager", "org.freedesktop.NetworkManager");
+            if (nm_props) {
+                GVariant* v_radio = nm_lookup_dict(nm_props, "WirelessEnabled");
+                wifi_enabled = nm_variant_to_bool(v_radio, true);
+                if (v_radio) g_variant_unref(v_radio);
 
-        if (info.is_connected) {
-            if (info.iface.rfind("wl", 0) == 0) {
-                info.type = "wifi";
-            } else if (info.iface.rfind("eth", 0) == 0 || info.iface.rfind("en", 0) == 0) {
-                info.type = "ethernet";
-            }
+                GVariant* v_prim = nm_lookup_dict(nm_props, "PrimaryConnection");
+                std::string prim_conn_path = nm_variant_to_string(v_prim, "/");
+                if (v_prim) g_variant_unref(v_prim);
 
-            // 2. Get connection name and IP from nmcli dev show
-            std::string cmd = "nmcli -t -f GENERAL.CONNECTION,IP4.ADDRESS,IP4.GATEWAY dev show " + info.iface + " 2>/dev/null";
-            fp = popen(cmd.c_str(), "r");
-            if (fp) {
-                char buf[256];
-                while (fgets(buf, sizeof(buf), fp)) {
-                    std::string l(buf);
-                    if (l.find("GENERAL.CONNECTION:") == 0) {
-                        info.ssid = l.substr(19);
-                        info.ssid.erase(info.ssid.find_last_not_of(" \n\r\t") + 1);
-                    } else if (l.find("IP4.ADDRESS") == 0 && info.ip_addr.empty()) {
-                        size_t colon = l.find(':');
-                        if (colon != std::string::npos) {
-                            info.ip_addr = l.substr(colon + 1);
-                            info.ip_addr.erase(info.ip_addr.find_last_not_of(" \n\r\t") + 1);
+                GVariant* v_type = nm_lookup_dict(nm_props, "PrimaryConnectionType");
+                std::string prim_type = nm_variant_to_string(v_type, "");
+                if (v_type) g_variant_unref(v_type);
+
+                if (!prim_conn_path.empty() && prim_conn_path != "/") {
+                    GVariant* conn_props = nm_get_all_props(bus, prim_conn_path.c_str(), "org.freedesktop.NetworkManager.Connection.Active");
+                    if (conn_props) {
+                        info.is_connected = true;
+
+                        GVariant* v_id = nm_lookup_dict(conn_props, "Id");
+                        info.ssid = nm_variant_to_string(v_id, "");
+                        if (v_id) g_variant_unref(v_id);
+
+                        GVariant* v_ctype = nm_lookup_dict(conn_props, "Type");
+                        std::string conn_type = nm_variant_to_string(v_ctype, prim_type);
+                        if (v_ctype) g_variant_unref(v_ctype);
+
+                        if (conn_type == "802-11-wireless") {
+                            info.type = "wifi";
+                        } else if (conn_type == "802-3-ethernet") {
+                            info.type = "ethernet";
+                        } else {
+                            info.type = conn_type;
                         }
-                    } else if (l.find("IP4.GATEWAY:") == 0 && info.gateway.empty()) {
-                        info.gateway = l.substr(12);
-                        info.gateway.erase(info.gateway.find_last_not_of(" \n\r\t") + 1);
-                    }
-                }
-                pclose(fp);
-            }
 
-            // 3. Wi-Fi details (Signal, Channel, Frequency)
-            if (info.type == "wifi") {
-                fp = popen("nmcli -t -f IN-USE,SSID,SIGNAL,CHAN,FREQ dev wifi list 2>/dev/null | grep '^\\*'", "r");
-                if (fp) {
-                    char buf[256];
-                    if (fgets(buf, sizeof(buf), fp)) {
-                        std::string l(buf);
-                        std::stringstream ss(l);
-                        std::string in_use, ssid, sig_str, chan_str, freq_str;
-                        std::getline(ss, in_use, ':');
-                        std::getline(ss, ssid, ':');
-                        std::getline(ss, sig_str, ':');
-                        std::getline(ss, chan_str, ':');
-                        std::getline(ss, freq_str, ':');
+                        // Query device interface
+                        GVariant* v_devs = nm_lookup_dict(conn_props, "Devices");
+                        if (v_devs) {
+                            if (g_variant_is_of_type(v_devs, G_VARIANT_TYPE("ao")) && g_variant_n_children(v_devs) > 0) {
+                                GVariant* first_dev = g_variant_get_child_value(v_devs, 0);
+                                const char* dev_path = g_variant_get_string(first_dev, nullptr);
+                                if (dev_path) {
+                                    GVariant* dev_props = nm_get_all_props(bus, dev_path, "org.freedesktop.NetworkManager.Device");
+                                    if (dev_props) {
+                                        GVariant* v_iface = nm_lookup_dict(dev_props, "Interface");
+                                        info.iface = nm_variant_to_string(v_iface, info.iface);
+                                        if (v_iface) g_variant_unref(v_iface);
+                                        g_variant_unref(dev_props);
+                                    }
+                                }
+                                g_variant_unref(first_dev);
+                            }
+                            g_variant_unref(v_devs);
+                        }
 
-                        if (!ssid.empty() && info.ssid.empty()) {
-                            info.ssid = ssid;
-                        }
-                        if (!sig_str.empty()) {
-                            try { info.signal_strength = std::stoi(sig_str); } catch (...) {}
-                        }
-                        info.channel = chan_str;
-                        if (!freq_str.empty()) {
-                            try {
-                                int f = std::stoi(freq_str);
-                                info.freq_band = (f > 4000) ? "5 GHz" : "2.4 GHz";
-                            } catch (...) {
-                                info.freq_band = freq_str;
+                        // Query access point details for Wi-Fi
+                        if (info.type == "wifi") {
+                            GVariant* v_ap = nm_lookup_dict(conn_props, "SpecificObject");
+                            std::string ap_path = nm_variant_to_string(v_ap, "/");
+                            if (v_ap) g_variant_unref(v_ap);
+
+                            if (!ap_path.empty() && ap_path != "/") {
+                                GVariant* ap_props = nm_get_all_props(bus, ap_path.c_str(), "org.freedesktop.NetworkManager.AccessPoint");
+                                if (ap_props) {
+                                    GVariant* v_str = nm_lookup_dict(ap_props, "Strength");
+                                    info.signal_strength = static_cast<int>(nm_variant_to_uint32(v_str, 0));
+                                    if (v_str) g_variant_unref(v_str);
+
+                                    GVariant* v_freq = nm_lookup_dict(ap_props, "Frequency");
+                                    uint32_t freq_mhz = nm_variant_to_uint32(v_freq, 0);
+                                    if (v_freq) g_variant_unref(v_freq);
+
+                                    if (freq_mhz > 0) {
+                                        info.freq_band = (freq_mhz > 4000) ? "5 GHz" : "2.4 GHz";
+                                        if (freq_mhz >= 2412 && freq_mhz <= 2484) {
+                                            info.channel = std::to_string((freq_mhz == 2484) ? 14 : ((freq_mhz - 2407) / 5));
+                                        } else if (freq_mhz >= 5000) {
+                                            info.channel = std::to_string((freq_mhz - 5000) / 5);
+                                        } else {
+                                            info.channel = std::to_string(freq_mhz);
+                                        }
+                                    }
+                                    g_variant_unref(ap_props);
+                                }
                             }
                         }
-                    }
-                    pclose(fp);
-                }
-            }
-        }
 
-        // 4. Check Wi-Fi radio status
-        bool wifi_enabled = true;
-        FILE* fp_radio = popen("nmcli radio wifi 2>/dev/null", "r");
-        if (fp_radio) {
-            char buf[32];
-            if (fgets(buf, sizeof(buf), fp_radio)) {
-                std::string r(buf);
-                if (r.find("disabled") != std::string::npos) {
-                    wifi_enabled = false;
+                        // Query IP4 Config
+                        GVariant* v_ip4 = nm_lookup_dict(conn_props, "Ip4Config");
+                        std::string ip4_path = nm_variant_to_string(v_ip4, "/");
+                        if (v_ip4) g_variant_unref(v_ip4);
+
+                        if (!ip4_path.empty() && ip4_path != "/") {
+                            GVariant* ip4_props = nm_get_all_props(bus, ip4_path.c_str(), "org.freedesktop.NetworkManager.IP4Config");
+                            if (ip4_props) {
+                                GVariant* v_gw = nm_lookup_dict(ip4_props, "Gateway");
+                                info.gateway = nm_variant_to_string(v_gw, "");
+                                if (v_gw) g_variant_unref(v_gw);
+
+                                GVariant* v_addr_data = nm_lookup_dict(ip4_props, "AddressData");
+                                if (v_addr_data) {
+                                    if (g_variant_is_of_type(v_addr_data, G_VARIANT_TYPE("aa{sv}")) && g_variant_n_children(v_addr_data) > 0) {
+                                        GVariant* first_addr = g_variant_get_child_value(v_addr_data, 0);
+                                        GVariant* addr_val = g_variant_lookup_value(first_addr, "address", G_VARIANT_TYPE_STRING);
+                                        if (addr_val) {
+                                            info.ip_addr = g_variant_get_string(addr_val, nullptr);
+                                            g_variant_unref(addr_val);
+                                        }
+                                        g_variant_unref(first_addr);
+                                    }
+                                    g_variant_unref(v_addr_data);
+                                }
+                                g_variant_unref(ip4_props);
+                            }
+                        }
+
+                        g_variant_unref(conn_props);
+                    }
                 }
+                g_variant_unref(nm_props);
             }
-            pclose(fp_radio);
+            g_object_unref(bus);
+        } else {
+            if (error) g_error_free(error);
         }
 
         struct FetchData {
@@ -646,37 +770,248 @@ void WifiManager::scan_networks(bool force_rescan) {
     }
 
     std::thread([force_rescan]() {
-        if (force_rescan) {
-            system("nmcli dev wifi rescan 2>/dev/null");
-        }
-
-        // 1. Fetch saved connection names
         std::unordered_set<std::string> saved_ssids;
-        FILE* fp_saved = popen("nmcli -t -f NAME,TYPE connection show 2>/dev/null | grep ':802-11-wireless' | cut -d: -f1", "r");
-        if (fp_saved) {
-            char buf[256];
-            while (fgets(buf, sizeof(buf), fp_saved)) {
-                std::string s(buf);
-                s.erase(s.find_last_not_of(" \n\r\t") + 1);
-                if (!s.empty()) saved_ssids.insert(s);
-            }
-            pclose(fp_saved);
-        }
-
-        // 2. Query nmcli for Wi-Fi access points
-        std::array<char, 512> buffer;
-        std::string result;
-        FILE* fp = popen("nmcli -t -f IN-USE,BSSID,SSID,MODE,CHAN,FREQ,RATE,SIGNAL,SECURITY device wifi list 2>/dev/null", "r");
-        if (fp) {
-            while (fgets(buffer.data(), buffer.size(), fp) != nullptr) {
-                result += buffer.data();
-            }
-            pclose(fp);
-        }
-
         std::map<std::string, WifiNetwork> unique_nets;
-        std::istringstream stream(result);
-        std::string line;
+        bool dbus_success = false;
+
+        GError* error = nullptr;
+        GDBusConnection* bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, &error);
+        if (bus) {
+            // 1. Fetch saved connection names via D-Bus Settings
+            GVariant* res_conns = nm_call_method_sync(
+                bus,
+                "/org/freedesktop/NetworkManager/Settings",
+                "org.freedesktop.NetworkManager.Settings",
+                "ListConnections",
+                nullptr,
+                G_VARIANT_TYPE("(ao)")
+            );
+            if (res_conns) {
+                GVariant* conn_arr = g_variant_get_child_value(res_conns, 0);
+                size_t n_conns = g_variant_n_children(conn_arr);
+                for (size_t i = 0; i < n_conns; ++i) {
+                    GVariant* c_child = g_variant_get_child_value(conn_arr, i);
+                    const char* c_path = g_variant_get_string(c_child, nullptr);
+                    if (c_path) {
+                        GVariant* res_set = nm_call_method_sync(
+                            bus,
+                            c_path,
+                            "org.freedesktop.NetworkManager.Settings.Connection",
+                            "GetSettings",
+                            nullptr,
+                            G_VARIANT_TYPE("(a{sa{sv}})")
+                        );
+                        if (res_set) {
+                            GVariant* set_dict = g_variant_get_child_value(res_set, 0);
+                            GVariant* conn_sec = g_variant_lookup_value(set_dict, "connection", G_VARIANT_TYPE("a{sv}"));
+                            if (conn_sec) {
+                                GVariant* v_type = g_variant_lookup_value(conn_sec, "type", G_VARIANT_TYPE_STRING);
+                                if (v_type) {
+                                    if (std::string(g_variant_get_string(v_type, nullptr)) == "802-11-wireless") {
+                                        GVariant* v_id = g_variant_lookup_value(conn_sec, "id", G_VARIANT_TYPE_STRING);
+                                        if (v_id) {
+                                            saved_ssids.insert(g_variant_get_string(v_id, nullptr));
+                                            g_variant_unref(v_id);
+                                        }
+                                    }
+                                    g_variant_unref(v_type);
+                                }
+                                g_variant_unref(conn_sec);
+                            }
+                            g_variant_unref(set_dict);
+                            g_variant_unref(res_set);
+                        }
+                    }
+                    g_variant_unref(c_child);
+                }
+                g_variant_unref(conn_arr);
+                g_variant_unref(res_conns);
+            }
+
+            // 2. Discover Wi-Fi Device
+            std::string wifi_dev_path;
+            std::string active_ap_path;
+
+            GVariant* res_devs = nm_call_method_sync(
+                bus,
+                "/org/freedesktop/NetworkManager",
+                "org.freedesktop.NetworkManager",
+                "GetDevices",
+                nullptr,
+                G_VARIANT_TYPE("(ao)")
+            );
+            if (res_devs) {
+                GVariant* dev_arr = g_variant_get_child_value(res_devs, 0);
+                size_t n_devs = g_variant_n_children(dev_arr);
+                for (size_t i = 0; i < n_devs; ++i) {
+                    GVariant* d_child = g_variant_get_child_value(dev_arr, i);
+                    const char* d_path = g_variant_get_string(d_child, nullptr);
+                    if (d_path) {
+                        GVariant* dev_props = nm_get_all_props(bus, d_path, "org.freedesktop.NetworkManager.Device");
+                        if (dev_props) {
+                            GVariant* v_dtype = nm_lookup_dict(dev_props, "DeviceType");
+                            if (nm_variant_to_uint32(v_dtype, 0) == 2) { // NM_DEVICE_TYPE_WIFI
+                                wifi_dev_path = d_path;
+                                if (v_dtype) g_variant_unref(v_dtype);
+                                g_variant_unref(dev_props);
+                                g_variant_unref(d_child);
+                                break;
+                            }
+                            if (v_dtype) g_variant_unref(v_dtype);
+                            g_variant_unref(dev_props);
+                        }
+                    }
+                    g_variant_unref(d_child);
+                }
+                g_variant_unref(dev_arr);
+                g_variant_unref(res_devs);
+            }
+
+            if (!wifi_dev_path.empty()) {
+                if (force_rescan) {
+                    GVariantBuilder b;
+                    g_variant_builder_init(&b, G_VARIANT_TYPE("a{sv}"));
+                    GVariant* rescan_res = nm_call_method_sync(
+                        bus,
+                        wifi_dev_path.c_str(),
+                        "org.freedesktop.NetworkManager.Device.Wireless",
+                        "RequestScan",
+                        g_variant_new("(a{sv})", &b),
+                        nullptr
+                    );
+                    if (rescan_res) g_variant_unref(rescan_res);
+                }
+
+                // Query Active AP
+                GVariant* active_ap_var = nm_call_method_sync(
+                    bus,
+                    wifi_dev_path.c_str(),
+                    "org.freedesktop.DBus.Properties",
+                    "Get",
+                    g_variant_new("(ss)", "org.freedesktop.NetworkManager.Device.Wireless", "ActiveAccessPoint"),
+                    G_VARIANT_TYPE("(v)")
+                );
+                if (active_ap_var) {
+                    GVariant* v_inner = g_variant_get_child_value(active_ap_var, 0);
+                    GVariant* v_val = g_variant_get_variant(v_inner);
+                    active_ap_path = nm_variant_to_string(v_val, "/");
+                    g_variant_unref(v_val);
+                    g_variant_unref(v_inner);
+                    g_variant_unref(active_ap_var);
+                }
+
+                // Query All APs
+                GVariant* res_aps = nm_call_method_sync(
+                    bus,
+                    wifi_dev_path.c_str(),
+                    "org.freedesktop.NetworkManager.Device.Wireless",
+                    "GetAllAccessPoints",
+                    nullptr,
+                    G_VARIANT_TYPE("(ao)")
+                );
+                if (res_aps) {
+                    GVariant* ap_arr = g_variant_get_child_value(res_aps, 0);
+                    size_t n_aps = g_variant_n_children(ap_arr);
+                    for (size_t i = 0; i < n_aps; ++i) {
+                        GVariant* ap_child = g_variant_get_child_value(ap_arr, i);
+                        const char* ap_path = g_variant_get_string(ap_child, nullptr);
+                        if (ap_path) {
+                            GVariant* ap_props = nm_get_all_props(bus, ap_path, "org.freedesktop.NetworkManager.AccessPoint");
+                            if (ap_props) {
+                                GVariant* v_ssid_raw = nm_lookup_dict(ap_props, "Ssid");
+                                std::string ssid = nm_bytes_to_string(v_ssid_raw);
+                                if (v_ssid_raw) g_variant_unref(v_ssid_raw);
+
+                                if (!ssid.empty() && ssid != "--") {
+                                    GVariant* v_bssid = nm_lookup_dict(ap_props, "HwAddress");
+                                    std::string bssid = nm_variant_to_string(v_bssid, "");
+                                    if (v_bssid) g_variant_unref(v_bssid);
+
+                                    GVariant* v_str = nm_lookup_dict(ap_props, "Strength");
+                                    int sig = static_cast<int>(nm_variant_to_uint32(v_str, 50));
+                                    if (v_str) g_variant_unref(v_str);
+
+                                    GVariant* v_freq = nm_lookup_dict(ap_props, "Frequency");
+                                    uint32_t freq_mhz = nm_variant_to_uint32(v_freq, 0);
+                                    if (v_freq) g_variant_unref(v_freq);
+
+                                    GVariant* v_wpa = nm_lookup_dict(ap_props, "WpaFlags");
+                                    uint32_t wpa = nm_variant_to_uint32(v_wpa, 0);
+                                    if (v_wpa) g_variant_unref(v_wpa);
+
+                                    GVariant* v_rsn = nm_lookup_dict(ap_props, "RsnFlags");
+                                    uint32_t rsn = nm_variant_to_uint32(v_rsn, 0);
+                                    if (v_rsn) g_variant_unref(v_rsn);
+
+                                    bool is_sec = (wpa > 0 || rsn > 0);
+                                    bool is_conn = (!active_ap_path.empty() && active_ap_path != "/" && std::string(ap_path) == active_ap_path);
+                                    bool is_saved = (saved_ssids.find(ssid) != saved_ssids.end());
+
+                                    std::string chan;
+                                    std::string freq_str;
+                                    if (freq_mhz > 0) {
+                                        freq_str = std::to_string(freq_mhz) + " MHz";
+                                        if (freq_mhz >= 2412 && freq_mhz <= 2484) {
+                                            chan = std::to_string((freq_mhz == 2484) ? 14 : ((freq_mhz - 2407) / 5));
+                                        } else if (freq_mhz >= 5000) {
+                                            chan = std::to_string((freq_mhz - 5000) / 5);
+                                        }
+                                    }
+
+                                    std::string sec_str = is_sec ? "WPA2" : "";
+
+                                    if (unique_nets.find(ssid) == unique_nets.end() || unique_nets[ssid].signal_strength < sig) {
+                                        unique_nets[ssid] = {ssid, bssid, is_conn, is_saved, sig, chan, freq_str, sec_str, is_sec};
+                                    }
+                                }
+                                g_variant_unref(ap_props);
+                            }
+                        }
+                        g_variant_unref(ap_child);
+                    }
+                    g_variant_unref(ap_arr);
+                    g_variant_unref(res_aps);
+                    if (!unique_nets.empty()) {
+                        dbus_success = true;
+                    }
+                }
+            }
+            g_object_unref(bus);
+        } else {
+            if (error) g_error_free(error);
+        }
+
+        // Fallback to nmcli if D-Bus scan did not yield access points
+        if (!dbus_success) {
+            if (force_rescan) {
+                system("nmcli dev wifi rescan 2>/dev/null");
+            }
+
+            if (saved_ssids.empty()) {
+                FILE* fp_saved = popen("nmcli -t -f NAME,TYPE connection show 2>/dev/null | grep ':802-11-wireless' | cut -d: -f1", "r");
+                if (fp_saved) {
+                    char buf[256];
+                    while (fgets(buf, sizeof(buf), fp_saved)) {
+                        std::string s(buf);
+                        s.erase(s.find_last_not_of(" \n\r\t") + 1);
+                        if (!s.empty()) saved_ssids.insert(s);
+                    }
+                    pclose(fp_saved);
+                }
+            }
+
+            std::array<char, 512> buffer;
+            std::string result;
+            FILE* fp = popen("nmcli -t -f IN-USE,BSSID,SSID,MODE,CHAN,FREQ,RATE,SIGNAL,SECURITY device wifi list 2>/dev/null", "r");
+            if (fp) {
+                while (fgets(buffer.data(), buffer.size(), fp) != nullptr) {
+                    result += buffer.data();
+                }
+                pclose(fp);
+            }
+
+            std::istringstream stream(result);
+            std::string line;
 
         while (std::getline(stream, line)) {
             if (line.empty()) continue;
@@ -721,6 +1056,7 @@ void WifiManager::scan_networks(bool force_rescan) {
                     unique_nets[ssid] = {ssid, bssid, is_conn, is_saved, sig, chan, freq, sec, is_sec};
                 }
             }
+        }
         }
 
         auto* nets = new std::vector<WifiNetwork>();
@@ -1179,9 +1515,42 @@ void WifiManager::disconnect_active() {
     }
 
     std::thread([]() {
-        std::string iface = current_info.iface;
-        std::string cmd = "nmcli device disconnect " + iface + " 2>/dev/null";
-        system(cmd.c_str());
+        bool disconnected = false;
+        GError* error = nullptr;
+        GDBusConnection* bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, &error);
+        if (bus) {
+            GVariant* nm_props = nm_get_all_props(bus, "/org/freedesktop/NetworkManager", "org.freedesktop.NetworkManager");
+            if (nm_props) {
+                GVariant* v_prim = nm_lookup_dict(nm_props, "PrimaryConnection");
+                std::string prim_conn_path = nm_variant_to_string(v_prim, "/");
+                if (v_prim) g_variant_unref(v_prim);
+
+                if (!prim_conn_path.empty() && prim_conn_path != "/") {
+                    GVariant* res = nm_call_method_sync(
+                        bus,
+                        "/org/freedesktop/NetworkManager",
+                        "org.freedesktop.NetworkManager",
+                        "DeactivateConnection",
+                        g_variant_new("(o)", prim_conn_path.c_str()),
+                        nullptr
+                    );
+                    if (res) {
+                        g_variant_unref(res);
+                        disconnected = true;
+                    }
+                }
+                g_variant_unref(nm_props);
+            }
+            g_object_unref(bus);
+        } else {
+            if (error) g_error_free(error);
+        }
+
+        if (!disconnected) {
+            std::string iface = current_info.iface;
+            std::string cmd = "nmcli device disconnect " + iface + " 2>/dev/null";
+            g_spawn_command_line_async(cmd.c_str(), nullptr);
+        }
 
         g_idle_add([](gpointer) -> gboolean {
             WifiManager::fetch_active_connection();
@@ -1199,8 +1568,31 @@ void WifiManager::toggle_wifi_radio(bool enable) {
     }
 
     std::thread([enable]() {
-        std::string cmd = enable ? "nmcli radio wifi on" : "nmcli radio wifi off";
-        system(cmd.c_str());
+        bool applied = false;
+        GError* error = nullptr;
+        GDBusConnection* bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, &error);
+        if (bus) {
+            GVariant* res = nm_call_method_sync(
+                bus,
+                "/org/freedesktop/NetworkManager",
+                "org.freedesktop.DBus.Properties",
+                "Set",
+                g_variant_new("(ssv)", "org.freedesktop.NetworkManager", "WirelessEnabled", g_variant_new_boolean(enable)),
+                nullptr
+            );
+            if (res) {
+                g_variant_unref(res);
+                applied = true;
+            }
+            g_object_unref(bus);
+        } else {
+            if (error) g_error_free(error);
+        }
+
+        if (!applied) {
+            std::string cmd = enable ? "nmcli radio wifi on" : "nmcli radio wifi off";
+            g_spawn_command_line_async(cmd.c_str(), nullptr);
+        }
 
         g_idle_add([](gpointer) -> gboolean {
             WifiManager::fetch_active_connection();
@@ -1328,12 +1720,55 @@ void WifiManager::run_ping_test() {
 }
 
 bool WifiManager::is_vpn_active() {
-    FILE* fp = popen("nmcli -t -f TYPE,STATE con show --active 2>/dev/null | grep -E '^(vpn|wireguard|tun):activated' || ip link show proton0 2>/dev/null || ip link show type wireguard 2>/dev/null", "r");
-    if (!fp) return false;
-    char buf[128];
-    bool active = (fgets(buf, sizeof(buf), fp) != nullptr && buf[0] != '\0');
-    pclose(fp);
-    return active;
+    if (fs::exists("/sys/class/net/proton0") || fs::exists("/sys/class/net/wg0") ||
+        fs::exists("/sys/class/net/tun0") || fs::exists("/sys/class/net/tap0")) {
+        return true;
+    }
+
+    GError* error = nullptr;
+    GDBusConnection* bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, &error);
+    if (bus) {
+        GVariant* nm_props = nm_get_all_props(bus, "/org/freedesktop/NetworkManager", "org.freedesktop.NetworkManager");
+        if (nm_props) {
+            GVariant* v_conns = nm_lookup_dict(nm_props, "ActiveConnections");
+            if (v_conns && g_variant_is_of_type(v_conns, G_VARIANT_TYPE("ao"))) {
+                size_t n = g_variant_n_children(v_conns);
+                for (size_t i = 0; i < n; ++i) {
+                    GVariant* c_child = g_variant_get_child_value(v_conns, i);
+                    const char* c_path = g_variant_get_string(c_child, nullptr);
+                    if (c_path) {
+                        GVariant* c_props = nm_get_all_props(bus, c_path, "org.freedesktop.NetworkManager.Connection.Active");
+                        if (c_props) {
+                            GVariant* v_vpn = nm_lookup_dict(c_props, "Vpn");
+                            bool is_vpn = nm_variant_to_bool(v_vpn, false);
+                            if (v_vpn) g_variant_unref(v_vpn);
+
+                            GVariant* v_type = nm_lookup_dict(c_props, "Type");
+                            std::string ctype = nm_variant_to_string(v_type, "");
+                            if (v_type) g_variant_unref(v_type);
+
+                            g_variant_unref(c_props);
+
+                            if (is_vpn || ctype == "vpn" || ctype == "wireguard" || ctype == "tun") {
+                                g_variant_unref(c_child);
+                                g_variant_unref(v_conns);
+                                g_variant_unref(nm_props);
+                                g_object_unref(bus);
+                                return true;
+                            }
+                        }
+                    }
+                    g_variant_unref(c_child);
+                }
+            }
+            if (v_conns) g_variant_unref(v_conns);
+            g_variant_unref(nm_props);
+        }
+        g_object_unref(bus);
+    } else {
+        if (error) g_error_free(error);
+    }
+    return false;
 }
 
 void WifiManager::toggle_vpn() {
@@ -1382,12 +1817,48 @@ void WifiManager::toggle_vpn() {
 }
 
 bool WifiManager::is_hotspot_active() {
-    FILE* fp = popen("nmcli -t -f TYPE,STATE con show --active 2>/dev/null | grep -i 'hotspot' || iw dev wlan0 info 2>/dev/null | grep -i 'type AP'", "r");
-    if (!fp) return false;
-    char buf[128];
-    bool active = (fgets(buf, sizeof(buf), fp) != nullptr && buf[0] != '\0');
-    pclose(fp);
-    return active;
+    GError* error = nullptr;
+    GDBusConnection* bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, &error);
+    if (bus) {
+        GVariant* nm_props = nm_get_all_props(bus, "/org/freedesktop/NetworkManager", "org.freedesktop.NetworkManager");
+        if (nm_props) {
+            GVariant* v_conns = nm_lookup_dict(nm_props, "ActiveConnections");
+            if (v_conns && g_variant_is_of_type(v_conns, G_VARIANT_TYPE("ao"))) {
+                size_t n = g_variant_n_children(v_conns);
+                for (size_t i = 0; i < n; ++i) {
+                    GVariant* c_child = g_variant_get_child_value(v_conns, i);
+                    const char* c_path = g_variant_get_string(c_child, nullptr);
+                    if (c_path) {
+                        GVariant* c_props = nm_get_all_props(bus, c_path, "org.freedesktop.NetworkManager.Connection.Active");
+                        if (c_props) {
+                            GVariant* v_id = nm_lookup_dict(c_props, "Id");
+                            std::string cid = nm_variant_to_string(v_id, "");
+                            if (v_id) g_variant_unref(v_id);
+
+                            g_variant_unref(c_props);
+
+                            std::string cid_lower = cid;
+                            std::transform(cid_lower.begin(), cid_lower.end(), cid_lower.begin(), ::tolower);
+                            if (cid_lower.find("hotspot") != std::string::npos) {
+                                g_variant_unref(c_child);
+                                g_variant_unref(v_conns);
+                                g_variant_unref(nm_props);
+                                g_object_unref(bus);
+                                return true;
+                            }
+                        }
+                    }
+                    g_variant_unref(c_child);
+                }
+            }
+            if (v_conns) g_variant_unref(v_conns);
+            g_variant_unref(nm_props);
+        }
+        g_object_unref(bus);
+    } else {
+        if (error) g_error_free(error);
+    }
+    return false;
 }
 
 void WifiManager::toggle_hotspot() {
