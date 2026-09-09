@@ -44,6 +44,8 @@ private:
     static bool cached_mic_muted;
     static std::string cached_sink_name;
     static std::string cached_source_name;
+    static std::vector<AudioDevice> cached_sinks;
+    static std::vector<AudioDevice> cached_sources;
 };
 
 } // namespace zenith

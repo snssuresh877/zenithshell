@@ -17,6 +17,8 @@ int AudioManager::cached_mic_volume = 100;
 bool AudioManager::cached_mic_muted = false;
 std::string AudioManager::cached_sink_name = "Speakers";
 std::string AudioManager::cached_source_name = "Internal Microphone";
+std::vector<AudioDevice> AudioManager::cached_sinks;
+std::vector<AudioDevice> AudioManager::cached_sources;
 
 static std::string exec_cmd(const char* cmd) {
     std::array<char, 256> buffer;
@@ -31,7 +33,8 @@ static std::string exec_cmd(const char* cmd) {
 
 void AudioManager::init() {
     update();
-    g_timeout_add_seconds(2, +[](gpointer) -> gboolean {
+    // Relaxed 15-second heartbeat for background synchronization (down from 2s)
+    g_timeout_add_seconds(15, +[](gpointer) -> gboolean {
         update();
         return TRUE;
     }, nullptr);
@@ -50,14 +53,14 @@ void AudioManager::set_volume(int volume) {
     cached_volume = vol;
     float v = vol / 100.0f;
     char cmd[64];
-    snprintf(cmd, sizeof(cmd), "wpctl set-volume @DEFAULT_AUDIO_SINK@ %.2f 2>/dev/null &", v);
-    system(cmd);
+    snprintf(cmd, sizeof(cmd), "wpctl set-volume @DEFAULT_AUDIO_SINK@ %.2f", v);
+    g_spawn_command_line_async(cmd, nullptr);
     OSDWindow::show_volume(cached_volume, cached_muted);
 }
 
 void AudioManager::toggle_mute() {
     cached_muted = !cached_muted;
-    system("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle 2>/dev/null &");
+    g_spawn_command_line_async("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle", nullptr);
     OSDWindow::show_volume(cached_volume, cached_muted);
 }
 
@@ -74,14 +77,14 @@ void AudioManager::set_mic_volume(int volume) {
     cached_mic_volume = vol;
     float v = vol / 100.0f;
     char cmd[64];
-    snprintf(cmd, sizeof(cmd), "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ %.2f 2>/dev/null &", v);
-    system(cmd);
+    snprintf(cmd, sizeof(cmd), "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ %.2f", v);
+    g_spawn_command_line_async(cmd, nullptr);
     OSDWindow::show_mic(cached_mic_volume, cached_mic_muted);
 }
 
 void AudioManager::toggle_mic_mute() {
     cached_mic_muted = !cached_mic_muted;
-    system("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle 2>/dev/null &");
+    g_spawn_command_line_async("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle", nullptr);
     OSDWindow::show_mic(cached_mic_volume, cached_mic_muted);
 }
 
@@ -93,87 +96,44 @@ std::string AudioManager::get_default_source_name() {
     return cached_source_name;
 }
 
-static std::vector<AudioDevice> parse_wpctl_section(const std::string& section) {
-    std::vector<AudioDevice> devices;
-    std::string out = exec_cmd("wpctl status 2>/dev/null");
-    std::istringstream stream(out);
-    std::string line;
-    bool in_section = false;
-
-    std::regex dev_regex(R"(([*]?)\s*(\d+)\.\s+(.+?)\s+\[vol:)");
-
-    while (std::getline(stream, line)) {
-        if (line.find("├─ " + section + ":") != std::string::npos || line.find("└─ " + section + ":") != std::string::npos) {
-            in_section = true;
-            continue;
-        } else if (in_section) {
-            if (line.find("├─") != std::string::npos || line.find("└─") != std::string::npos) {
-                if (line.find("Streams:") != std::string::npos || line.find("Filters:") != std::string::npos || line.find("Devices:") != std::string::npos || line.find("Sources:") != std::string::npos) {
-                    break;
-                }
-            }
-            if (line.empty()) continue;
-        }
-
-        if (in_section) {
-            std::smatch match;
-            if (std::regex_search(line, match, dev_regex)) {
-                AudioDevice dev;
-                dev.is_default = (match[1].length() > 0);
-                dev.id = std::stoi(match[2].str());
-                dev.name = match[3].str();
-                
-                // Trim trailing spaces
-                while (!dev.name.empty() && (dev.name.back() == ' ' || dev.name.back() == '\t')) {
-                    dev.name.pop_back();
-                }
-
-                // Shorten common lengthy names for clean UI
-                if (dev.name.find("Speaker") != std::string::npos) {
-                    dev.name = "Built-in Speakers";
-                } else if (dev.name.find("Headphones") != std::string::npos) {
-                    dev.name = "Wired Headphones";
-                } else if (dev.name.find("Digital Microphone") != std::string::npos) {
-                    dev.name = "Built-in Microphone";
-                } else if (dev.name.find("Stereo Microphone") != std::string::npos) {
-                    dev.name = "Headset Microphone";
-                }
-
-                devices.push_back(dev);
-            }
-        }
-    }
-    return devices;
-}
-
 std::vector<AudioDevice> AudioManager::get_sinks() {
-    auto sinks = parse_wpctl_section("Sinks");
-    if (sinks.empty()) {
-        sinks.push_back({52, "Built-in Speakers", true});
+    if (cached_sinks.empty()) {
+        update();
     }
-    return sinks;
+    if (cached_sinks.empty()) {
+        return {{52, "Built-in Speakers", true}};
+    }
+    return cached_sinks;
 }
 
 std::vector<AudioDevice> AudioManager::get_sources() {
-    auto sources = parse_wpctl_section("Sources");
-    if (sources.empty()) {
-        sources.push_back({54, "Built-in Microphone", true});
+    if (cached_sources.empty()) {
+        update();
     }
-    return sources;
+    if (cached_sources.empty()) {
+        return {{54, "Built-in Microphone", true}};
+    }
+    return cached_sources;
 }
 
 void AudioManager::set_default_sink(int id) {
     char cmd[64];
-    snprintf(cmd, sizeof(cmd), "wpctl set-default %d 2>/dev/null &", id);
-    system(cmd);
-    update();
+    snprintf(cmd, sizeof(cmd), "wpctl set-default %d", id);
+    g_spawn_command_line_async(cmd, nullptr);
+    g_timeout_add(100, +[](gpointer) -> gboolean {
+        AudioManager::update();
+        return G_SOURCE_REMOVE;
+    }, nullptr);
 }
 
 void AudioManager::set_default_source(int id) {
     char cmd[64];
-    snprintf(cmd, sizeof(cmd), "wpctl set-default %d 2>/dev/null &", id);
-    system(cmd);
-    update();
+    snprintf(cmd, sizeof(cmd), "wpctl set-default %d", id);
+    g_spawn_command_line_async(cmd, nullptr);
+    g_timeout_add(100, +[](gpointer) -> gboolean {
+        AudioManager::update();
+        return G_SOURCE_REMOVE;
+    }, nullptr);
 }
 
 bool AudioManager::is_noise_cancelling_active() {
@@ -183,49 +143,126 @@ bool AudioManager::is_noise_cancelling_active() {
 
 void AudioManager::toggle_noise_cancelling() {
     if (is_noise_cancelling_active()) {
-        system("killall easyeffects 2>/dev/null || true");
+        g_spawn_command_line_async("killall easyeffects", nullptr);
     } else {
-        system("easyeffects --gapplication-service 2>/dev/null &");
+        g_spawn_command_line_async("easyeffects --gapplication-service", nullptr);
     }
 }
 
 void AudioManager::update() {
-    // Sink Volume & Mute
-    std::string sink_res = exec_cmd("wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null");
-    if (!sink_res.empty()) {
-        cached_muted = (sink_res.find("[MUTED]") != std::string::npos);
-        float vol = 0.0f;
-        if (sscanf(sink_res.c_str(), "Volume: %f", &vol) == 1) {
-            cached_volume = static_cast<int>(vol * 100.0f + 0.5f);
+    std::string out = exec_cmd("wpctl status 2>/dev/null");
+    if (out.empty()) return;
+
+    std::istringstream stream(out);
+    std::string line;
+
+    bool in_audio = false;
+    bool in_sinks = false;
+    bool in_sources = false;
+
+    std::vector<AudioDevice> new_sinks;
+    std::vector<AudioDevice> new_sources;
+
+    std::regex dev_regex(R"(([*]?)\s*(\d+)\.\s+(.+?)(?:\s+\[vol:\s*([\d.]+)(.*?)\])?$)");
+
+    while (std::getline(stream, line)) {
+        if (line.rfind("Audio", 0) == 0) {
+            in_audio = true;
+            continue;
+        } else if (line.rfind("Video", 0) == 0 || line.rfind("Settings", 0) == 0) {
+            in_audio = false;
+            in_sinks = false;
+            in_sources = false;
+            continue;
+        }
+
+        if (!in_audio) continue;
+
+        if (line.find("Sinks:") != std::string::npos) {
+            in_sinks = true;
+            in_sources = false;
+            continue;
+        } else if (line.find("Sources:") != std::string::npos) {
+            in_sinks = false;
+            in_sources = true;
+            continue;
+        } else if (line.find("Filters:") != std::string::npos ||
+                   line.find("Streams:") != std::string::npos ||
+                   line.find("Devices:") != std::string::npos) {
+            in_sinks = false;
+            in_sources = false;
+            continue;
+        }
+
+        if (in_sinks || in_sources) {
+            std::smatch match;
+            if (std::regex_search(line, match, dev_regex)) {
+                bool is_default = (match[1].length() > 0);
+                int dev_id = std::stoi(match[2].str());
+                std::string dev_name = match[3].str();
+
+                // Trim trailing spaces / tabs
+                while (!dev_name.empty() && (dev_name.back() == ' ' || dev_name.back() == '\t')) {
+                    dev_name.pop_back();
+                }
+
+                // Friendly UI presentation
+                if (dev_name.find("Speaker") != std::string::npos) {
+                    dev_name = "Built-in Speakers";
+                } else if (dev_name.find("Headphones") != std::string::npos) {
+                    dev_name = "Wired Headphones";
+                } else if (dev_name.find("Digital Microphone") != std::string::npos) {
+                    dev_name = "Built-in Microphone";
+                } else if (dev_name.find("Stereo Microphone") != std::string::npos) {
+                    dev_name = "Headset Microphone";
+                }
+
+                AudioDevice dev;
+                dev.id = dev_id;
+                dev.name = dev_name;
+                dev.is_default = is_default;
+
+                float vol_f = 1.0f;
+                bool is_muted_dev = false;
+
+                if (match[4].matched) {
+                    try {
+                        vol_f = std::stof(match[4].str());
+                    } catch (...) {
+                        vol_f = 1.0f;
+                    }
+                }
+                if (match[5].matched) {
+                    std::string flags = match[5].str();
+                    if (flags.find("MUTED") != std::string::npos) {
+                        is_muted_dev = true;
+                    }
+                }
+
+                if (in_sinks) {
+                    new_sinks.push_back(dev);
+                    if (is_default) {
+                        cached_volume = static_cast<int>(vol_f * 100.0f + 0.5f);
+                        cached_muted = is_muted_dev;
+                        cached_sink_name = dev_name;
+                    }
+                } else if (in_sources) {
+                    new_sources.push_back(dev);
+                    if (is_default) {
+                        cached_mic_volume = static_cast<int>(vol_f * 100.0f + 0.5f);
+                        cached_mic_muted = is_muted_dev;
+                        cached_source_name = dev_name;
+                    }
+                }
+            }
         }
     }
 
-    // Source Volume & Mute
-    std::string src_res = exec_cmd("wpctl get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null");
-    if (!src_res.empty()) {
-        cached_mic_muted = (src_res.find("[MUTED]") != std::string::npos);
-        float vol = 0.0f;
-        if (sscanf(src_res.c_str(), "Volume: %f", &vol) == 1) {
-            cached_mic_volume = static_cast<int>(vol * 100.0f + 0.5f);
-        }
+    if (!new_sinks.empty()) {
+        cached_sinks = std::move(new_sinks);
     }
-
-    // Default Sink Name
-    auto sinks = get_sinks();
-    for (const auto& s : sinks) {
-        if (s.is_default) {
-            cached_sink_name = s.name;
-            break;
-        }
-    }
-
-    // Default Source Name
-    auto sources = get_sources();
-    for (const auto& s : sources) {
-        if (s.is_default) {
-            cached_source_name = s.name;
-            break;
-        }
+    if (!new_sources.empty()) {
+        cached_sources = std::move(new_sources);
     }
 }
 
