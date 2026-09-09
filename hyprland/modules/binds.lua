@@ -23,19 +23,19 @@ local numberkey = {
 
 -- COMMAND CENTER / LAUNCHER
 
-hl.bind(MOD .. " + A", hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/ui/open_controlpanel.sh"), {
+hl.bind(MOD .. " + A", hl.dsp.exec_cmd(Launchers.zenithshell.controlCenter or "zenithctl cc"), {
 	description = "Interactive Control Panel",
 })
 
-hl.bind(MOD .. " + SPACE", hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/ui/open_launcher.sh"), {
+hl.bind(MOD .. " + SPACE", hl.dsp.exec_cmd(Launchers.zenithshell.app or "zenithctl launcher"), {
 	description = "Application launcher",
 })
 
-hl.bind(MOD .. " + K", hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/ui/show_keybinds.sh"), {
+hl.bind(MOD .. " + K", hl.dsp.exec_cmd(Launchers.zenithshell.keybinds or "zenithctl keybinds"), {
 	description = "Keybindings Cheatsheet",
 })
 
-hl.bind(MOD .. " + I", hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/ui/open_network.sh"), {
+hl.bind(MOD .. " + I", hl.dsp.exec_cmd(Launchers.zenithshell.network or "zenithctl network"), {
 	description = "Network & Wi-Fi Management",
 })
 
@@ -75,17 +75,9 @@ hl.bind(MOD .. " + SHIFT + A", hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/ui/ai
 })
 
 -- DO NOT DISTURB
-hl.bind(
-	MOD .. " + SHIFT + N",
-	hl.dsp.exec_cmd([[
-sh -c '
-notify-send -u low "Do Not Disturb" "Toggled"
-'
-]]),
-	{
-		description = "Toggle do not disturb",
-	}
-)
+hl.bind(MOD .. " + SHIFT + N", hl.dsp.exec_cmd(Notifications.toggleDND or "zenithctl dnd toggle"), {
+	description = "Toggle do not disturb",
+})
 
 -- POWER & SESSION CONTROLS
 
@@ -97,7 +89,7 @@ hl.bind(MOD .. " + P", hl.dsp.exec_cmd("pavucontrol"), {
 	description = "Audio control mixer",
 })
 
-hl.bind(MOD .. " + SHIFT + P", hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/ui/powermenu.sh"), {
+hl.bind(MOD .. " + SHIFT + P", hl.dsp.exec_cmd(Launchers.power or "zenithctl power"), {
 	description = "Interactive Power menu",
 })
 
@@ -168,7 +160,7 @@ hl.bind(MOD .. " + SHIFT + W", hl.dsp.exec_cmd(Wallpaper.script), {
 })
 
 -- CLIPBOARD
-hl.bind(MOD .. " + V", hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/ui/open_clipboard.sh"), {
+hl.bind(MOD .. " + V", hl.dsp.exec_cmd(Launchers.zenithshell.clipboard or "zenithctl clipboard"), {
 	description = "Clipboard Manager",
 })
 

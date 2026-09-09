@@ -70,7 +70,7 @@ UI = {
 
 	notifications = "zenithshell",
 
-	wallpaper = "awww",
+	wallpaper = "zenithshell",
 }
 
 ------------------------------------------------------------
@@ -80,14 +80,19 @@ UI = {
 Launchers = {
 
 	--------------------------------------------------------
-	-- ZENITHSHELL (SPOTLIGHT + CLIPBOARD + NOTIFICATIONS)
+	-- ZENITHSHELL (NATIVE SPOTLIGHT, CLIPBOARD, CONTROL CENTER, & KEYBINDS)
 	--------------------------------------------------------
 
 	zenithshell = {
-		app = "$HOME/.config/hypr/scripts/ui/open_launcher.sh",
-		run = "$HOME/.config/hypr/scripts/ui/open_launcher.sh",
-		window = "$HOME/.config/hypr/scripts/ui/open_launcher.sh",
-		clipboard = "$HOME/.config/hypr/scripts/ui/open_clipboard.sh",
+		app = "zenithctl launcher",
+		run = "zenithctl launcher",
+		window = "zenithctl launcher",
+		clipboard = "zenithctl clipboard",
+		controlCenter = "zenithctl cc",
+		keybinds = "zenithctl keybinds",
+		network = "zenithctl network",
+		reminders = "zenithctl reminders",
+		activeApps = "zenithctl active-apps",
 	},
 
 	--------------------------------------------------------
@@ -106,7 +111,7 @@ Launchers = {
 	-- POWER
 	--------------------------------------------------------
 
-	power = "wlogout",
+	power = "zenithctl power 2>/dev/null || wlogout",
 }
 ------------------------------------------------------------
 -- NOTIFICATIONS
@@ -118,9 +123,9 @@ Notifications = {
 
 	toggleDND = "zenithctl dnd toggle 2>/dev/null || swaync-client -d -sw",
 
-	dismissAll = "zenithctl notifications 2>/dev/null || swaync-client -C",
+	dismissAll = "zenithctl nc clear 2>/dev/null || swaync-client -C",
 
-	restore = "zenithctl notifications 2>/dev/null || swaync-client -t -sw",
+	restore = "zenithctl nc 2>/dev/null || swaync-client -t -sw",
 }
 
 ------------------------------------------------------------
@@ -142,9 +147,9 @@ Screenshots = {
 
 Wallpaper = {
 
-	directory = "$HOME/Pictures/wallpapers/resized",
+	directory = "$HOME/Pictures/wallpapers",
 
-	script = "$HOME/.config/hypr/scripts/ui/switch_wallpaper.sh",
+	script = "zenithctl wallpaper cycle",
 
 	pywalCache = "$HOME/.cache/wal",
 }
@@ -154,7 +159,7 @@ Wallpaper = {
 ------------------------------------------------------------
 
 Waybar = {
-	toggle = "sh -c 'if pgrep -x waybar >/dev/null; then pkill -x waybar; else waybar >/dev/null 2>&1 & fi'",
+	toggle = "zenithctl bar 2>/dev/null || sh -c 'if pgrep -x waybar >/dev/null; then pkill -x waybar; else waybar >/dev/null 2>&1 & fi'",
 }
 
 ------------------------------------------------------------
@@ -165,7 +170,7 @@ Session = {
 
 	lock = "$HOME/.config/hypr/scripts/ui/lock_screen.sh",
 
-	logout = "$HOME/.config/hypr/scripts/ui/logout_session.sh",
+	logout = "zenithctl power 2>/dev/null || $HOME/.config/hypr/scripts/ui/logout_session.sh",
 
 	suspend = "loginctl lock-session; systemctl suspend",
 
@@ -229,7 +234,7 @@ System = {
 
 	bluetooth = "blueman-manager",
 
-	network = "nm-connection-editor",
+	network = "zenithctl network 2>/dev/null || nm-connection-editor",
 }
 
 ------------------------------------------------------------
@@ -240,7 +245,7 @@ Hyprland = {
 
 	reload = "hyprctl reload",
 
-	exit = "hyprctl dispatch exit",
+	exit = "zenithctl power 2>/dev/null || hyprctl dispatch exit",
 }
 
 ------------------------------------------------------------

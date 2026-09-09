@@ -1,15 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-STATE_FILE="$HOME/.config/hypr/ui_mode"
-MODE="zenithshell"
-
-if [ -f "$STATE_FILE" ]; then
-    MODE=$(cat "$STATE_FILE" | tr -d '[:space:]')
-fi
-
-if [ "$MODE" = "zenithshell" ]; then
-    gdbus call --session --dest dev.zenith.Shell --object-path /dev/zenith/Shell --method dev.zenith.Shell.ToggleSpotlight >/dev/null 2>&1 || rofi -show drun
-else
-    rofi -show drun
-fi
+# Trigger ZenithShell native Spotlight launcher directly
+zenithctl launcher 2>/dev/null || gdbus call --session --dest dev.zenith.Shell --object-path /dev/zenith/Shell --method dev.zenith.Shell.ToggleSpotlight >/dev/null 2>&1 || rofi -show drun
