@@ -108,7 +108,7 @@
   // ==========================================================
 
   "memory": {
-    "format": "󰍛 {percentage}%",
+    "format": "󰘚 {percentage}%",
     "interval": 10,
     "on-click": "foot --app-id=btop_float -e btop",
     "tooltip": false
