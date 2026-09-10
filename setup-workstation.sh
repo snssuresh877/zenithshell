@@ -242,6 +242,7 @@ if [ "$INSTALL_WORKSTATION_TOOLS" -eq 1 ]; then
         mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0"
         cp -f classic-addons/gtk-3.0/settings.ini "$HOME/.config/gtk-3.0/settings.ini"
         cp -f classic-addons/gtk-3.0/gtk.css "$HOME/.config/gtk-3.0/gtk.css" 2>/dev/null || true
+        cp -f classic-addons/gtk-3.0/zenith_colors.css "$HOME/.config/gtk-3.0/zenith_colors.css" 2>/dev/null || true
         cp -f classic-addons/gtk-4.0/settings.ini "$HOME/.config/gtk-4.0/settings.ini"
     fi
 
