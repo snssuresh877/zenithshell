@@ -366,10 +366,14 @@ void ThemeEngine::init(const std::string& default_theme, const std::string& cust
     // 1. Check for previously saved wallpaper across reboots
     std::string saved_wp = get_current_wallpaper_path();
 
-    // 2. Set theme
-    set_theme(default_theme);
+    // 2. Check for previously saved theme across reboots
+    std::string saved_theme = get_saved_theme_name();
+    std::string initial_theme = !saved_theme.empty() ? saved_theme : (!default_theme.empty() ? default_theme : "zenith-dark");
 
-    // 3. If a saved wallpaper exists, restore it directly on boot
+    // 3. Set theme
+    set_theme(initial_theme);
+
+    // 4. If a saved wallpaper exists, restore it directly on boot
     if (!saved_wp.empty() && fs::exists(saved_wp)) {
         set_wallpaper(saved_wp);
     }
@@ -417,6 +421,24 @@ std::string ThemeEngine::get_current_theme_name() {
         return theme_display_names[current_theme.name];
     }
     return format_theme_title(current_theme.name);
+}
+
+std::string ThemeEngine::get_saved_theme_name() {
+    std::error_code ec;
+    std::string state_file = std::string(g_get_home_dir()) + "/.local/state/zenithshell/current/theme_name.txt";
+    if (fs::exists(state_file, ec)) {
+        std::ifstream in(state_file);
+        std::string saved;
+        if (in.is_open() && std::getline(in, saved)) {
+            while (!saved.empty() && (saved.back() == '\r' || saved.back() == '\n' || saved.back() == ' ')) {
+                saved.pop_back();
+            }
+            if (!saved.empty()) {
+                return saved;
+            }
+        }
+    }
+    return "";
 }
 
 const Theme& ThemeEngine::get_current_theme() {
@@ -561,6 +583,19 @@ void ThemeEngine::cycle_wallpaper() {
 }
 
 void ThemeEngine::set_theme(const std::string& theme_name) {
+    if (theme_name.empty()) return;
+
+    // Persist chosen theme across reboots and restarts
+    std::error_code ec;
+    std::string current_dir = std::string(g_get_home_dir()) + "/.local/state/zenithshell/current";
+    fs::create_directories(current_dir, ec);
+    std::string state_file = current_dir + "/theme_name.txt";
+    std::ofstream out(state_file, std::ios::trunc);
+    if (out.is_open()) {
+        out << theme_name << "\n";
+        out.close();
+    }
+
     if (theme_name == "dynamic" || theme_name == "pywal") {
         std::string cur_wp = get_current_wallpaper_path();
         if (cur_wp.empty()) {

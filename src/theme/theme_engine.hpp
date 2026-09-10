@@ -26,6 +26,7 @@ public:
     static void set_theme(const std::string& theme_name);
     static std::string cycle_next_theme();
     static std::string get_current_theme_name();
+    static std::string get_saved_theme_name();
     static const Theme& get_current_theme();
     static std::vector<std::string> get_available_themes();
     static std::vector<ThemeInfo> get_theme_infos();
