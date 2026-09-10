@@ -112,7 +112,7 @@ GtkWidget* BarWindow::create(GtkApplication* app, const Config& config) {
     // ─────────────────────────────────────────────────────────────
     GtkWidget* right_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
 
-    // 1. System Stats ( CPU +  RAM)
+    // 1. System Stats ( CPU + 󰍛 RAM)
     GtkWidget* sys_info = SysInfoWidget::create(config.sys_update_interval_ms);
 
     // 2. Network Speed Widget

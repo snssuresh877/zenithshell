@@ -32,9 +32,9 @@ GtkWidget* SysInfoWidget::create(int update_interval_ms) {
     GtkWidget* sep = gtk_label_new("|");
     gtk_widget_add_css_class(sep, "sys-vsep-lbl");
 
-    // RAM (Waybar / QuickShell Icon: )
+    // RAM (Nerd Font md-memory: 󰍛)
     GtkWidget* ram_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
-    GtkWidget* ram_icon = gtk_label_new("");
+    GtkWidget* ram_icon = gtk_label_new("󰍛");
     gtk_widget_add_css_class(ram_icon, "sys-ram-icon");
 
     ram_label = gtk_label_new("0%");

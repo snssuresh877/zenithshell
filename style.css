@@ -203,6 +203,7 @@ headerbar {
 }
 
 .sys-cpu-icon {
+    font-family: 'JetBrainsMono Nerd Font', 'Symbols Nerd Font', monospace;
     color: #9A9AAF;
     font-size: 11px;
     margin-right: 2px;
@@ -215,6 +216,7 @@ headerbar {
 }
 
 .sys-ram-icon {
+    font-family: 'JetBrainsMono Nerd Font', 'Symbols Nerd Font', monospace;
     color: #9A9AAF;
     font-size: 11px;
     margin-right: 2px;
