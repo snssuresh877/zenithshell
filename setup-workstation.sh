@@ -213,11 +213,15 @@ if [ "$INSTALL_WORKSTATION_TOOLS" -eq 1 ]; then
 
     # Deploy Thunar & XFCE4 file manager configuration
     if [ -d "classic-addons/thunar" ]; then
-        mkdir -p "$HOME/.config/Thunar" "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml"
+        mkdir -p "$HOME/.config/Thunar" "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml" "$HOME/.local/share/icons/hicolor/scalable/apps"
         cp -f classic-addons/thunar/uca.xml "$HOME/.config/Thunar/uca.xml" 2>/dev/null || true
         cp -f classic-addons/thunar/accels.scm "$HOME/.config/Thunar/accels.scm" 2>/dev/null || true
         if [ -f "classic-addons/thunar/thunar.xml" ]; then
             cp -f classic-addons/thunar/thunar.xml "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml" 2>/dev/null || true
+        fi
+        if [ -f "classic-addons/thunar/icons/org.xfce.thunar.svg" ]; then
+            cp -f classic-addons/thunar/icons/org.xfce.thunar.svg "$HOME/.local/share/icons/hicolor/scalable/apps/org.xfce.thunar.svg" 2>/dev/null || true
+            cp -f classic-addons/thunar/icons/org.xfce.thunar.svg "$HOME/.local/share/icons/hicolor/scalable/apps/thunar.svg" 2>/dev/null || true
         fi
     fi
 
