@@ -720,6 +720,30 @@ void ThemeEngine::apply_theme(const Theme& t) {
         }
     }
 
+    // Hot-reload running Thunar and GTK applications asynchronously to instantly reflect new colors
+    system(
+        "( "
+        "  CUR=$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null | tr -d \"'\"); "
+        "  [ -n \"$CUR\" ] && gsettings set org.gnome.desktop.interface gtk-theme \"\" 2>/dev/null && gsettings set org.gnome.desktop.interface gtk-theme \"$CUR\" 2>/dev/null; "
+        "  if pgrep -x thunar >/dev/null 2>&1; then "
+        "    if hyprctl clients -j 2>/dev/null | grep -q '\"class\": *\"thunar\"'; then "
+        "      TITLE=$(hyprctl clients -j 2>/dev/null | jq -r '.[] | select(.class==\"thunar\") | .title' | head -n1); "
+        "      FOLDER=\"${TITLE% - Thunar}\"; "
+        "      TARGET=\"$HOME\"; "
+        "      [ -d \"$HOME/$FOLDER\" ] && TARGET=\"$HOME/$FOLDER\"; "
+        "      [ -d \"$FOLDER\" ] && TARGET=\"$FOLDER\"; "
+        "      thunar -q 2>/dev/null; "
+        "      sleep 0.15; "
+        "      systemd-run --user thunar \"$TARGET\" >/dev/null 2>&1 || nohup thunar \"$TARGET\" >/dev/null 2>&1 & "
+        "    else "
+        "      thunar -q 2>/dev/null; "
+        "      sleep 0.1; "
+        "      systemd-run --user thunar --daemon >/dev/null 2>&1 || nohup thunar --daemon >/dev/null 2>&1 & "
+        "    fi; "
+        "  fi; "
+        ") &"
+    );
+
     CssManager::reload();
 }
 
