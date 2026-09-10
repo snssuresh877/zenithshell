@@ -1,0 +1,233 @@
+/* ==========================================================================
+   Zenith Dark Modern Theme (GTK 3 & Thunar)
+   ========================================================================== */
+
+/* Overriding Global GTK Palette for seamless Dark Zenith integration */
+@define-color theme_fg_color #f1f5f9;
+@define-color theme_text_color #f1f5f9;
+@define-color theme_bg_color #0b1222;
+@define-color theme_base_color #0f172a;
+@define-color theme_selected_bg_color #fb7333;
+@define-color theme_selected_fg_color #ffffff;
+@define-color insensitive_bg_color #0b1222;
+@define-color insensitive_fg_color rgba(241, 245, 249, 0.45);
+@define-color insensitive_base_color #0d1527;
+@define-color theme_unfocused_bg_color #0b1222;
+@define-color theme_unfocused_base_color #0f172a;
+@define-color theme_unfocused_selected_bg_color #fb7333;
+@define-color borders rgba(255, 255, 255, 0.08);
+@define-color unfocused_borders rgba(255, 255, 255, 0.06);
+
+/* Global typography */
+* {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* --------------------------------------------------------------------------
+   Thunar Main Window & Views
+   -------------------------------------------------------------------------- */
+
+window.thunar {
+    background-color: #0b1222;
+    color: #f1f5f9;
+}
+
+/* Toolbar & Breadcrumbs Bar */
+window.thunar toolbar,
+.thunar toolbar {
+    background-color: #070c18;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 6px 10px;
+}
+
+window.thunar toolbar button,
+.thunar toolbar button {
+    background: transparent;
+    color: #94a3b8;
+    border-radius: 8px;
+    border: none;
+    padding: 6px 8px;
+    margin: 0 2px;
+    transition: all 150ms ease-in-out;
+}
+
+window.thunar toolbar button:hover,
+.thunar toolbar button:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+}
+
+window.thunar toolbar button:active,
+window.thunar toolbar button:checked,
+.thunar toolbar button:active {
+    background-color: rgba(251, 115, 51, 0.2);
+    color: #fb7333;
+}
+
+/* Breadcrumbs (Pathbar buttons) */
+window.thunar path-bar button,
+.thunar path-bar button,
+.thunar .path-bar-box button {
+    background-color: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: #cbd5e1;
+    font-weight: 500;
+    padding: 4px 10px;
+    margin: 2px 3px;
+    transition: all 150ms ease-in-out;
+}
+
+window.thunar path-bar button:hover,
+.thunar path-bar button:hover,
+.thunar .path-bar-box button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+}
+
+window.thunar path-bar button:checked,
+window.thunar path-bar button:active,
+.thunar path-bar button:checked {
+    background-color: #fb7333;
+    border-color: #fb7333;
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* Sidebar (Shortcuts / Places Pane) */
+window.thunar .sidebar,
+window.thunar .shortcuts-pane,
+window.thunar scrolledwindow.shortcuts-pane,
+window.thunar scrolledwindow.shortcuts-pane treeview.view {
+    background-color: #070c18;
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
+}
+
+window.thunar .sidebar treeview.view row,
+window.thunar scrolledwindow.shortcuts-pane treeview.view row {
+    padding: 6px 8px;
+    margin: 2px 4px;
+    border-radius: 8px;
+    transition: all 120ms ease;
+}
+
+window.thunar .sidebar treeview.view row:hover,
+window.thunar scrolledwindow.shortcuts-pane treeview.view row:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+    color: #f1f5f9;
+}
+
+window.thunar .sidebar treeview.view row:selected,
+window.thunar scrolledwindow.shortcuts-pane treeview.view row:selected {
+    background-color: rgba(251, 115, 51, 0.2);
+    color: #fb7333;
+    font-weight: 600;
+}
+
+/* Main File View Area */
+window.thunar .standard-view,
+window.thunar .standard-view widget.view,
+window.thunar .standard-view iconview,
+window.thunar .standard-view treeview.view,
+.thunar .standard-view {
+    background-color: #0b1222;
+    color: #f1f5f9;
+}
+
+/* Selection and Hover in Icon Grid */
+window.thunar .standard-view iconview:hover:not(:selected),
+window.thunar .standard-view .view:hover:not(:selected) {
+    background-color: rgba(255, 255, 255, 0.04);
+    border-radius: 10px;
+}
+
+window.thunar .standard-view iconview:selected,
+window.thunar .standard-view .view:selected {
+    background-color: rgba(251, 115, 51, 0.25);
+    border: 1px solid rgba(251, 115, 51, 0.5);
+    border-radius: 10px;
+    color: #ffffff;
+}
+
+/* Details / List View */
+window.thunar treeview.view row:hover:not(:selected) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+window.thunar treeview.view row:selected {
+    background-color: rgba(251, 115, 51, 0.25);
+    color: #ffffff;
+}
+
+window.thunar treeview.view header button {
+    background-color: #070c18;
+    border: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-right: 1px solid rgba(255, 255, 255, 0.06);
+    color: #94a3b8;
+    font-size: 0.85em;
+    font-weight: 600;
+    padding: 6px 10px;
+}
+
+/* Tabs / Notebook */
+window.thunar notebook header {
+    background-color: #070c18;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 2px 4px 0 4px;
+}
+
+window.thunar notebook header tab {
+    background-color: transparent;
+    color: #94a3b8;
+    border: none;
+    border-radius: 8px 8px 0 0;
+    padding: 6px 16px;
+    margin: 0 3px;
+    transition: all 150ms ease;
+}
+
+window.thunar notebook header tab:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+    color: #f1f5f9;
+}
+
+window.thunar notebook header tab:checked {
+    background-color: #0b1222;
+    color: #f1f5f9;
+    font-weight: 600;
+    border-top: 2px solid #fb7333;
+}
+
+/* Minimalist Scrollbars */
+window.thunar scrollbar {
+    background-color: transparent;
+    border: none;
+}
+
+window.thunar scrollbar slider {
+    min-width: 5px;
+    min-height: 5px;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.15);
+    border: none;
+    margin: 2px;
+}
+
+window.thunar scrollbar slider:hover {
+    background-color: rgba(255, 255, 255, 0.35);
+    min-width: 7px;
+    min-height: 7px;
+}
+
+/* Statusbar */
+window.thunar statusbar,
+.thunar statusbar {
+    background-color: #070c18;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 4px 12px;
+    color: #64748b;
+    font-size: 0.85em;
+}

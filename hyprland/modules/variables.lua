@@ -32,7 +32,7 @@ Apps = {
 
 	browser = "firefox",
 
-	fileManager = "cosmic-files",
+	fileManager = "thunar",
 
 	codeEditor = "foot -e nvim",
 

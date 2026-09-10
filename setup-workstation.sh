@@ -104,7 +104,7 @@ else
         fi
 
         INSTALL_WORKSTATION_TOOLS=1
-        if prompt_step "4. Install Modern File Managers & CLI Tools (Yazi, Cosmic Files, fd, rg, fzf, bat)" "Y"; then
+        if prompt_step "4. Install Modern File Managers & CLI Tools (Thunar, Yazi, fd, rg, fzf, bat)" "Y"; then
             INSTALL_WORKSTATION_TOOLS=1
         else
             INSTALL_WORKSTATION_TOOLS=0
@@ -118,14 +118,14 @@ else
         fi
 
         INSTALL_OFFICE=1
-        if prompt_step "6. Configure LibreOffice for 100% MS Office/Excel Compatibility & Metric Fonts" "Y"; then
+        if prompt_step "6. Install Modern Office Suite & Document Tools (OnlyOffice Desktop / PDF Editors)" "Y"; then
             INSTALL_OFFICE=1
         else
             INSTALL_OFFICE=0
         fi
 
         INSTALL_POWER=1
-        if prompt_step "7. Configure Smart Battery & Idle Power Management (Hypridle & Hyprlock)" "Y"; then
+        if prompt_step "7. Install Workstation Power, Battery & Performance Tuning (TLP, Thermal, Powertop)" "Y"; then
             INSTALL_POWER=1
         else
             INSTALL_POWER=0
@@ -138,35 +138,39 @@ sleep 1
 
 # --- Execution ---
 
-# 1. Core ZenithShell
+# 1. Core Shell Installation
 if [ "$INSTALL_CORE" -eq 1 ]; then
-    echo -e "${BLUE}▶ [1/7] Building & Installing ZenithShell Core...${RESET}"
-    if [ -f "./install.sh" ]; then
-        ./install.sh
-    else
-        cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-        ninja -C build
-        mkdir -p "$HOME/.local/bin" "$HOME/.config/zenithshell"
-        cp -f build/zenithshell "$HOME/.local/bin/zenithshell"
-        chmod +x "$HOME/.local/bin/zenithshell"
-    fi
-    echo -e "${GREEN}✔ ZenithShell Core installed!${RESET}\n"
+    echo -e "${BLUE}▶ [1/7] Building and Installing ZenithShell Core Native Binary & Desktop Assets...${RESET}"
+    bash "install.sh"
+    echo -e "${GREEN}✔ ZenithShell core binary, 23 themes, and wallpapers installed!${RESET}\n"
 fi
 
-# 2. Hyprland Modular Configuration
+# 2. Hyprland Configuration & Keybindings
 if [ "$INSTALL_HYPR" -eq 1 ]; then
-    echo -e "${BLUE}▶ [2/7] Deploying Modular Hyprland Lua Configuration...${RESET}"
+    echo -e "${BLUE}▶ [2/7] Deploying Zenith Modular Hyprland Lua Configuration...${RESET}"
     if [ -d "hyprland" ]; then
         mkdir -p "$HOME/.config/hypr"
-        cp -r hyprland/* "$HOME/.config/hypr/"
-        find "$HOME/.config/hypr/scripts" -type f -name "*.sh" -exec chmod +x {} + 2>/dev/null || true
-        echo -e "${GREEN}✔ Hyprland Lua configuration deployed to ~/.config/hypr!${RESET}\n"
+        cp -rf hyprland/* "$HOME/.config/hypr/"
+        echo -e "${GREEN}✔ Zenith Hyprland modular Lua config, scripts, and keybinds deployed to ~/.config/hypr!${RESET}\n"
     fi
 fi
 
-# 3. Terminal Stack (Foot, Kitty, Fish)
+# 3. Terminal Emulator & Fish Shell Stack
 if [ "$INSTALL_TERMINALS" -eq 1 ]; then
-    echo -e "${BLUE}▶ [3/7] Setting up Foot, Kitty, and Fish Shell Environment...${RESET}"
+    echo -e "${BLUE}▶ [3/7] Checking Terminal Emulators, Starship & Modern Fish Shell...${RESET}"
+    case "$DISTRO" in
+        arch|manjaro|endeavouros|cachyos)
+            sudo pacman -S --needed --noconfirm foot kitty fish starship fastfetch 2>/dev/null || true
+            ;;
+        fedora|rhel)
+            sudo dnf install -y foot kitty fish starship fastfetch 2>/dev/null || true
+            ;;
+        ubuntu|debian|pop)
+            sudo apt install -y foot kitty fish fastfetch 2>/dev/null || true
+            ;;
+    esac
+
+    # Deploy configs from classic-addons if available
     if [ -d "classic-addons/foot" ]; then
         mkdir -p "$HOME/.config/foot"
         cp -f classic-addons/foot/foot.ini "$HOME/.config/foot/foot.ini"
@@ -192,20 +196,30 @@ if [ "$INSTALL_WORKSTATION_TOOLS" -eq 1 ]; then
     echo -e "${BLUE}▶ [4/7] Checking CLI Power Utilities, Clipboard, BTOP, GTK Settings & File Managers...${RESET}"
     case "$DISTRO" in
         arch|manjaro|endeavouros|cachyos)
-            sudo pacman -S --needed --noconfirm yazi btop fd ripgrep jq fzf zoxide eza bat zip unzip p7zip cliphist wl-clipboard wl-clip-persist networkmanager network-manager-applet udisks2 dosfstools ntfs-3g exfatprogs pavucontrol playerctl kernel-modules-hook blueman 2>/dev/null || true
+            sudo pacman -S --needed --noconfirm thunar thunar-volman thunar-archive-plugin tumbler gvfs yazi btop fd ripgrep jq fzf zoxide eza bat zip unzip p7zip cliphist wl-clipboard wl-clip-persist networkmanager network-manager-applet udisks2 dosfstools ntfs-3g exfatprogs pavucontrol playerctl kernel-modules-hook blueman 2>/dev/null || true
             sudo systemctl enable --now linux-modules-cleanup.service 2>/dev/null || true
             sudo systemctl enable --now udisks2.service 2>/dev/null || true
             ;;
         fedora|rhel)
-            sudo dnf install -y yazi btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip wl-clipboard NetworkManager network-manager-applet udisks2 dosfstools ntfs-3g exfatprogs pavucontrol playerctl blueman 2>/dev/null || true
+            sudo dnf install -y thunar thunar-volman thunar-archive-plugin tumbler gvfs yazi btop fd-find ripgrep jq fzf zoxide eza bat zip unzip p7zip wl-clipboard NetworkManager network-manager-applet udisks2 dosfstools ntfs-3g exfatprogs pavucontrol playerctl blueman 2>/dev/null || true
             sudo systemctl enable --now udisks2.service 2>/dev/null || true
             ;;
         ubuntu|debian|pop)
-            sudo apt install -y btop fd-find ripgrep jq fzf bat zip unzip p7zip-full wl-clipboard network-manager network-manager-gnome udisks2 dosfstools ntfs-3g exfatprogs pavucontrol playerctl blueman 2>/dev/null || true
+            sudo apt install -y thunar thunar-volman thunar-archive-plugin tumbler gvfs btop fd-find ripgrep jq fzf bat zip unzip p7zip-full wl-clipboard network-manager network-manager-gnome udisks2 dosfstools ntfs-3g exfatprogs pavucontrol playerctl blueman 2>/dev/null || true
             sudo apt install -y zoxide eza yazi 2>/dev/null || true
             sudo systemctl enable --now udisks2.service 2>/dev/null || true
             ;;
     esac
+
+    # Deploy Thunar & XFCE4 file manager configuration
+    if [ -d "classic-addons/thunar" ]; then
+        mkdir -p "$HOME/.config/Thunar" "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml"
+        cp -f classic-addons/thunar/uca.xml "$HOME/.config/Thunar/uca.xml" 2>/dev/null || true
+        cp -f classic-addons/thunar/accels.scm "$HOME/.config/Thunar/accels.scm" 2>/dev/null || true
+        if [ -f "classic-addons/thunar/thunar.xml" ]; then
+            cp -f classic-addons/thunar/thunar.xml "$HOME/.config/xfce4/xfconf/xfce-perchannel-xml/thunar.xml" 2>/dev/null || true
+        fi
+    fi
 
     # Deploy Yazi configuration
     if [ -d "classic-addons/yazi" ]; then
@@ -219,10 +233,11 @@ if [ "$INSTALL_WORKSTATION_TOOLS" -eq 1 ]; then
         cp -f classic-addons/btop/btop.conf "$HOME/.config/btop/btop.conf"
     fi
 
-    # Deploy GTK-3.0 & GTK-4.0 Dark Mode Preferences
+    # Deploy GTK-3.0 & GTK-4.0 Dark Mode Preferences & Zenith Theme CSS
     if [ -d "classic-addons/gtk-3.0" ]; then
         mkdir -p "$HOME/.config/gtk-3.0" "$HOME/.config/gtk-4.0"
         cp -f classic-addons/gtk-3.0/settings.ini "$HOME/.config/gtk-3.0/settings.ini"
+        cp -f classic-addons/gtk-3.0/gtk.css "$HOME/.config/gtk-3.0/gtk.css" 2>/dev/null || true
         cp -f classic-addons/gtk-4.0/settings.ini "$HOME/.config/gtk-4.0/settings.ini"
     fi
 
@@ -230,9 +245,10 @@ if [ "$INSTALL_WORKSTATION_TOOLS" -eq 1 ]; then
     if [ -d "classic-addons/xdg" ]; then
         mkdir -p "$HOME/.config"
         cp -f classic-addons/xdg/mimeapps.list "$HOME/.config/mimeapps.list"
+        command -v xdg-mime >/dev/null 2>&1 && xdg-mime default thunar.desktop inode/directory 2>/dev/null || true
     fi
 
-    echo -e "${GREEN}✔ CLI workstation power tools, Clipboard, Yazi, BTOP, and GTK settings deployed!${RESET}\n"
+    echo -e "${GREEN}✔ CLI workstation power tools, Clipboard, Thunar, Yazi, BTOP, and GTK settings deployed!${RESET}\n"
 fi
 
 # 5. Multimedia & Screen Recording Tools

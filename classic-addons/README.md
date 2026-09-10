@@ -25,6 +25,19 @@ Press **`SUPER + ALT + U`** or run:
 
 ```text
 classic-addons/
+├── thunar/                    # Modern Thunar file manager configuration
+│   ├── uca.xml                # Custom actions: Open in Foot, Neovim, Yazi, Copy Path, Set Wallpaper
+│   ├── thunar.xml             # View preferences: pill breadcrumbs, hidden menubar, item counts
+│   └── accels.scm             # Keyboard shortcuts
+├── gtk-3.0/                   # Zenith Midnight GTK-3.0 theme & preferences
+│   ├── gtk.css                # Polished dark theme stylesheet specifically tuned for Thunar
+│   └── settings.ini           # Inter font, dark theme preference, Bibata cursor
+├── gtk-4.0/                   # GTK-4.0 preferences
+│   └── settings.ini           # Inter font and dark theme configuration
+├── yazi/                      # Ultra-fast terminal file manager
+│   └── yazi.toml              # Modern preview and keymap settings
+├── btop/                      # Beautiful system resource monitor
+│   └── btop.conf              # Truecolor hardware graph layout
 ├── fish/                      # Pro Fish shell environment with universal PATHs & Pywal sync
 │   └── config.fish            # Cargo, Mason, Flatpak, Android paths, Zoxide, Starship, Zenith aliases
 ├── kitty/                     # Pro-grade Kitty terminal configuration (Pywal dynamic theme sync)

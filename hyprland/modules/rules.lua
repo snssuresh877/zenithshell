@@ -207,6 +207,18 @@ hl.window_rule({
 	rounding = 14,
 })
 
+-- Thunar File Manager Popups & Dialogs
+hl.window_rule({
+	match = {
+		class = "^([Tt]hunar)$",
+		title = "^(File Operation Progress|Confirm to replace files|Attention|Preferences|Properties|Create New Folder|Create New File|Rename.*)$",
+	},
+
+	float = true,
+	center = true,
+	rounding = 14,
+})
+
 ------------------------------------------------------------
 -- 03. PICTURE IN PICTURE
 ------------------------------------------------------------

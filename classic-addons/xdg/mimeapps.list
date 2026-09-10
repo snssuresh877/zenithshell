@@ -1,5 +1,5 @@
 [Default Applications]
-inode/directory=com.system76.CosmicFiles.desktop;org.gnome.Nautilus.desktop;thunar.desktop;
+inode/directory=thunar.desktop;org.gnome.Nautilus.desktop;com.system76.CosmicFiles.desktop;
 text/plain=nvim.desktop;org.gnome.TextEditor.desktop;kate.desktop;
 image/png=org.gnome.Loupe.desktop;imv.desktop;viewnior.desktop;feh.desktop;
 image/jpeg=org.gnome.Loupe.desktop;imv.desktop;viewnior.desktop;feh.desktop;

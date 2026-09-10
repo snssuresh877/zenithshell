@@ -54,7 +54,7 @@ hl.bind(MOD .. " + Q", hl.dsp.exec_cmd(Apps.secondTerminal), {
 })
 
 hl.bind(MOD .. " + E", hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/ui/open_filemanager.sh gui"), {
-	description = "Cosmic / GUI File Manager",
+	description = "Thunar / GUI File Manager",
 })
 
 hl.bind(MOD .. " + SHIFT + E", hl.dsp.exec_cmd("$HOME/.config/hypr/scripts/ui/open_filemanager.sh yazi"), {

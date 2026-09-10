@@ -40,14 +40,14 @@ if [ "$MODE" = "tui" ] || [ "$MODE" = "yazi" ]; then
 fi
 
 # GUI Mode
-if command -v cosmic-files >/dev/null 2>&1; then
-    exec cosmic-files "$TARGET_DIR"
+if command -v thunar >/dev/null 2>&1; then
+    exec thunar "$TARGET_DIR"
 elif command -v dolphin >/dev/null 2>&1; then
     exec dolphin "$TARGET_DIR"
 elif command -v nautilus >/dev/null 2>&1; then
     exec nautilus "$TARGET_DIR"
-elif command -v thunar >/dev/null 2>&1; then
-    exec thunar "$TARGET_DIR"
+elif command -v cosmic-files >/dev/null 2>&1; then
+    exec cosmic-files "$TARGET_DIR"
 elif command -v yazi >/dev/null 2>&1; then
     exec foot -D "$TARGET_DIR" -e yazi "$TARGET_DIR"
 else

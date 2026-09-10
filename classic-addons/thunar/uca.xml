@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<actions>
+<action>
+	<icon>utilities-terminal</icon>
+	<name>Open Terminal Here</name>
+	<submenu></submenu>
+	<unique-id>1700000000000001-1</unique-id>
+	<command>foot -D %f</command>
+	<description>Open terminal in current directory</description>
+	<range></range>
+	<patterns>*</patterns>
+	<startup-notify/>
+	<directories/>
+</action>
+<action>
+	<icon>nvim</icon>
+	<name>Open in Neovim</name>
+	<submenu></submenu>
+	<unique-id>1700000000000002-2</unique-id>
+	<command>foot -e nvim %F</command>
+	<description>Open selected files in Neovim</description>
+	<range></range>
+	<patterns>*</patterns>
+	<text-files/>
+	<other-files/>
+</action>
+<action>
+	<icon>folder</icon>
+	<name>Open in Yazi</name>
+	<submenu></submenu>
+	<unique-id>1700000000000003-3</unique-id>
+	<command>foot -D %f -e yazi</command>
+	<description>Open folder in Yazi TUI file manager</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+</action>
+<action>
+	<icon>edit-copy</icon>
+	<name>Copy Path to Clipboard</name>
+	<submenu></submenu>
+	<unique-id>1700000000000004-4</unique-id>
+	<command>sh -c 'printf "%s" "$*" | wl-copy' _ %F</command>
+	<description>Copy full file path(s) to Wayland clipboard</description>
+	<range></range>
+	<patterns>*</patterns>
+	<directories/>
+	<audio-files/>
+	<image-files/>
+	<other-files/>
+	<text-files/>
+	<video-files/>
+</action>
+<action>
+	<icon>preferences-desktop-wallpaper</icon>
+	<name>Set as Wallpaper</name>
+	<submenu></submenu>
+	<unique-id>1700000000000005-5</unique-id>
+	<command>sh -c 'if command -v zenithctl >/dev/null 2>&amp;1; then zenithctl wallpaper set "$1"; else awww img "$1" &amp;&amp; wal -n -q -i "$1"; fi; notify-send "Wallpaper changed" "$(basename "$1")"' _ %f</command>
+	<description>Set image as desktop wallpaper</description>
+	<range></range>
+	<patterns>*.png;*.jpg;*.jpeg;*.webp;*.PNG;*.JPG;*.JPEG;*.WEBP</patterns>
+	<image-files/>
+</action>
+</actions>
