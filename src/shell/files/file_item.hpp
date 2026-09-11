@@ -41,6 +41,11 @@ struct FileItem {
     static std::shared_ptr<FileItem> from_file_info(GFile* file, GFileInfo* info, int large_icon_size = 48, int small_icon_size = 20);
     static std::string format_size(uint64_t bytes);
     static std::string format_timestamp(time_t t);
+
+    // Async thumbnail loader — safe to call from a non-GTK worker thread.
+    // Returns a new GdkPixbuf* (caller owns it) or nullptr if not an image.
+    static GdkPixbuf* load_thumbnail(const std::string& path, const std::string& uri,
+                                      const std::string& mime_type, int size);
 };
 
 } // namespace zenith

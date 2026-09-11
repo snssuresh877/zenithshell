@@ -9,6 +9,7 @@
 #include <iostream>
 #include <cstring>
 #include <sys/stat.h>
+#include <mutex>
 
 namespace zenith {
 
@@ -52,11 +53,29 @@ struct FileViewData {
 
     FileViewWidget::NavigateCallback on_navigate;
     FileViewWidget::StatusCallback on_status;
+
+    // ── Async thumbnail generation ────────────────────────────────────────────
+    // Each call to load_directory() bumps this counter. Thumbnail idle callbacks
+    // carry the generation at dispatch time and silently discard results from
+    // stale generations (user navigated away before thumb finished).
+    uint64_t thumb_generation{0};
+    GThreadPool* thumb_pool{nullptr};  // created lazily, shared across navigations
 };
 
 static void file_view_data_free(gpointer user_data) {
     auto* data = static_cast<FileViewData*>(user_data);
     if (!data) return;
+
+    // Bump generation so any in-flight thumbnail g_idle_add callbacks become no-ops
+    data->thumb_generation++;
+
+    if (data->thumb_pool) {
+        // Don't wait — just mark exclusive so no new items are pushed after this.
+        // Already-running jobs will complete but their idle callbacks will abort
+        // because thumb_generation won't match.
+        g_thread_pool_free(data->thumb_pool, TRUE, FALSE);
+        data->thumb_pool = nullptr;
+    }
 
     if (data->debounce_refresh_timer > 0) {
         g_source_remove(data->debounce_refresh_timer);
@@ -740,6 +759,10 @@ void FileViewWidget::load_directory(GtkWidget* widget, const std::string& path) 
     auto* data = get_data(widget);
     if (!data) return;
 
+    // ── Invalidate any in-flight thumbnails from a previous directory ─────────
+    data->thumb_generation++;
+    uint64_t my_generation = data->thumb_generation;
+
     data->current_path = path;
     data->all_items.clear();
 
@@ -769,6 +792,7 @@ void FileViewWidget::load_directory(GtkWidget* widget, const std::string& path) 
             const char* name = g_file_info_get_name(info);
             GFile* child_file = g_file_get_child(dir, name);
 
+            // Fast path: icon-theme icons only — NO pixel reads here
             auto item = FileItem::from_file_info(child_file, info, 48, 20);
             if (item) {
                 data->all_items.push_back(item);
@@ -782,7 +806,120 @@ void FileViewWidget::load_directory(GtkWidget* widget, const std::string& path) 
     g_object_unref(dir);
 
     setup_file_monitor(data, path);
-    repopulate_store(data);
+    repopulate_store(data);   // ← directory appears instantly with theme icons
+
+    // ── Async thumbnail loading ───────────────────────────────────────────────
+    // Struct passed to each worker thread job (heap-allocated, worker frees it)
+    struct ThumbJob {
+        FileViewData* view_data;
+        GtkListStore* store;        // ref held during job lifetime
+        std::string   path;
+        std::string   uri;
+        std::string   mime_type;
+        std::string   item_path;    // used to find the row in the store
+        int           size;
+        uint64_t      generation;
+    };
+
+    // Lazy-create the thread pool (4 concurrent decoders max)
+    if (!data->thumb_pool) {
+        data->thumb_pool = g_thread_pool_new(
+            +[](gpointer job_data, gpointer) {
+                auto* job = static_cast<ThumbJob*>(job_data);
+                GdkPixbuf* thumb = FileItem::load_thumbnail(
+                    job->path, job->uri, job->mime_type, job->size);
+
+                if (!thumb) { delete job; return; }
+
+                // Pass result back to main thread via g_idle_add
+                struct IdleCtx {
+                    FileViewData* view_data;
+                    GtkListStore* store;
+                    GdkPixbuf*    thumb;
+                    std::string   item_path;
+                    int           size;
+                    uint64_t      generation;
+                };
+                auto* ctx = new IdleCtx{job->view_data, job->store,
+                                        thumb, job->item_path,
+                                        job->size, job->generation};
+                g_object_ref(job->store);
+
+                g_idle_add(+[](gpointer p) -> gboolean {
+                    auto* c = static_cast<IdleCtx*>(p);
+
+                    // Discard if user navigated away
+                    if (c->generation != c->view_data->thumb_generation ||
+                        !GTK_IS_LIST_STORE(c->store)) {
+                        g_object_unref(c->store);
+                        g_object_unref(c->thumb);
+                        delete c;
+                        return G_SOURCE_REMOVE;
+                    }
+
+                    // Find the matching row by path and update pixbuf columns
+                    GtkTreeModel* model = GTK_TREE_MODEL(c->store);
+                    GtkTreeIter iter;
+                    if (gtk_tree_model_get_iter_first(model, &iter)) {
+                        do {
+                            gchar* row_path = nullptr;
+                            gtk_tree_model_get(model, &iter, COL_PATH, &row_path, -1);
+                            if (row_path && c->item_path == row_path) {
+                                // Scale small version from the loaded thumb
+                                int pw = gdk_pixbuf_get_width(c->thumb);
+                                int ph = gdk_pixbuf_get_height(c->thumb);
+                                double scale = std::min(20.0 / pw, 20.0 / ph);
+                                int sw = std::max(1, static_cast<int>(pw * scale));
+                                int sh = std::max(1, static_cast<int>(ph * scale));
+                                GdkPixbuf* sm = gdk_pixbuf_scale_simple(
+                                    c->thumb, sw, sh, GDK_INTERP_BILINEAR);
+
+                                gtk_list_store_set(c->store, &iter,
+                                    COL_PIXBUF_LARGE, c->thumb,
+                                    COL_PIXBUF_SMALL, sm ? sm : c->thumb,
+                                    -1);
+                                if (sm) g_object_unref(sm);
+                                g_free(row_path);
+                                break;
+                            }
+                            if (row_path) g_free(row_path);
+                        } while (gtk_tree_model_iter_next(model, &iter));
+                    }
+
+                    g_object_unref(c->store);
+                    g_object_unref(c->thumb);
+                    delete c;
+                    return G_SOURCE_REMOVE;
+                }, ctx);
+
+                delete job;
+            },
+            nullptr,
+            4,      // max 4 concurrent decoder threads
+            FALSE,  // not exclusive
+            nullptr
+        );
+    }
+
+    // Dispatch one thumbnail job per image/video file
+    for (const auto& item : data->filtered_items) {
+        if (item->is_directory) continue;
+        bool needs_thumb = (item->mime_type.rfind("image/", 0) == 0 ||
+                            item->mime_type.rfind("video/", 0) == 0);
+        if (!needs_thumb) continue;
+
+        auto* job = new ThumbJob{
+            data,
+            data->store,
+            item->path,
+            item->uri,
+            item->mime_type,
+            item->path,
+            48,
+            my_generation
+        };
+        g_thread_pool_push(data->thumb_pool, job, nullptr);
+    }
 }
 
 std::string FileViewWidget::get_current_directory(GtkWidget* widget) {

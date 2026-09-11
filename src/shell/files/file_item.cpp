@@ -191,70 +191,51 @@ std::shared_ptr<FileItem> FileItem::from_file_info(GFile* file, GFileInfo* info,
         item->pixbuf_small = gtk_icon_theme_load_icon(theme, fallback, small_icon_size, GTK_ICON_LOOKUP_FORCE_SIZE, nullptr);
     }
 
-    // ── Thumbnail generation ─────────────────────────────────────────────────
-    // For image/* MIME types: check Freedesktop thumbnail cache first, then
-    // fall back to direct gdk_pixbuf_new_from_file_at_scale() pixel read.
-    // For video/* MIME types: check Freedesktop cache only (tumbler-generated).
-    if (!item->path.empty() && !item->is_directory) {
-        bool is_raster = (item->mime_type == "image/jpeg" || item->mime_type == "image/png"  ||
-                          item->mime_type == "image/gif"  || item->mime_type == "image/webp"  ||
-                          item->mime_type == "image/bmp"  || item->mime_type == "image/tiff"  ||
-                          item->mime_type == "image/x-bmp" || item->mime_type == "image/svg+xml");
-        bool is_video = (item->mime_type.rfind("video/", 0) == 0);
-
-        GdkPixbuf* thumb_lg = nullptr;
-
-        // 1. Try Freedesktop thumbnail cache (md5 of "file://..." URI)
-        const char* home_dir = g_get_home_dir();
-        if (home_dir && !item->uri.empty()) {
-            gchar* md5 = g_compute_checksum_for_string(G_CHECKSUM_MD5, item->uri.c_str(), -1);
-            if (md5) {
-                // Check large (256px) cache first, then normal (128px)
-                for (const char* size_dir : {"large", "normal"}) {
-                    std::string cache_path = std::string(home_dir) +
-                                            "/.cache/thumbnails/" + size_dir + "/" + md5 + ".png";
-                    std::error_code ec;
-                    if (fs::exists(cache_path, ec)) {
-                        thumb_lg = gdk_pixbuf_new_from_file_at_scale(
-                            cache_path.c_str(), large_icon_size, large_icon_size, TRUE, nullptr);
-                        if (thumb_lg) break;
-                    }
-                }
-                g_free(md5);
-            }
-        }
-
-        // 2. For raster images: load directly from file if not cached
-        if (!thumb_lg && is_raster) {
-            GError* perr = nullptr;
-            thumb_lg = gdk_pixbuf_new_from_file_at_scale(
-                item->path.c_str(), large_icon_size, large_icon_size, TRUE, &perr);
-            if (perr) { g_error_free(perr); }
-        }
-
-        // Apply large thumbnail
-        if (thumb_lg) {
-            if (item->pixbuf_large) g_object_unref(item->pixbuf_large);
-            item->pixbuf_large = thumb_lg;
-
-            // Scale down for small icon (list view)
-            int pw = gdk_pixbuf_get_width(thumb_lg);
-            int ph = gdk_pixbuf_get_height(thumb_lg);
-            double scale = std::min(static_cast<double>(small_icon_size) / pw,
-                                    static_cast<double>(small_icon_size) / ph);
-            int sw = std::max(1, static_cast<int>(pw * scale));
-            int sh = std::max(1, static_cast<int>(ph * scale));
-            GdkPixbuf* thumb_sm = gdk_pixbuf_scale_simple(thumb_lg, sw, sh, GDK_INTERP_BILINEAR);
-            if (thumb_sm) {
-                if (item->pixbuf_small) g_object_unref(item->pixbuf_small);
-                item->pixbuf_small = thumb_sm;
-            }
-        }
-
-        (void)is_video; // video thumbnails come from Freedesktop cache above
-    }
+    // NOTE: Image/video thumbnails are generated asynchronously by the
+    // ThumbnailLoader in file_view_widget.cpp after the directory is shown.
+    // This keeps load_directory() fast and non-blocking for any folder size.
 
     return item;
+}
+
+// ── Async thumbnail loading ───────────────────────────────────────────────────
+// Called from a GThreadPool worker thread (NOT the GTK main thread).
+// Returns a pixbuf or nullptr — caller g_idle_adds the result to main thread.
+GdkPixbuf* FileItem::load_thumbnail(const std::string& path, const std::string& uri,
+                                     const std::string& mime_type, int size) {
+    // Step 1: Check Freedesktop thumbnail cache (md5 of the file:// URI)
+    const char* home_dir = g_get_home_dir();
+    if (home_dir && !uri.empty()) {
+        gchar* md5 = g_compute_checksum_for_string(G_CHECKSUM_MD5, uri.c_str(), -1);
+        if (md5) {
+            for (const char* sz : {"large", "normal"}) {
+                std::string cache = std::string(home_dir) +
+                                    "/.cache/thumbnails/" + sz + "/" + md5 + ".png";
+                std::error_code ec;
+                if (fs::exists(cache, ec)) {
+                    GdkPixbuf* pb = gdk_pixbuf_new_from_file_at_scale(
+                        cache.c_str(), size, size, TRUE, nullptr);
+                    if (pb) { g_free(md5); return pb; }
+                }
+            }
+            g_free(md5);
+        }
+    }
+
+    // Step 2: For raster images, decode directly (safe — runs on worker thread)
+    bool is_raster = (mime_type == "image/jpeg" || mime_type == "image/png"  ||
+                      mime_type == "image/gif"  || mime_type == "image/webp"  ||
+                      mime_type == "image/bmp"  || mime_type == "image/tiff"  ||
+                      mime_type == "image/x-bmp" || mime_type == "image/svg+xml");
+    if (is_raster && !path.empty()) {
+        GError* err = nullptr;
+        GdkPixbuf* pb = gdk_pixbuf_new_from_file_at_scale(
+            path.c_str(), size, size, TRUE, &err);
+        if (err) g_error_free(err);
+        return pb; // nullptr if decode failed
+    }
+
+    return nullptr;
 }
 
 } // namespace zenith
