@@ -33,6 +33,12 @@ public:
     static void set_view_mode(GtkWidget* widget, ViewMode mode);
     static ViewMode get_view_mode(GtkWidget* widget);
 
+    static void set_icon_size(GtkWidget* widget, int size_px);
+    static int get_icon_size(GtkWidget* widget);
+    static void zoom_in(GtkWidget* widget);
+    static void zoom_out(GtkWidget* widget);
+    static void zoom_reset(GtkWidget* widget);
+
     static void set_show_hidden(GtkWidget* widget, bool show);
     static bool get_show_hidden(GtkWidget* widget);
 

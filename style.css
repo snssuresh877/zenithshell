@@ -3449,3 +3449,13 @@ window.zenith-files-window {
     font-size: 11px;
     color: @zenith_text_primary;
 }
+
+.files-prop-key tt {
+    background-color: @zenith_surface_highlight;
+    border: 1px solid @zenith_border;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-family: monospace;
+    font-size: 11px;
+    color: @zenith_accent;
+}

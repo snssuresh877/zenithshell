@@ -44,6 +44,7 @@ struct FileViewData {
     std::vector<std::shared_ptr<FileItem>> filtered_items;
 
     ViewMode view_mode{ViewMode::GRID};
+    int icon_size{96};
     bool show_hidden{false};
     std::string search_query;
     SortField sort_field{SortField::NAME};
@@ -885,6 +886,21 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
     g_signal_connect(data->icon_view, "drag-data-received", G_CALLBACK(on_drag_data_received), data);
 
     gtk_container_add(GTK_CONTAINER(data->grid_scrolled), data->icon_view);
+
+    g_signal_connect(data->grid_scrolled, "scroll-event", G_CALLBACK(+[](GtkWidget*, GdkEventScroll* event, gpointer user_data) -> gboolean {
+        if (event->state & GDK_CONTROL_MASK) {
+            auto* d = static_cast<FileViewData*>(user_data);
+            if (event->direction == GDK_SCROLL_UP || (event->direction == GDK_SCROLL_SMOOTH && event->delta_y < 0)) {
+                FileViewWidget::zoom_in(d->root_box);
+                return TRUE;
+            } else if (event->direction == GDK_SCROLL_DOWN || (event->direction == GDK_SCROLL_SMOOTH && event->delta_y > 0)) {
+                FileViewWidget::zoom_out(d->root_box);
+                return TRUE;
+            }
+        }
+        return FALSE;
+    }), data);
+
     gtk_stack_add_named(GTK_STACK(data->stack), data->grid_scrolled, "grid");
 
     // 2. List View (GtkTreeView)
@@ -1088,6 +1104,38 @@ void FileViewWidget::set_view_mode(GtkWidget* widget, ViewMode mode) {
 ViewMode FileViewWidget::get_view_mode(GtkWidget* widget) {
     auto* data = get_data(widget);
     return data ? data->view_mode : ViewMode::GRID;
+}
+
+void FileViewWidget::set_icon_size(GtkWidget* widget, int size_px) {
+    auto* data = get_data(widget);
+    if (!data) return;
+
+    size_px = std::clamp(size_px, 48, 256);
+    data->icon_size = size_px;
+    if (data->icon_view) {
+        gtk_icon_view_set_item_width(GTK_ICON_VIEW(data->icon_view), size_px);
+    }
+}
+
+int FileViewWidget::get_icon_size(GtkWidget* widget) {
+    auto* data = get_data(widget);
+    return data ? data->icon_size : 96;
+}
+
+void FileViewWidget::zoom_in(GtkWidget* widget) {
+    auto* data = get_data(widget);
+    if (!data) return;
+    set_icon_size(widget, data->icon_size + 16);
+}
+
+void FileViewWidget::zoom_out(GtkWidget* widget) {
+    auto* data = get_data(widget);
+    if (!data) return;
+    set_icon_size(widget, data->icon_size - 16);
+}
+
+void FileViewWidget::zoom_reset(GtkWidget* widget) {
+    set_icon_size(widget, 96);
 }
 
 void FileViewWidget::set_show_hidden(GtkWidget* widget, bool show) {

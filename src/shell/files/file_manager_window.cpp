@@ -53,6 +53,7 @@ struct FileManagerState {
     GtkWidget* btn_hidden{nullptr};
     GtkWidget* btn_grid_view{nullptr};
     GtkWidget* btn_list_view{nullptr};
+    GtkWidget* btn_settings{nullptr};
 
     GtkWidget* paned{nullptr};
     GtkWidget* sidebar{nullptr};
@@ -321,6 +322,218 @@ static void create_new_tab(FileManagerState* state, const std::string& initial_p
         navigate_to(state, initial_path, false);
     }
 }
+
+static void open_settings_dialog(FileManagerState* state) {
+    if (!state || !state->window) return;
+
+    GtkWidget* dialog = gtk_dialog_new_with_buttons(
+        "Zenith Files — Preferences & Shortcuts",
+        GTK_WINDOW(state->window),
+        static_cast<GtkDialogFlags>(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
+        "_Close", GTK_RESPONSE_CLOSE,
+        nullptr
+    );
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 620, 520);
+    gtk_widget_add_css_class(dialog, "zenith-files-dialog");
+
+    GtkWidget* content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    gtk_container_set_border_width(GTK_CONTAINER(content), 16);
+    gtk_box_set_spacing(GTK_BOX(content), 12);
+
+    GtkWidget* notebook = gtk_notebook_new();
+    gtk_widget_add_css_class(notebook, "files-settings-notebook");
+
+    // ── Tab 1: Preferences & View Sizing ──────────────────────────────────────
+    GtkWidget* tab1_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 16);
+    gtk_container_set_border_width(GTK_CONTAINER(tab1_vbox), 16);
+
+    // Section 1: Icon / Folder Size
+    GtkWidget* size_header = gtk_label_new("<b>Folder & Icon Size</b>");
+    gtk_label_set_use_markup(GTK_LABEL(size_header), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(size_header), 0.0f);
+    gtk_widget_add_css_class(size_header, "files-prop-title");
+    gtk_box_pack_start(GTK_BOX(tab1_vbox), size_header, FALSE, FALSE, 0);
+
+    GtkWidget* size_desc = gtk_label_new("Adjust the size of folders and file icons in Grid View (also Ctrl+Scroll or Ctrl++/Ctrl+-):");
+    gtk_label_set_xalign(GTK_LABEL(size_desc), 0.0f);
+    gtk_label_set_line_wrap(GTK_LABEL(size_desc), TRUE);
+    gtk_widget_add_css_class(size_desc, "files-prop-subtitle");
+    gtk_box_pack_start(GTK_BOX(tab1_vbox), size_desc, FALSE, FALSE, 0);
+
+    // Get current size from active tab
+    int cur_size = 96;
+    if (state->active_tab && state->active_tab->active_pane) {
+        cur_size = FileViewWidget::get_icon_size(state->active_tab->active_pane->file_view);
+    }
+
+    GtkWidget* scale = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 48, 192, 16);
+    gtk_scale_set_value_pos(GTK_SCALE(scale), GTK_POS_RIGHT);
+    gtk_scale_set_digits(GTK_SCALE(scale), 0);
+    gtk_range_set_value(GTK_RANGE(scale), cur_size);
+    gtk_scale_add_mark(GTK_SCALE(scale), 48, GTK_POS_BOTTOM, "Small (48px)");
+    gtk_scale_add_mark(GTK_SCALE(scale), 64, GTK_POS_BOTTOM, "Medium (64px)");
+    gtk_scale_add_mark(GTK_SCALE(scale), 96, GTK_POS_BOTTOM, "Normal (96px)");
+    gtk_scale_add_mark(GTK_SCALE(scale), 128, GTK_POS_BOTTOM, "Large (128px)");
+    gtk_scale_add_mark(GTK_SCALE(scale), 160, GTK_POS_BOTTOM, "Huge (160px)");
+
+    g_signal_connect(scale, "value-changed", G_CALLBACK(+[](GtkRange* r, gpointer user_data) {
+        auto* s = static_cast<FileManagerState*>(user_data);
+        int sz = static_cast<int>(gtk_range_get_value(r));
+        for (auto& tab : s->tabs) {
+            FileViewWidget::set_icon_size(tab->left_pane.file_view, sz);
+            if (tab->is_dual) FileViewWidget::set_icon_size(tab->right_pane.file_view, sz);
+        }
+    }), state);
+
+    gtk_box_pack_start(GTK_BOX(tab1_vbox), scale, FALSE, FALSE, 8);
+
+    // Zoom buttons row
+    GtkWidget* zoom_btn_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+
+    GtkWidget* btn_smaller = gtk_button_new_with_label("➖ Smaller (Ctrl+-)");
+    gtk_widget_add_css_class(btn_smaller, "files-btn-tool");
+    g_signal_connect_swapped(btn_smaller, "clicked", G_CALLBACK(+[](FileManagerState* s) {
+        for (auto& tab : s->tabs) {
+            FileViewWidget::zoom_out(tab->left_pane.file_view);
+            if (tab->is_dual) FileViewWidget::zoom_out(tab->right_pane.file_view);
+        }
+    }), state);
+    gtk_box_pack_start(GTK_BOX(zoom_btn_box), btn_smaller, FALSE, FALSE, 0);
+
+    GtkWidget* btn_reset = gtk_button_new_with_label("↺ Reset (Ctrl+0)");
+    gtk_widget_add_css_class(btn_reset, "files-btn-tool");
+    g_signal_connect_swapped(btn_reset, "clicked", G_CALLBACK(+[](FileManagerState* s) {
+        for (auto& tab : s->tabs) {
+            FileViewWidget::zoom_reset(tab->left_pane.file_view);
+            if (tab->is_dual) FileViewWidget::zoom_reset(tab->right_pane.file_view);
+        }
+    }), state);
+    gtk_box_pack_start(GTK_BOX(zoom_btn_box), btn_reset, FALSE, FALSE, 0);
+
+    GtkWidget* btn_larger = gtk_button_new_with_label("➕ Larger (Ctrl++)");
+    gtk_widget_add_css_class(btn_larger, "files-btn-tool");
+    g_signal_connect_swapped(btn_larger, "clicked", G_CALLBACK(+[](FileManagerState* s) {
+        for (auto& tab : s->tabs) {
+            FileViewWidget::zoom_in(tab->left_pane.file_view);
+            if (tab->is_dual) FileViewWidget::zoom_in(tab->right_pane.file_view);
+        }
+    }), state);
+    gtk_box_pack_start(GTK_BOX(zoom_btn_box), btn_larger, FALSE, FALSE, 0);
+
+    gtk_box_pack_start(GTK_BOX(tab1_vbox), zoom_btn_box, FALSE, FALSE, 0);
+
+    gtk_box_pack_start(GTK_BOX(tab1_vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 8);
+
+    // Section 2: General Options
+    GtkWidget* gen_header = gtk_label_new("<b>General Options</b>");
+    gtk_label_set_use_markup(GTK_LABEL(gen_header), TRUE);
+    gtk_label_set_xalign(GTK_LABEL(gen_header), 0.0f);
+    gtk_widget_add_css_class(gen_header, "files-prop-title");
+    gtk_box_pack_start(GTK_BOX(tab1_vbox), gen_header, FALSE, FALSE, 0);
+
+    GtkWidget* chk_hidden = gtk_check_button_new_with_label("Show hidden files and folders by default (Ctrl+H)");
+    if (state->active_tab && state->active_tab->active_pane) {
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_hidden),
+            FileViewWidget::get_show_hidden(state->active_tab->active_pane->file_view));
+    }
+    g_signal_connect(chk_hidden, "toggled", G_CALLBACK(+[](GtkToggleButton* btn, gpointer user_data) {
+        auto* s = static_cast<FileManagerState*>(user_data);
+        gboolean act = gtk_toggle_button_get_active(btn);
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(s->btn_hidden), act);
+        for (auto& tab : s->tabs) {
+            FileViewWidget::set_show_hidden(tab->left_pane.file_view, act);
+            if (tab->is_dual) FileViewWidget::set_show_hidden(tab->right_pane.file_view, act);
+        }
+    }), state);
+    gtk_box_pack_start(GTK_BOX(tab1_vbox), chk_hidden, FALSE, FALSE, 0);
+
+    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), tab1_vbox, gtk_label_new("⚙ Preferences"));
+
+    // ── Tab 2: Keyboard Shortcuts Reference ──────────────────────────────────
+    GtkWidget* scroll = gtk_scrolled_window_new(nullptr, nullptr);
+    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+
+    GtkWidget* tab2_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
+    gtk_container_set_border_width(GTK_CONTAINER(tab2_vbox), 16);
+
+    auto add_shortcut_section = [](GtkWidget* vbox, const char* section_title, const std::vector<std::pair<std::string, std::string>>& items) {
+        GtkWidget* hdr = gtk_label_new(section_title);
+        gtk_label_set_use_markup(GTK_LABEL(hdr), TRUE);
+        gtk_label_set_xalign(GTK_LABEL(hdr), 0.0f);
+        gtk_widget_add_css_class(hdr, "files-prop-title");
+        gtk_box_pack_start(GTK_BOX(vbox), hdr, FALSE, FALSE, 4);
+
+        GtkWidget* grid = gtk_grid_new();
+        gtk_grid_set_row_spacing(GTK_GRID(grid), 6);
+        gtk_grid_set_column_spacing(GTK_GRID(grid), 16);
+
+        int row = 0;
+        for (const auto& item : items) {
+            GtkWidget* key_lbl = gtk_label_new(item.first.c_str());
+            gtk_label_set_use_markup(GTK_LABEL(key_lbl), TRUE);
+            gtk_label_set_xalign(GTK_LABEL(key_lbl), 0.0f);
+            gtk_widget_add_css_class(key_lbl, "files-prop-key");
+            gtk_grid_attach(GTK_GRID(grid), key_lbl, 0, row, 1, 1);
+
+            GtkWidget* desc_lbl = gtk_label_new(item.second.c_str());
+            gtk_label_set_xalign(GTK_LABEL(desc_lbl), 0.0f);
+            gtk_widget_add_css_class(desc_lbl, "files-prop-val");
+            gtk_grid_attach(GTK_GRID(grid), desc_lbl, 1, row, 1, 1);
+
+            row++;
+        }
+        gtk_box_pack_start(GTK_BOX(vbox), grid, FALSE, FALSE, 0);
+        gtk_box_pack_start(GTK_BOX(vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 6);
+    };
+
+    add_shortcut_section(tab2_vbox, "<b>🧭 Navigation & Tabs</b>", {
+        {"<tt>Alt + Left</tt>", "Go back in history"},
+        {"<tt>Alt + Right</tt>", "Go forward in history"},
+        {"<tt>Alt + Up / Backspace</tt>", "Go to parent directory"},
+        {"<tt>Alt + Home</tt>", "Go to Home folder"},
+        {"<tt>Ctrl + L</tt>", "Enter editable path bar directly"},
+        {"<tt>Ctrl + F</tt>", "Open recursive background search"},
+        {"<tt>Ctrl + T</tt>", "Open a new tab"},
+        {"<tt>Ctrl + W</tt>", "Close active tab"},
+        {"<tt>F3</tt>", "Toggle split view (Dual Pane)"},
+        {"<tt>F4</tt>", "Open terminal in current directory"}
+    });
+
+    add_shortcut_section(tab2_vbox, "<b>📁 File Operations</b>", {
+        {"<tt>Enter / Double Click</tt>", "Open selected file or enter folder"},
+        {"<tt>F2</tt>", "Rename single item or Bulk Rename multiple items"},
+        {"<tt>Ctrl + C</tt>", "Copy selected items to clipboard"},
+        {"<tt>Ctrl + X</tt>", "Cut selected items to clipboard"},
+        {"<tt>Ctrl + V</tt>", "Paste items from clipboard (with progress)"},
+        {"<tt>Ctrl + Shift + C</tt>", "Copy full path(s) to clipboard"},
+        {"<tt>Ctrl + Shift + N</tt>", "Create a new folder"},
+        {"<tt>Delete</tt>", "Move selected items to Trash"},
+        {"<tt>Shift + Delete</tt>", "Permanently delete (with confirmation)"},
+        {"<tt>Ctrl + A</tt>", "Select all items in current folder"},
+        {"<tt>F5 / Ctrl + R</tt>", "Refresh folder contents"}
+    });
+
+    add_shortcut_section(tab2_vbox, "<b>🔍 Views & Zoom</b>", {
+        {"<tt>Ctrl + 1</tt>", "Switch to Grid (Icon) View"},
+        {"<tt>Ctrl + 2</tt>", "Switch to List (Detail) View"},
+        {"<tt>Ctrl + Plus (+)</tt>", "Zoom in (increase icon/folder size)"},
+        {"<tt>Ctrl + Minus (-)</tt>", "Zoom out (decrease icon/folder size)"},
+        {"<tt>Ctrl + 0</tt>", "Reset zoom to normal size (96px)"},
+        {"<tt>Ctrl + ScrollWheel</tt>", "Smoothly zoom icon size in view"},
+        {"<tt>Ctrl + H</tt>", "Toggle hidden files & folders"},
+        {"<tt>Ctrl + ,</tt>", "Open Preferences & Shortcuts"}
+    });
+
+    gtk_container_add(GTK_CONTAINER(scroll), tab2_vbox);
+    gtk_notebook_append_page(GTK_NOTEBOOK(notebook), scroll, gtk_label_new("⌨ Shortcuts"));
+
+    gtk_box_pack_start(GTK_BOX(content), notebook, TRUE, TRUE, 0);
+
+    gtk_widget_show_all(dialog);
+    gtk_dialog_run(GTK_DIALOG(dialog));
+    gtk_widget_destroy(dialog);
+}
+
 static gboolean on_window_key_press(GtkWidget*, GdkEventKey* event, gpointer user_data) {
     auto* state = static_cast<FileManagerState*>(user_data);
     if (!state) return FALSE;
@@ -374,6 +587,27 @@ static gboolean on_window_key_press(GtkWidget*, GdkEventKey* event, gpointer use
             if (state->active_tab) FileViewWidget::set_view_mode(state->active_tab->active_pane->file_view, ViewMode::LIST);
             gtk_widget_add_css_class(state->btn_list_view, "files-btn-view-active");
             gtk_widget_remove_css_class(state->btn_grid_view, "files-btn-view-active");
+            return TRUE;
+        } else if (key == GDK_KEY_plus || key == GDK_KEY_equal || key == GDK_KEY_KP_Add) {
+            for (auto& tab : state->tabs) {
+                FileViewWidget::zoom_in(tab->left_pane.file_view);
+                if (tab->is_dual) FileViewWidget::zoom_in(tab->right_pane.file_view);
+            }
+            return TRUE;
+        } else if (key == GDK_KEY_minus || key == GDK_KEY_KP_Subtract) {
+            for (auto& tab : state->tabs) {
+                FileViewWidget::zoom_out(tab->left_pane.file_view);
+                if (tab->is_dual) FileViewWidget::zoom_out(tab->right_pane.file_view);
+            }
+            return TRUE;
+        } else if (key == GDK_KEY_0 || key == GDK_KEY_KP_0) {
+            for (auto& tab : state->tabs) {
+                FileViewWidget::zoom_reset(tab->left_pane.file_view);
+                if (tab->is_dual) FileViewWidget::zoom_reset(tab->right_pane.file_view);
+            }
+            return TRUE;
+        } else if (key == GDK_KEY_comma) {
+            open_settings_dialog(state);
             return TRUE;
         }
     } else if (state_mask == 0) {
@@ -531,9 +765,14 @@ GtkWidget* FileManagerWindow::create(const std::string& initial_path) {
         gtk_widget_add_css_class(s->btn_list_view, "files-btn-view-active");
         gtk_widget_remove_css_class(s->btn_grid_view, "files-btn-view-active");
     }), state);
-    gtk_box_pack_start(GTK_BOX(view_box), state->btn_list_view, FALSE, FALSE, 0);
-
     gtk_box_pack_start(GTK_BOX(act_box), view_box, FALSE, FALSE, 0);
+
+    state->btn_settings = gtk_button_new_from_icon_name("emblem-system-symbolic", GTK_ICON_SIZE_BUTTON);
+    gtk_widget_set_tooltip_text(state->btn_settings, "Preferences & Shortcuts (Ctrl+,)");
+    gtk_widget_add_css_class(state->btn_settings, "files-btn-tool");
+    g_signal_connect_swapped(state->btn_settings, "clicked", G_CALLBACK(open_settings_dialog), state);
+    gtk_box_pack_start(GTK_BOX(act_box), state->btn_settings, FALSE, FALSE, 0);
+
     gtk_box_pack_start(GTK_BOX(toolbar), act_box, FALSE, FALSE, 0);
 
     // 2. Filter / Search Bar (Revealer)
