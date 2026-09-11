@@ -60,6 +60,10 @@ struct FileViewData {
     // stale generations (user navigated away before thumb finished).
     uint64_t thumb_generation{0};
     GThreadPool* thumb_pool{nullptr};  // created lazily, shared across navigations
+    
+    bool is_searching{false};
+    uint64_t search_generation{0};
+    GThreadPool* search_pool{nullptr};
 };
 
 static void file_view_data_free(gpointer user_data) {
@@ -75,6 +79,12 @@ static void file_view_data_free(gpointer user_data) {
         // because thumb_generation won't match.
         g_thread_pool_free(data->thumb_pool, TRUE, FALSE);
         data->thumb_pool = nullptr;
+    }
+
+    data->search_generation++;
+    if (data->search_pool) {
+        g_thread_pool_free(data->search_pool, TRUE, FALSE);
+        data->search_pool = nullptr;
     }
 
     if (data->debounce_refresh_timer > 0) {
@@ -759,6 +769,8 @@ void FileViewWidget::load_directory(GtkWidget* widget, const std::string& path) 
     auto* data = get_data(widget);
     if (!data) return;
 
+    if (data->is_searching) return;
+
     // ── Invalidate any in-flight thumbnails from a previous directory ─────────
     data->thumb_generation++;
     uint64_t my_generation = data->thumb_generation;
@@ -959,12 +971,136 @@ bool FileViewWidget::get_show_hidden(GtkWidget* widget) {
     return data ? data->show_hidden : false;
 }
 
+struct SearchJob {
+    FileViewData* data;
+    std::string query;
+    std::string root_path;
+    uint64_t generation;
+};
+
+static void run_search_job(gpointer job_data, gpointer) {
+    auto* job = static_cast<SearchJob*>(job_data);
+    
+    std::string q_lower = job->query;
+    std::transform(q_lower.begin(), q_lower.end(), q_lower.begin(), ::tolower);
+    
+    std::vector<std::string> stack;
+    stack.push_back(job->root_path);
+    
+    std::vector<std::shared_ptr<FileItem>> batch;
+    
+    while (!stack.empty()) {
+        if (job->data->search_generation != job->generation) break;
+        
+        std::string current = stack.back();
+        stack.pop_back();
+        
+        GFile* file = g_file_new_for_path(current.c_str());
+        GFileEnumerator* enumerator = g_file_enumerate_children(
+            file,
+            "standard::*,time::*,access::*,unix::*",
+            G_FILE_QUERY_INFO_NONE,
+            nullptr, nullptr
+        );
+        g_object_unref(file);
+        
+        if (!enumerator) continue;
+        
+        GFileInfo* info = nullptr;
+        while ((info = g_file_enumerator_next_file(enumerator, nullptr, nullptr)) != nullptr) {
+            if (job->data->search_generation != job->generation) {
+                g_object_unref(info);
+                break;
+            }
+            
+            const char* name = g_file_info_get_name(info);
+            if (!name || strcmp(name, ".") == 0 || strcmp(name, "..") == 0) {
+                g_object_unref(info);
+                continue;
+            }
+            
+            bool is_dir = g_file_info_get_file_type(info) == G_FILE_TYPE_DIRECTORY;
+            std::string child_path = current + "/" + name;
+            
+            if (is_dir) stack.push_back(child_path);
+            
+            std::string n_lower = name;
+            std::transform(n_lower.begin(), n_lower.end(), n_lower.begin(), ::tolower);
+            if (n_lower.find(q_lower) != std::string::npos) {
+                GFile* child_file = g_file_new_for_path(child_path.c_str());
+                auto item = FileItem::from_file_info(child_file, info, 64, 24);
+                if (item) batch.push_back(item);
+                g_object_unref(child_file);
+            }
+            g_object_unref(info);
+            
+            if (batch.size() >= 20) {
+                struct BatchData {
+                    FileViewData* d;
+                    uint64_t g;
+                    std::vector<std::shared_ptr<FileItem>> items;
+                };
+                auto* bd = new BatchData{job->data, job->generation, std::move(batch)};
+                batch.clear();
+                
+                g_idle_add(+[](gpointer u) -> gboolean {
+                    auto* b = static_cast<BatchData*>(u);
+                    if (b->d->search_generation == b->g) {
+                        for (auto& i : b->items) b->d->all_items.push_back(i);
+                        repopulate_store(b->d);
+                    }
+                    delete b;
+                    return G_SOURCE_REMOVE;
+                }, bd);
+            }
+        }
+        g_object_unref(enumerator);
+    }
+    
+    if (!batch.empty() && job->data->search_generation == job->generation) {
+        struct BatchData {
+            FileViewData* d;
+            uint64_t g;
+            std::vector<std::shared_ptr<FileItem>> items;
+        };
+        auto* bd = new BatchData{job->data, job->generation, std::move(batch)};
+        g_idle_add(+[](gpointer u) -> gboolean {
+            auto* b = static_cast<BatchData*>(u);
+            if (b->d->search_generation == b->g) {
+                for (auto& i : b->items) b->d->all_items.push_back(i);
+                repopulate_store(b->d);
+            }
+            delete b;
+            return G_SOURCE_REMOVE;
+        }, bd);
+    }
+    
+    delete job;
+}
+
 void FileViewWidget::set_search_query(GtkWidget* widget, const std::string& query) {
     auto* data = get_data(widget);
     if (!data) return;
 
     data->search_query = query;
+    data->search_generation++;
+
+    if (query.empty()) {
+        data->is_searching = false;
+        load_directory(widget, data->current_path);
+        return;
+    }
+
+    data->is_searching = true;
+    data->all_items.clear();
     repopulate_store(data);
+
+    if (!data->search_pool) {
+        data->search_pool = g_thread_pool_new(run_search_job, nullptr, 1, FALSE, nullptr);
+    }
+
+    auto* job = new SearchJob{data, query, data->current_path, data->search_generation};
+    g_thread_pool_push(data->search_pool, job, nullptr);
 }
 
 void FileViewWidget::set_sort(GtkWidget* widget, SortField field, bool ascending) {
@@ -1313,6 +1449,11 @@ void FileViewWidget::action_properties(GtkWidget* widget) {
         return;
     }
 
+    guint32 initial_mode = 0;
+    if (g_file_info_has_attribute(info, G_FILE_ATTRIBUTE_UNIX_MODE)) {
+        initial_mode = g_file_info_get_attribute_uint32(info, G_FILE_ATTRIBUTE_UNIX_MODE);
+    }
+
     auto item = FileItem::from_file_info(file, info, 64, 24);
     g_object_unref(info);
     g_object_unref(file);
@@ -1381,6 +1522,56 @@ void FileViewWidget::action_properties(GtkWidget* widget) {
     add_row(row++, "Modified:", item->formatted_date);
 
     gtk_box_pack_start(GTK_BOX(content), grid, TRUE, TRUE, 0);
+
+    gtk_box_pack_start(GTK_BOX(content), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 0);
+
+    GtkWidget* perm_label = gtk_label_new("Permissions");
+    gtk_label_set_xalign(GTK_LABEL(perm_label), 0.0f);
+    gtk_widget_add_css_class(perm_label, "files-prop-title");
+    gtk_box_pack_start(GTK_BOX(content), perm_label, FALSE, FALSE, 0);
+
+    GtkWidget* pgrid = gtk_grid_new();
+    gtk_grid_set_row_spacing(GTK_GRID(pgrid), 4);
+    gtk_grid_set_column_spacing(GTK_GRID(pgrid), 16);
+
+    const char* owners[] = {"Owner", "Group", "Others"};
+    int shifts[] = {6, 3, 0};
+
+    gtk_grid_attach(GTK_GRID(pgrid), gtk_label_new("Read"), 1, 0, 1, 1);
+    gtk_grid_attach(GTK_GRID(pgrid), gtk_label_new("Write"), 2, 0, 1, 1);
+    gtk_grid_attach(GTK_GRID(pgrid), gtk_label_new("Execute"), 3, 0, 1, 1);
+
+    struct PermState {
+        std::string path;
+        guint32 current_mode;
+    };
+    auto* perm_state = new PermState{target_path, initial_mode};
+
+    for (int i = 0; i < 3; ++i) {
+        GtkWidget* lbl = gtk_label_new(owners[i]);
+        gtk_label_set_xalign(GTK_LABEL(lbl), 0.0f);
+        gtk_grid_attach(GTK_GRID(pgrid), lbl, 0, i+1, 1, 1);
+        for (int j = 0; j < 3; ++j) {
+            GtkWidget* cb = gtk_check_button_new();
+            int bit = 1 << (shifts[i] + (2 - j));
+            gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(cb), (initial_mode & bit) != 0);
+            auto* cb_data = new std::pair<PermState*, int>(perm_state, bit);
+            auto cb_func = +[](GtkToggleButton* btn, gpointer udata) {
+                auto* d = static_cast<std::pair<PermState*, int>*>(udata);
+                if (gtk_toggle_button_get_active(btn)) d->first->current_mode |= d->second;
+                else d->first->current_mode &= ~(d->second);
+                GFile* f = g_file_new_for_path(d->first->path.c_str());
+                g_file_set_attribute_uint32(f, G_FILE_ATTRIBUTE_UNIX_MODE, d->first->current_mode, G_FILE_QUERY_INFO_NONE, nullptr, nullptr);
+                g_object_unref(f);
+            };
+            g_signal_connect_data(cb, "toggled", G_CALLBACK(cb_func), cb_data, [](gpointer d, GClosure*) { delete static_cast<std::pair<PermState*, int>*>(d); }, static_cast<GConnectFlags>(0));
+            gtk_grid_attach(GTK_GRID(pgrid), cb, j+1, i+1, 1, 1);
+        }
+    }
+    gtk_box_pack_start(GTK_BOX(content), pgrid, TRUE, TRUE, 0);
+
+    auto destroy_func = +[](GtkWidget*, gpointer u) { delete static_cast<PermState*>(u); };
+    g_signal_connect_data(dialog, "destroy", G_CALLBACK(destroy_func), perm_state, nullptr, static_cast<GConnectFlags>(0));
 
     gtk_widget_show_all(dialog);
     gtk_dialog_run(GTK_DIALOG(dialog));
