@@ -100,6 +100,9 @@ void print_help() {
     std::cout << "  " << C_GREEN << "audio" << C_RESET << "                   Open Audio control modal\n";
     std::cout << "  " << C_GREEN << "power" << C_RESET << "                   Open Power & Session menu\n\n";
 
+    std::cout << C_BOLD << "FILE MANAGER:\n" << C_RESET;
+    std::cout << "  " << C_GREEN << "files [path]" << C_RESET << " | " << C_GREEN << "fm [path]" << C_RESET << "     Launch ZenithFiles native file manager\n\n";
+
     std::cout << C_BOLD << "SYSTEM & DAEMON:\n" << C_RESET;
     std::cout << "  " << C_GREEN << "stats" << C_RESET << "                   Print live CPU, RAM, Battery, and Network metrics\n";
     std::cout << "  " << C_GREEN << "stats --json" << C_RESET << "            Output live metrics in raw JSON\n";
@@ -187,6 +190,7 @@ bool ZenithCtl::should_handle(int argc, char** argv) {
         if (cmd == "power") return true;
         if (cmd == "stats") return true;
         if (cmd == "reload") return true;
+        if (cmd == "files" || cmd == "fm") return true;
     }
 
     return false;
@@ -947,6 +951,19 @@ int ZenithCtl::run(int argc, char** argv) {
         if (!res) return 1;
         g_variant_unref(res);
         std::cout << C_GREEN << "✔ " << C_RESET << "ZenithShell configuration and styles reloaded\n";
+        return 0;
+    }
+
+    // --- File Manager ---
+    if (target == "files" || target == "fm") {
+        std::string path = (args.size() > 1) ? args[1] : "";
+        std::string cmd = "zenithshell --files";
+        if (!path.empty()) {
+            cmd += " \"" + path + "\"";
+        }
+        cmd += " >/dev/null 2>&1 &";
+        int ret = system(cmd.c_str());
+        (void)ret;
         return 0;
     }
 

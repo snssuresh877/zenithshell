@@ -85,6 +85,12 @@ set(SOURCES
     src/shell/osd/osd_window.cpp
     src/cli/zenithctl.cpp
     src/system/backlight_manager.cpp
+    src/shell/files/file_item.cpp
+    src/shell/files/file_operations.cpp
+    src/shell/files/path_bar_widget.cpp
+    src/shell/files/places_sidebar.cpp
+    src/shell/files/file_view_widget.cpp
+    src/shell/files/file_manager_window.cpp
 )
 
 add_executable(zenithshell ${SOURCES})

@@ -3141,3 +3141,311 @@ window.zenith-osd {
 
 
 
+
+/* ─── ZenithFiles Native Desktop File Manager ─── */
+window.zenith-files-window {
+    background-color: @zenith_bg;
+    color: @zenith_text_primary;
+}
+
+.files-toolbar {
+    background-color: @zenith_surface;
+    border-bottom: 1px solid @zenith_border;
+    padding: 6px 12px;
+}
+
+.files-nav-group button,
+.files-btn-nav,
+.files-btn-tool {
+    background-color: transparent;
+    color: @zenith_text_secondary;
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin: 0 2px;
+    transition: all 120ms ease-in-out;
+}
+
+.files-btn-nav:hover,
+.files-btn-tool:hover {
+    background-color: @zenith_surface_variant;
+    color: @zenith_text_primary;
+}
+
+.files-btn-nav:active,
+.files-btn-tool:active,
+.files-btn-tool:checked {
+    background-color: @zenith_accent_soft;
+    color: @zenith_accent;
+}
+
+/* Path Bar & Breadcrumbs */
+.files-pathbar-container {
+    background-color: @zenith_bg;
+    border: 1px solid @zenith_border;
+    border-radius: 8px;
+    padding: 2px 8px;
+    margin: 0 8px;
+}
+
+.files-pathbar-container:focus-within {
+    border-color: @zenith_border_focus;
+    box-shadow: 0 0 0 1px @zenith_accent_glow;
+}
+
+.files-pathbar-crumb {
+    background-color: transparent;
+    color: @zenith_text_secondary;
+    border-radius: 4px;
+    padding: 4px 6px;
+    margin: 0 1px;
+    font-size: 11px;
+    font-weight: 600;
+    transition: all 120ms ease;
+}
+
+.files-pathbar-crumb:hover {
+    background-color: @zenith_surface;
+    color: @zenith_text_primary;
+}
+
+.files-pathbar-crumb-active {
+    color: @zenith_accent;
+    font-weight: 700;
+}
+
+.files-pathbar-chevron {
+    color: @zenith_text_disabled;
+    font-size: 11px;
+    margin: 0 2px;
+}
+
+.files-pathbar-entry {
+    background-color: transparent;
+    color: @zenith_text_primary;
+    border: none;
+    padding: 4px 6px;
+    font-size: 11px;
+}
+
+/* View Switcher */
+.files-view-switcher {
+    background-color: @zenith_bg;
+    border: 1px solid @zenith_border;
+    border-radius: 6px;
+    padding: 2px;
+}
+
+.files-view-switcher button {
+    background-color: transparent;
+    color: @zenith_text_secondary;
+    border-radius: 4px;
+    padding: 4px 8px;
+    transition: all 120ms ease;
+}
+
+.files-view-switcher button.files-btn-view-active {
+    background-color: @zenith_accent;
+    color: @zenith_bg;
+}
+
+/* Search Bar */
+.files-search-bar {
+    background-color: @zenith_surface;
+    border-bottom: 1px solid @zenith_border;
+    padding: 6px 12px;
+}
+
+.files-search-entry {
+    background-color: @zenith_bg;
+    border: 1px solid @zenith_border;
+    border-radius: 6px;
+    color: @zenith_text_primary;
+    padding: 4px 10px;
+}
+
+.files-search-entry:focus {
+    border-color: @zenith_border_focus;
+    box-shadow: 0 0 0 1px @zenith_accent_glow;
+}
+
+.files-btn-close-search {
+    background-color: transparent;
+    color: @zenith_text_secondary;
+    border-radius: 4px;
+}
+
+.files-btn-close-search:hover {
+    color: @zenith_error;
+}
+
+/* Sidebar */
+.files-sidebar {
+    background-color: @zenith_surface;
+    border-right: 1px solid @zenith_border;
+    min-width: 180px;
+    padding: 6px 0;
+}
+
+.files-sidebar-header {
+    color: @zenith_text_disabled;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    padding: 8px 14px 4px 14px;
+}
+
+.files-sidebar-row {
+    color: @zenith_text_secondary;
+    border-radius: 6px;
+    padding: 6px 12px;
+    margin: 1px 8px;
+    transition: all 120ms ease;
+}
+
+.files-sidebar-row:hover {
+    background-color: @zenith_surface_variant;
+    color: @zenith_text_primary;
+}
+
+.files-sidebar-row.files-sidebar-row-active,
+.files-sidebar-row:selected {
+    background-color: @zenith_accent_soft;
+    color: @zenith_accent;
+    font-weight: 700;
+}
+
+/* File Views */
+.files-view-container {
+    background-color: @zenith_bg;
+}
+
+.files-icon-view {
+    background-color: @zenith_bg;
+    color: @zenith_text_primary;
+}
+
+.files-icon-view:selected {
+    background-color: @zenith_accent_soft;
+    border: 1px solid @zenith_accent;
+    border-radius: 8px;
+    color: @zenith_text_primary;
+}
+
+.files-icon-view:hover {
+    color: @zenith_text_primary;
+}
+
+.files-tree-view {
+    background-color: @zenith_bg;
+    color: @zenith_text_primary;
+}
+
+.files-tree-view:selected,
+.files-tree-view row:selected {
+    background-color: @zenith_accent_soft;
+    color: @zenith_accent;
+}
+
+.files-tree-view header button {
+    background-color: @zenith_surface;
+    color: @zenith_text_secondary;
+    border-bottom: 1px solid @zenith_border;
+    border-right: 1px solid @zenith_border;
+    padding: 4px 8px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.files-tree-view header button:hover {
+    color: @zenith_text_primary;
+}
+
+/* Status Bar */
+.files-statusbar {
+    background-color: @zenith_surface;
+    border-top: 1px solid @zenith_border;
+    padding: 4px 12px;
+    min-height: 24px;
+}
+
+.files-status-text {
+    color: @zenith_text_secondary;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.files-disk-text {
+    color: @zenith_text_disabled;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+/* Context Menu */
+.files-context-menu {
+    background-color: @zenith_surface;
+    border: 1px solid @zenith_border;
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.files-context-menu menuitem {
+    color: @zenith_text_primary;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 11px;
+}
+
+.files-context-menu menuitem:hover {
+    background-color: @zenith_accent;
+    color: @zenith_bg;
+}
+
+/* Dialogs */
+.zenith-files-dialog {
+    background-color: @zenith_bg;
+    color: @zenith_text_primary;
+    border: 1px solid @zenith_border;
+    border-radius: 12px;
+}
+
+.zenith-files-dialog entry {
+    background-color: @zenith_surface;
+    border: 1px solid @zenith_border;
+    border-radius: 6px;
+    color: @zenith_text_primary;
+    padding: 6px 10px;
+}
+
+.zenith-files-dialog entry:focus {
+    border-color: @zenith_border_focus;
+    box-shadow: 0 0 0 1px @zenith_accent_glow;
+}
+
+.zenith-files-dialog button {
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-weight: 600;
+}
+
+.files-prop-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: @zenith_text_primary;
+}
+
+.files-prop-subtitle {
+    font-size: 11px;
+    color: @zenith_text_secondary;
+}
+
+.files-prop-key {
+    font-size: 11px;
+    font-weight: 700;
+    color: @zenith_text_secondary;
+}
+
+.files-prop-val {
+    font-size: 11px;
+    color: @zenith_text_primary;
+}
