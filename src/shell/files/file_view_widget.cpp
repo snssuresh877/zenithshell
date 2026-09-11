@@ -1,6 +1,7 @@
 #include "file_view_widget.hpp"
 #include "file_item.hpp"
 #include "file_operations.hpp"
+#include "theme/theme_engine.hpp"
 #include "../../gtk3_compat.hpp"
 
 #include <glib/gstdio.h>
@@ -217,6 +218,189 @@ static void repopulate_store(FileViewData* data) {
     update_status_bar(data);
 }
 
+// ── Async thumbnail loading ───────────────────────────────────────────────
+struct ThumbJob {
+    FileViewData* view_data;
+    GtkListStore* store;        // ref held during job lifetime
+    std::string   path;
+    std::string   uri;
+    std::string   mime_type;
+    std::string   item_path;    // used to find the row in the store
+    int           size;
+    uint64_t      generation;
+};
+
+static void dispatch_thumbnails(FileViewData* data, uint64_t my_generation) {
+    if (!data || !data->store) return;
+
+    // Lazy-create the thread pool (4 concurrent decoders max)
+    if (!data->thumb_pool) {
+        data->thumb_pool = g_thread_pool_new(
+            +[](gpointer job_data, gpointer) {
+                auto* job = static_cast<ThumbJob*>(job_data);
+                GdkPixbuf* thumb = FileItem::load_thumbnail(
+                    job->path, job->uri, job->mime_type, job->size);
+
+                if (!thumb) { delete job; return; }
+
+                // Pass result back to main thread via g_idle_add
+                struct IdleCtx {
+                    FileViewData* view_data;
+                    GtkListStore* store;
+                    GdkPixbuf*    thumb;
+                    std::string   item_path;
+                    int           size;
+                    uint64_t      generation;
+                };
+                auto* ctx = new IdleCtx{job->view_data, job->store,
+                                        thumb, job->item_path,
+                                        job->size, job->generation};
+                g_object_ref(job->store);
+
+                g_idle_add(+[](gpointer p) -> gboolean {
+                    auto* c = static_cast<IdleCtx*>(p);
+
+                    // Discard if user navigated away
+                    if (c->generation != c->view_data->thumb_generation ||
+                        !GTK_IS_LIST_STORE(c->store)) {
+                        g_object_unref(c->store);
+                        g_object_unref(c->thumb);
+                        delete c;
+                        return G_SOURCE_REMOVE;
+                    }
+
+                    // Find the matching row by path and update pixbuf columns
+                    GtkTreeModel* model = GTK_TREE_MODEL(c->store);
+                    GtkTreeIter iter;
+                    if (gtk_tree_model_get_iter_first(model, &iter)) {
+                        do {
+                            gchar* row_path = nullptr;
+                            gtk_tree_model_get(model, &iter, COL_PATH, &row_path, -1);
+                            if (row_path && c->item_path == row_path) {
+                                int pw = gdk_pixbuf_get_width(c->thumb);
+                                int ph = gdk_pixbuf_get_height(c->thumb);
+                                double scale = std::min(20.0 / pw, 20.0 / ph);
+                                int sw = std::max(1, static_cast<int>(pw * scale));
+                                int sh = std::max(1, static_cast<int>(ph * scale));
+                                GdkPixbuf* sm = gdk_pixbuf_scale_simple(
+                                    c->thumb, sw, sh, GDK_INTERP_BILINEAR);
+
+                                gtk_list_store_set(c->store, &iter,
+                                    COL_PIXBUF_LARGE, c->thumb,
+                                    COL_PIXBUF_SMALL, sm ? sm : c->thumb,
+                                    -1);
+                                if (sm) g_object_unref(sm);
+                                g_free(row_path);
+                                break;
+                            }
+                            if (row_path) g_free(row_path);
+                        } while (gtk_tree_model_iter_next(model, &iter));
+                    }
+
+                    g_object_unref(c->store);
+                    g_object_unref(c->thumb);
+                    delete c;
+                    return G_SOURCE_REMOVE;
+                }, ctx);
+
+                delete job;
+            },
+            nullptr,
+            4,      // max 4 concurrent decoder threads
+            FALSE,  // not exclusive
+            nullptr
+        );
+    }
+
+    // Dispatch one thumbnail job per image/video file
+    for (const auto& item : data->filtered_items) {
+        if (item->is_directory) continue;
+        bool needs_thumb = (item->mime_type.rfind("image/", 0) == 0 ||
+                            item->mime_type.rfind("video/", 0) == 0);
+        if (!needs_thumb) continue;
+
+        auto* job = new ThumbJob{
+            data,
+            data->store,
+            item->path,
+            item->uri,
+            item->mime_type,
+            item->path,
+            48,
+            my_generation
+        };
+        g_thread_pool_push(data->thumb_pool, job, nullptr);
+    }
+}
+
+// ── Drag and Drop handlers ──────────────────────────────────────────────────
+static void on_drag_data_get(GtkWidget*, GdkDragContext*, GtkSelectionData* selection_data, guint, guint, gpointer user_data) {
+    auto* data = static_cast<FileViewData*>(user_data);
+    if (!data) return;
+    auto paths = FileViewWidget::get_selected_paths(data->root_box);
+    if (paths.empty()) return;
+
+    std::string uris;
+    for (const auto& p : paths) {
+        GFile* f = g_file_parse_name(p.c_str());
+        if (f) {
+            char* u = g_file_get_uri(f);
+            if (u) {
+                uris += u;
+                uris += "\r\n";
+                g_free(u);
+            }
+            g_object_unref(f);
+        }
+    }
+    GdkAtom target = gdk_atom_intern_static_string("text/uri-list");
+    gtk_selection_data_set(selection_data, target, 8, (const guchar*)uris.c_str(), uris.length());
+}
+
+static void on_drag_data_received(GtkWidget*, GdkDragContext* context, gint, gint, GtkSelectionData* selection_data, guint, guint time, gpointer user_data) {
+    auto* data = static_cast<FileViewData*>(user_data);
+    if (!data || data->current_path.empty()) {
+        gtk_drag_finish(context, FALSE, FALSE, time);
+        return;
+    }
+
+    gchar** uris = gtk_selection_data_get_uris(selection_data);
+    if (!uris) {
+        gtk_drag_finish(context, FALSE, FALSE, time);
+        return;
+    }
+
+    GdkDragAction action = gdk_drag_context_get_selected_action(context);
+    bool is_move = (action == GDK_ACTION_MOVE);
+
+    std::vector<std::string> src_paths;
+    for (int i = 0; uris[i] != nullptr; ++i) {
+        GFile* f = g_file_new_for_uri(uris[i]);
+        if (f) {
+            char* p = g_file_get_parse_name(f);
+            if (p) {
+                src_paths.push_back(p);
+                g_free(p);
+            }
+            g_object_unref(f);
+        }
+    }
+    g_strfreev(uris);
+
+    if (!src_paths.empty()) {
+        FileOperations::copy_to_clipboard(src_paths, is_move);
+        GtkWindow* parent_win = GTK_WINDOW(gtk_widget_get_toplevel(data->root_box));
+        FileOperations::paste_from_clipboard_with_progress(
+            data->current_path,
+            GTK_IS_WINDOW(parent_win) ? parent_win : nullptr
+        );
+        FileViewWidget::refresh(data->root_box);
+        gtk_drag_finish(context, TRUE, is_move, time);
+    } else {
+        gtk_drag_finish(context, FALSE, FALSE, time);
+    }
+}
+
 static gboolean on_debounce_refresh(gpointer user_data) {
     auto* data = static_cast<FileViewData*>(user_data);
     if (!data) return G_SOURCE_REMOVE;
@@ -412,14 +596,40 @@ static void show_context_menu(FileViewData* data, GdkEventButton* event) {
         g_signal_connect_swapped(item_copy, "activate", G_CALLBACK(FileViewWidget::action_copy), data->root_box);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_copy);
 
+        GtkWidget* item_copypath = gtk_menu_item_new_with_label("Copy Path (Ctrl+Shift+C)");
+        g_signal_connect_swapped(item_copypath, "activate", G_CALLBACK(FileViewWidget::action_copy_path), data->root_box);
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_copypath);
+
+        // "Set as Wallpaper" for single image selection
+        if (selected.size() == 1) {
+            struct stat st;
+            if (stat(selected[0].c_str(), &st) == 0 && !S_ISDIR(st.st_mode)) {
+                GFile* gf = g_file_parse_name(selected[0].c_str());
+                GFileInfo* fi = g_file_query_info(gf, "standard::content-type", G_FILE_QUERY_INFO_NONE, nullptr, nullptr);
+                if (fi) {
+                    const char* ct = g_file_info_get_content_type(fi);
+                    if (ct && g_str_has_prefix(ct, "image/")) {
+                        GtkWidget* item_wp = gtk_menu_item_new_with_label("Set as Wallpaper");
+                        std::string* wp_path = new std::string(selected[0]);
+                        g_object_set_data_full(G_OBJECT(item_wp), "wp_path", wp_path, [](gpointer p) { delete static_cast<std::string*>(p); });
+                        g_signal_connect(item_wp, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer) {
+                            auto* p = static_cast<std::string*>(g_object_get_data(G_OBJECT(mi), "wp_path"));
+                            if (p) ThemeEngine::set_wallpaper(*p);
+                        }), nullptr);
+                        gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_wp);
+                    }
+                    g_object_unref(fi);
+                }
+                g_object_unref(gf);
+            }
+        }
+
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
 
         // ── Rename / Delete ───────────────────────────────────────────────────
-        if (selected.size() == 1) {
-            GtkWidget* item_rename = gtk_menu_item_new_with_label("Rename (F2)");
-            g_signal_connect_swapped(item_rename, "activate", G_CALLBACK(FileViewWidget::action_rename_selected), data->root_box);
-            gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_rename);
-        }
+        GtkWidget* item_rename = gtk_menu_item_new_with_label(selected.size() == 1 ? "Rename (F2)" : "Bulk Rename (F2)");
+        g_signal_connect_swapped(item_rename, "activate", G_CALLBACK(FileViewWidget::action_rename_selected), data->root_box);
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_rename);
 
         GtkWidget* item_trash = gtk_menu_item_new_with_label("Move to Trash (Del)");
         g_signal_connect_swapped(item_trash, "activate", G_CALLBACK(FileViewWidget::action_trash_selected), data->root_box);
@@ -586,6 +796,9 @@ static gboolean on_key_press(GtkWidget*, GdkEventKey* event, gpointer user_data)
         if (key == GDK_KEY_n || key == GDK_KEY_N) {
             FileViewWidget::action_new_folder(data->root_box);
             return TRUE;
+        } else if (key == GDK_KEY_c || key == GDK_KEY_C) {
+            FileViewWidget::action_copy_path(data->root_box);
+            return TRUE;
         }
     }
 
@@ -661,6 +874,15 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
     g_signal_connect(data->icon_view, "selection-changed", G_CALLBACK(on_selection_changed), data);
     g_signal_connect(data->icon_view, "button-press-event", G_CALLBACK(on_icon_button_press), data);
     g_signal_connect(data->icon_view, "key-press-event", G_CALLBACK(on_key_press), data);
+
+    // DND configuration
+    static const GtkTargetEntry dnd_targets[] = {
+        {(gchar*)"text/uri-list", 0, 0}
+    };
+    gtk_drag_source_set(data->icon_view, GDK_BUTTON1_MASK, dnd_targets, 1, static_cast<GdkDragAction>(GDK_ACTION_COPY | GDK_ACTION_MOVE));
+    g_signal_connect(data->icon_view, "drag-data-get", G_CALLBACK(on_drag_data_get), data);
+    gtk_drag_dest_set(data->icon_view, GTK_DEST_DEFAULT_ALL, dnd_targets, 1, static_cast<GdkDragAction>(GDK_ACTION_COPY | GDK_ACTION_MOVE));
+    g_signal_connect(data->icon_view, "drag-data-received", G_CALLBACK(on_drag_data_received), data);
 
     gtk_container_add(GTK_CONTAINER(data->grid_scrolled), data->icon_view);
     gtk_stack_add_named(GTK_STACK(data->stack), data->grid_scrolled, "grid");
@@ -757,6 +979,14 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
     g_signal_connect(data->tree_view, "button-press-event", G_CALLBACK(on_tree_button_press), data);
     g_signal_connect(data->tree_view, "key-press-event", G_CALLBACK(on_key_press), data);
 
+    gtk_drag_source_set(data->tree_view, GDK_BUTTON1_MASK, dnd_targets, 1, static_cast<GdkDragAction>(GDK_ACTION_COPY | GDK_ACTION_MOVE));
+    g_signal_connect(data->tree_view, "drag-data-get", G_CALLBACK(on_drag_data_get), data);
+    gtk_drag_dest_set(data->tree_view, GTK_DEST_DEFAULT_ALL, dnd_targets, 1, static_cast<GdkDragAction>(GDK_ACTION_COPY | GDK_ACTION_MOVE));
+    g_signal_connect(data->tree_view, "drag-data-received", G_CALLBACK(on_drag_data_received), data);
+
+    gtk_tree_view_set_enable_search(GTK_TREE_VIEW(data->tree_view), TRUE);
+    gtk_tree_view_set_search_column(GTK_TREE_VIEW(data->tree_view), COL_NAME);
+
     gtk_container_add(GTK_CONTAINER(data->list_scrolled), data->tree_view);
     gtk_stack_add_named(GTK_STACK(data->stack), data->list_scrolled, "list");
 
@@ -827,125 +1057,13 @@ void FileViewWidget::load_directory(GtkWidget* widget, const std::string& path) 
                 d->all_items = std::move(t->items);
                 setup_file_monitor(d, t->path);
                 repopulate_store(d);
+                dispatch_thumbnails(d, t->gen);
             }
             g_object_unref(t->widget);
             delete t;
             return G_SOURCE_REMOVE;
         }, task);
     }).detach();   // ← directory appears instantly with theme icons
-
-    // ── Async thumbnail loading ───────────────────────────────────────────────
-    // Struct passed to each worker thread job (heap-allocated, worker frees it)
-    struct ThumbJob {
-        FileViewData* view_data;
-        GtkListStore* store;        // ref held during job lifetime
-        std::string   path;
-        std::string   uri;
-        std::string   mime_type;
-        std::string   item_path;    // used to find the row in the store
-        int           size;
-        uint64_t      generation;
-    };
-
-    // Lazy-create the thread pool (4 concurrent decoders max)
-    if (!data->thumb_pool) {
-        data->thumb_pool = g_thread_pool_new(
-            +[](gpointer job_data, gpointer) {
-                auto* job = static_cast<ThumbJob*>(job_data);
-                GdkPixbuf* thumb = FileItem::load_thumbnail(
-                    job->path, job->uri, job->mime_type, job->size);
-
-                if (!thumb) { delete job; return; }
-
-                // Pass result back to main thread via g_idle_add
-                struct IdleCtx {
-                    FileViewData* view_data;
-                    GtkListStore* store;
-                    GdkPixbuf*    thumb;
-                    std::string   item_path;
-                    int           size;
-                    uint64_t      generation;
-                };
-                auto* ctx = new IdleCtx{job->view_data, job->store,
-                                        thumb, job->item_path,
-                                        job->size, job->generation};
-                g_object_ref(job->store);
-
-                g_idle_add(+[](gpointer p) -> gboolean {
-                    auto* c = static_cast<IdleCtx*>(p);
-
-                    // Discard if user navigated away
-                    if (c->generation != c->view_data->thumb_generation ||
-                        !GTK_IS_LIST_STORE(c->store)) {
-                        g_object_unref(c->store);
-                        g_object_unref(c->thumb);
-                        delete c;
-                        return G_SOURCE_REMOVE;
-                    }
-
-                    // Find the matching row by path and update pixbuf columns
-                    GtkTreeModel* model = GTK_TREE_MODEL(c->store);
-                    GtkTreeIter iter;
-                    if (gtk_tree_model_get_iter_first(model, &iter)) {
-                        do {
-                            gchar* row_path = nullptr;
-                            gtk_tree_model_get(model, &iter, COL_PATH, &row_path, -1);
-                            if (row_path && c->item_path == row_path) {
-                                // Scale small version from the loaded thumb
-                                int pw = gdk_pixbuf_get_width(c->thumb);
-                                int ph = gdk_pixbuf_get_height(c->thumb);
-                                double scale = std::min(20.0 / pw, 20.0 / ph);
-                                int sw = std::max(1, static_cast<int>(pw * scale));
-                                int sh = std::max(1, static_cast<int>(ph * scale));
-                                GdkPixbuf* sm = gdk_pixbuf_scale_simple(
-                                    c->thumb, sw, sh, GDK_INTERP_BILINEAR);
-
-                                gtk_list_store_set(c->store, &iter,
-                                    COL_PIXBUF_LARGE, c->thumb,
-                                    COL_PIXBUF_SMALL, sm ? sm : c->thumb,
-                                    -1);
-                                if (sm) g_object_unref(sm);
-                                g_free(row_path);
-                                break;
-                            }
-                            if (row_path) g_free(row_path);
-                        } while (gtk_tree_model_iter_next(model, &iter));
-                    }
-
-                    g_object_unref(c->store);
-                    g_object_unref(c->thumb);
-                    delete c;
-                    return G_SOURCE_REMOVE;
-                }, ctx);
-
-                delete job;
-            },
-            nullptr,
-            4,      // max 4 concurrent decoder threads
-            FALSE,  // not exclusive
-            nullptr
-        );
-    }
-
-    // Dispatch one thumbnail job per image/video file
-    for (const auto& item : data->filtered_items) {
-        if (item->is_directory) continue;
-        bool needs_thumb = (item->mime_type.rfind("image/", 0) == 0 ||
-                            item->mime_type.rfind("video/", 0) == 0);
-        if (!needs_thumb) continue;
-
-        auto* job = new ThumbJob{
-            data,
-            data->store,
-            item->path,
-            item->uri,
-            item->mime_type,
-            item->path,
-            48,
-            my_generation
-        };
-        g_thread_pool_push(data->thumb_pool, job, nullptr);
-    }
 }
 
 std::string FileViewWidget::get_current_directory(GtkWidget* widget) {
@@ -1226,6 +1344,28 @@ void FileViewWidget::action_copy(GtkWidget* widget) {
     auto paths = get_selected_paths(widget);
     if (!paths.empty()) {
         FileOperations::copy_to_clipboard(paths, false);
+    }
+}
+
+void FileViewWidget::action_copy_path(GtkWidget* widget) {
+    auto paths = get_selected_paths(widget);
+    if (paths.empty()) {
+        auto* data = get_data(widget);
+        if (data && !data->current_path.empty()) {
+            paths.push_back(data->current_path);
+        }
+    }
+    if (paths.empty()) return;
+
+    std::string text;
+    for (size_t i = 0; i < paths.size(); ++i) {
+        text += paths[i];
+        if (i + 1 < paths.size()) text += "\n";
+    }
+
+    GtkClipboard* clip = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    if (clip) {
+        gtk_clipboard_set_text(clip, text.c_str(), -1);
     }
 }
 

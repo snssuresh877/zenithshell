@@ -48,6 +48,7 @@ public:
     static void action_open_selected(GtkWidget* widget);
     static void action_cut(GtkWidget* widget);
     static void action_copy(GtkWidget* widget);
+    static void action_copy_path(GtkWidget* widget);
     static void action_paste(GtkWidget* widget);
     static void action_rename_selected(GtkWidget* widget);
     static void action_trash_selected(GtkWidget* widget);
