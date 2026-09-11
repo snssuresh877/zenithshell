@@ -3308,10 +3308,11 @@ window.zenith-files-window {
 }
 
 .files-sidebar-row.files-sidebar-row-active,
-.files-sidebar-row:selected {
-    background-color: @zenith_accent_soft;
+.files-sidebar-row:selected,
+.files-sidebar-row.active {
+    background-color: alpha(@zenith_accent, 0.08);
     color: @zenith_accent;
-    font-weight: 700;
+    font-weight: 600;
 }
 
 /* File Views */
@@ -3325,10 +3326,11 @@ window.zenith-files-window {
 }
 
 .files-icon-view:selected {
-    background-color: @zenith_accent_soft;
-    border: 1px solid @zenith_accent;
+    background-color: alpha(@zenith_accent, 0.08);
     border-radius: 8px;
     color: @zenith_text_primary;
+    outline: 1px solid alpha(@zenith_accent, 0.4);
+    outline-offset: -1px;
 }
 
 .files-icon-view:hover {
@@ -3648,4 +3650,194 @@ window.zenith-files-window {
     background-color: @zenith_accent_soft;
     border-color: @zenith_accent;
 }
+
+/* ── View Popover ──────────────────────────────────────────────────────────── */
+.files-view-popover {
+    background-color: @zenith_surface;
+    border: 1px solid @zenith_border;
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.files-view-popover label.section-header {
+    font-size: 9.5px;
+    font-weight: 800;
+    color: @zenith_text_muted;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.files-view-popover .layout-btn {
+    background-color: @zenith_bg;
+    border: 1px solid @zenith_border;
+    border-radius: 6px;
+    padding: 6px 14px;
+    color: @zenith_text_secondary;
+    transition: all 120ms ease;
+}
+
+.files-view-popover .layout-btn.active {
+    background-color: @zenith_accent;
+    border-color: @zenith_accent;
+    color: @zenith_bg;
+}
+
+.files-view-popover scale {
+    margin: 4px 0;
+}
+
+.files-view-popover scale trough {
+    background-color: @zenith_bg;
+    border-radius: 4px;
+    min-height: 4px;
+}
+
+.files-view-popover scale highlight {
+    background-color: @zenith_accent;
+    border-radius: 4px;
+}
+
+.files-view-popover scale slider {
+    background-color: @zenith_accent;
+    border-radius: 50%;
+    min-width: 14px;
+    min-height: 14px;
+}
+
+.files-view-popover combobox button {
+    background-color: @zenith_bg;
+    border: 1px solid @zenith_border;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: @zenith_text_primary;
+}
+
+.files-view-popover checkbutton {
+    font-size: 11px;
+    color: @zenith_text_secondary;
+}
+
+/* ── More Menu Popover ─────────────────────────────────────────────────────── */
+.files-more-popover {
+    background-color: @zenith_surface;
+    border: 1px solid @zenith_border;
+    border-radius: 10px;
+    padding: 6px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.files-more-popover .more-item {
+    background-color: transparent;
+    border-radius: 6px;
+    padding: 7px 12px;
+    color: @zenith_text_primary;
+    font-size: 12px;
+    transition: background-color 100ms ease;
+}
+
+.files-more-popover .more-item:hover {
+    background-color: @zenith_accent_soft;
+}
+
+.files-more-popover .more-item .shortcut-badge {
+    font-family: monospace;
+    font-size: 10px;
+    color: @zenith_text_muted;
+    background-color: @zenith_surface_highlight;
+    border: 1px solid @zenith_border;
+    border-radius: 4px;
+    padding: 1px 5px;
+}
+
+.files-more-popover separator {
+    background-color: @zenith_border;
+    margin: 4px 6px;
+    min-height: 1px;
+}
+
+/* ── Inspector Close Button ────────────────────────────────────────────────── */
+.files-inspector-close {
+    background-color: transparent;
+    color: @zenith_text_muted;
+    border-radius: 4px;
+    padding: 2px;
+    min-width: 20px;
+    min-height: 20px;
+    transition: all 120ms ease;
+}
+
+.files-inspector-close:hover {
+    background-color: alpha(@zenith_error, 0.15);
+    color: @zenith_error;
+}
+
+/* ── New Button Popover ────────────────────────────────────────────────────── */
+.files-new-popover {
+    background-color: @zenith_surface;
+    border: 1px solid @zenith_border;
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.files-new-popover .more-item {
+    background-color: transparent;
+    border-radius: 6px;
+    padding: 7px 12px;
+    color: @zenith_text_primary;
+    font-size: 12px;
+}
+
+.files-new-popover .more-item:hover {
+    background-color: @zenith_accent_soft;
+}
+
+/* ── Path Bar Button Fixes ─────────────────────────────────────────────────── */
+.files-pathbar-btn {
+    background-color: transparent;
+    color: @zenith_text_secondary;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 6px;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 120ms ease;
+}
+
+.files-pathbar-btn:hover {
+    background-color: @zenith_surface_variant;
+    color: @zenith_text_primary;
+}
+
+.files-pathbar-btn.active {
+    color: @zenith_text_primary;
+    font-weight: 700;
+}
+
+.files-pathbar-sep {
+    color: @zenith_text_disabled;
+    font-size: 12px;
+    padding: 0 1px;
+}
+
+.files-pathbar-icon {
+    font-size: 13px;
+}
+
+.files-pathbar-edit-btn {
+    background-color: transparent;
+    color: @zenith_text_muted;
+    border: none;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.files-pathbar-edit-btn:hover {
+    color: @zenith_text_primary;
+    background-color: @zenith_surface_variant;
+}
+
 

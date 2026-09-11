@@ -77,11 +77,11 @@ static void rebuild_breadcrumbs(PathBarData* data) {
 
         GtkWidget* btn_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
         if (seg.label == "~") {
-            GtkWidget* ico = gtk_label_new("");
+            GtkWidget* ico = gtk_label_new("⌂");
             gtk_widget_add_css_class(ico, "files-pathbar-icon");
             gtk_box_pack_start(GTK_BOX(btn_box), ico, FALSE, FALSE, 0);
         } else if (seg.label == "File System") {
-            GtkWidget* ico = gtk_label_new("󰋊");
+            GtkWidget* ico = gtk_label_new("⛁");
             gtk_widget_add_css_class(ico, "files-pathbar-icon");
             gtk_box_pack_start(GTK_BOX(btn_box), ico, FALSE, FALSE, 0);
         }
@@ -109,27 +109,11 @@ static void rebuild_breadcrumbs(PathBarData* data) {
 
         // Add chevron separator if not last
         if (!is_last) {
-            GtkWidget* chevron = gtk_label_new("");
+            GtkWidget* chevron = gtk_label_new("›");
             gtk_widget_add_css_class(chevron, "files-pathbar-sep");
             gtk_box_pack_start(GTK_BOX(data->breadcrumb_box), chevron, FALSE, FALSE, 0);
         }
     }
-
-    // Trailing edit button to click and type path directly
-    GtkWidget* edit_trigger = gtk_button_new();
-    gtk_widget_add_css_class(edit_trigger, "files-pathbar-edit-btn");
-    GtkWidget* edit_icon = gtk_label_new("󰏫");
-    gtk_container_add(GTK_CONTAINER(edit_trigger), edit_icon);
-    gtk_widget_set_tooltip_text(edit_trigger, "Edit path directly (Ctrl+L)");
-
-    g_signal_connect(edit_trigger, "clicked", G_CALLBACK(+[](GtkButton*, gpointer user_data) {
-        auto* d = static_cast<PathBarData*>(user_data);
-        if (d && d->stack) {
-            PathBarWidget::enter_edit_mode(d->stack);
-        }
-    }), data);
-
-    gtk_box_pack_start(GTK_BOX(data->breadcrumb_box), edit_trigger, FALSE, FALSE, 0);
 
     gtk_widget_show_all(data->breadcrumb_box);
 }

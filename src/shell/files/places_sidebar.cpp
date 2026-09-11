@@ -169,21 +169,12 @@ static void populate_sidebar(SidebarData* data) {
         g_object_unref(monitor);
     }
 
-    // --- Section 3: Favorites ---
-    auto favs = load_favorites();
-    if (!favs.empty()) {
-        items.push_back({"Favorites", "", "", "", true, false});
-        for (const auto& fav : favs) {
-            items.push_back({fav.first, fav.second, "starred-symbolic", "★", false, true});
-        }
-    }
-
-    // --- Section 4: Bookmarks ---
+    // --- Section 3: Favorites (merged with GTK bookmarks) ---
+    std::vector<std::pair<std::string, std::string>> gtk_bookmarks;
     std::string bookmarks_file = home + "/.config/gtk-3.0/bookmarks";
     if (fs::exists(bookmarks_file)) {
         std::ifstream in(bookmarks_file);
         std::string line;
-        bool header_added = false;
         while (std::getline(in, line)) {
             while (!line.empty() && (line.back() == '\r' || line.back() == '\n' || line.back() == ' ')) {
                 line.pop_back();
@@ -203,16 +194,36 @@ static void populate_sidebar(SidebarData* data) {
             if (bf) {
                 char* bp = g_file_get_parse_name(bf);
                 if (bp && fs::exists(bp)) {
-                    if (!header_added) {
-                        items.push_back({"Bookmarks", "", "", "", true, false});
-                        header_added = true;
-                    }
                     std::string label = !custom_name.empty() ? custom_name : fs::path(bp).filename().string();
-                    items.push_back({label, bp, "folder-symbolic", "󰉋", false, false});
+                    gtk_bookmarks.push_back({label, bp});
                 }
                 if (bp) g_free(bp);
                 g_object_unref(bf);
             }
+        }
+    }
+
+    auto favs = load_favorites();
+
+    items.push_back({"Favorites", "", "", "", true, false});
+
+    std::vector<std::string> seen_fav_paths;
+    for (const auto& fav : favs) {
+        seen_fav_paths.push_back(fav.second);
+        items.push_back({fav.first, fav.second, "starred-symbolic", "★", false, true});
+    }
+
+    for (const auto& bm : gtk_bookmarks) {
+        bool duplicate = false;
+        for (const auto& p : seen_fav_paths) {
+            if (p == bm.second) {
+                duplicate = true;
+                break;
+            }
+        }
+        if (!duplicate) {
+            seen_fav_paths.push_back(bm.second);
+            items.push_back({bm.first, bm.second, "starred-symbolic", "★", false, true});
         }
     }
 

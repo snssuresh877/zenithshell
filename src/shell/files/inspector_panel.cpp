@@ -3,6 +3,7 @@
 #include "gtk3_compat.hpp"
 #include <gio/gio.h>
 #include <filesystem>
+#include <functional>
 #include <sys/stat.h>
 #include <pwd.h>
 #include <grp.h>
@@ -35,6 +36,8 @@ struct InspectorData {
 
     std::string current_path;
     uint64_t calculation_gen{0};
+
+    InspectorPanel::CloseCallback on_close;
 };
 
 struct ChecksumResultCtx {
@@ -106,13 +109,14 @@ static GtkWidget* create_meta_row(GtkWidget* grid, int row, const char* label, G
     return key;
 }
 
-GtkWidget* InspectorPanel::create() {
+GtkWidget* InspectorPanel::create(CloseCallback on_close) {
     auto* data = new InspectorData();
+    data->on_close = std::move(on_close);
 
     GtkWidget* root = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     data->root_box = root;
     gtk_widget_add_css_class(root, "files-inspector-panel");
-    gtk_widget_set_size_request(root, 280, -1);
+    gtk_widget_set_size_request(root, 240, -1);
 
     // Header
     GtkWidget* header_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
@@ -123,6 +127,17 @@ GtkWidget* InspectorPanel::create() {
     gtk_label_set_xalign(GTK_LABEL(hdr_lbl), 0.0f);
     gtk_widget_add_css_class(hdr_lbl, "files-prop-title");
     gtk_box_pack_start(GTK_BOX(header_box), hdr_lbl, TRUE, TRUE, 0);
+
+    // Close button (×)
+    GtkWidget* close_btn = gtk_button_new_from_icon_name("window-close-symbolic", GTK_ICON_SIZE_MENU);
+    gtk_widget_add_css_class(close_btn, "files-inspector-close");
+    gtk_widget_set_tooltip_text(close_btn, "Close Inspector");
+    gtk_box_pack_end(GTK_BOX(header_box), close_btn, FALSE, FALSE, 0);
+
+    g_signal_connect(close_btn, "clicked", G_CALLBACK(+[](GtkButton*, gpointer ud) {
+        auto* d = static_cast<InspectorData*>(ud);
+        if (d->on_close) d->on_close();
+    }), data);
 
     gtk_box_pack_start(GTK_BOX(root), header_box, FALSE, FALSE, 0);
 
