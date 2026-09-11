@@ -321,7 +321,7 @@ void FilePreferencesDialog::show(FileManagerState* state) {
         GtkWidget* list_container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
         gtk_box_pack_start(GTK_BOX(vbox), list_container, TRUE, TRUE, 0);
 
-        auto populate_shortcuts_list = [list_container, dialog](auto& self) -> void {
+        static void (*populate_shortcuts_list)(GtkWidget*, GtkWidget*) = [](GtkWidget* list_container, GtkWidget* dialog) -> void {
             GList* children = gtk_container_get_children(GTK_CONTAINER(list_container));
             for (GList* it = children; it != nullptr; it = g_list_next(it)) {
                 gtk_widget_destroy(GTK_WIDGET(it->data));
@@ -365,7 +365,7 @@ void FilePreferencesDialog::show(FileManagerState* state) {
                     GtkWindow* parent;
                     std::function<void()> refresh_fn;
                 };
-                auto* cd = new RebindBtnCtx{s, GTK_WINDOW(dialog), [&self]() { self(self); }};
+                auto* cd = new RebindBtnCtx{s, GTK_WINDOW(dialog), [list_container, dialog]() { populate_shortcuts_list(list_container, dialog); }};
                 auto rebind_click_cb = +[](GtkButton*, gpointer user_data) {
                     auto* c = static_cast<RebindBtnCtx*>(user_data);
                     show_rebind_dialog(c->parent, c->s, c->refresh_fn);
@@ -378,7 +378,7 @@ void FilePreferencesDialog::show(FileManagerState* state) {
             // Reset defaults button
             GtkWidget* reset_btn = gtk_button_new_with_label("↺ Reset All Shortcuts to Defaults");
             gtk_widget_add_css_class(reset_btn, "files-btn-tool");
-            auto* refresh_ptr = new std::function<void()>([&self]() { self(self); });
+            auto* refresh_ptr = new std::function<void()>([list_container, dialog]() { populate_shortcuts_list(list_container, dialog); });
             auto reset_click_cb = +[](GtkButton*, gpointer user_data) {
                 auto* rp = static_cast<std::function<void()>*>(user_data);
                 FileShortcuts::reset_to_defaults();
@@ -390,7 +390,7 @@ void FilePreferencesDialog::show(FileManagerState* state) {
             gtk_widget_show_all(list_container);
         };
 
-        populate_shortcuts_list(populate_shortcuts_list);
+        populate_shortcuts_list(list_container, dialog);
 
         gtk_container_add(GTK_CONTAINER(scroll), vbox);
         gtk_notebook_append_page(GTK_NOTEBOOK(notebook), scroll, gtk_label_new("Shortcuts"));
@@ -398,9 +398,10 @@ void FilePreferencesDialog::show(FileManagerState* state) {
 
     gtk_box_pack_start(GTK_BOX(content), notebook, TRUE, TRUE, 0);
 
+    g_signal_connect(dialog, "response", G_CALLBACK(+[](GtkDialog* d, gint response_id, gpointer) {
+        gtk_widget_destroy(GTK_WIDGET(d));
+    }), nullptr);
     gtk_widget_show_all(dialog);
-    gtk_dialog_run(GTK_DIALOG(dialog));
-    gtk_widget_destroy(dialog);
 }
 
 } // namespace zenith
