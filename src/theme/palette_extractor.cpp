@@ -296,6 +296,34 @@ bool PaletteExtractor::emit_wal_cache(const ExtractedPalette& palette) {
 }
 
 std::optional<Theme> PaletteExtractor::extract_from_image(const std::string& image_path) {
+    std::string cache_path = std::string(g_get_home_dir()) + "/.cache/zenith_palette_cache.txt";
+    std::ifstream in(cache_path);
+    std::string cached_path;
+    if (in.is_open() && std::getline(in, cached_path) && cached_path == image_path) {
+        Theme theme;
+        theme.name = "dynamic";
+        std::getline(in, theme.background);
+        std::getline(in, theme.surface);
+        std::getline(in, theme.surface_variant);
+        std::getline(in, theme.border);
+        std::getline(in, theme.text_primary);
+        std::getline(in, theme.text_secondary);
+        std::getline(in, theme.text_disabled);
+        std::getline(in, theme.text);
+        std::getline(in, theme.text_muted);
+        std::getline(in, theme.accent);
+        std::getline(in, theme.accent_secondary);
+        
+        theme.semantic_success = "#3DDC84";
+        theme.semantic_warning = "#FFB454";
+        theme.semantic_error = "#FF5C6C";
+        theme.semantic_info = "#55B9FF";
+        theme.success = "#3DDC84";
+        theme.warning = "#FFB454";
+        theme.error = "#FF5C6C";
+        return theme;
+    }
+
     auto palette_opt = extract_raw_palette(image_path);
     if (!palette_opt) return std::nullopt;
 
@@ -334,10 +362,21 @@ std::optional<Theme> PaletteExtractor::extract_from_image(const std::string& ima
     theme.warning = "#FFB454";
     theme.error = "#FF5C6C";
 
-    std::cout << "[PaletteExtractor] Extracted dynamic theme natively: bg=" << theme.background 
-              << ", text=" << theme.text_primary 
-              << ", accent=" << theme.accent 
-              << ", sec=" << theme.accent_secondary << std::endl;
+    std::ofstream out(cache_path);
+    if (out.is_open()) {
+        out << image_path << "\n";
+        out << theme.background << "\n";
+        out << theme.surface << "\n";
+        out << theme.surface_variant << "\n";
+        out << theme.border << "\n";
+        out << theme.text_primary << "\n";
+        out << theme.text_secondary << "\n";
+        out << theme.text_disabled << "\n";
+        out << theme.text << "\n";
+        out << theme.text_muted << "\n";
+        out << theme.accent << "\n";
+        out << theme.accent_secondary << "\n";
+    }
 
     return theme;
 }

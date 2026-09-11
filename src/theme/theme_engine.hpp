@@ -22,6 +22,7 @@ struct ThemeInfo {
 
 class ThemeEngine {
 public:
+    static bool is_desktop_shell;
     static void init(const std::string& default_theme = "zenith-dark", const std::string& custom_wallpaper_dir = "");
     static void set_theme(const std::string& theme_name);
     static std::string cycle_next_theme();

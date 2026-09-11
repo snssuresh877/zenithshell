@@ -71,6 +71,8 @@ void App::on_activate(GtkApplication* app, gpointer user_data) {
     // Initialize CSS Styles, Native Wallpaper Engine & Universal Theme Engine
     CssManager::init(self->style_path);
     WallpaperEngine::init(app);
+    ThemeEngine::is_desktop_shell = true;
+    ThemeEngine::is_desktop_shell = true;
     ThemeEngine::init(self->theme_name, self->config.wallpaper_dir);
 
     // Initialize DBus Notification Manager

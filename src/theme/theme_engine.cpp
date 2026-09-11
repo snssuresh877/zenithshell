@@ -18,6 +18,9 @@ namespace fs = std::filesystem;
 
 namespace zenith {
 
+bool ThemeEngine::is_desktop_shell = false;
+
+
 GtkCssProvider* ThemeEngine::theme_provider = nullptr;
 Theme ThemeEngine::current_theme;
 std::map<std::string, Theme> ThemeEngine::builtin_themes;
@@ -549,7 +552,9 @@ void ThemeEngine::set_wallpaper(const std::string& path) {
     }
 
     // Render wallpaper natively via Wayland layer-shell engine (no awww / swww needed)
-    WallpaperEngine::set_wallpaper(path);
+    if (ThemeEngine::is_desktop_shell) {
+        if (is_desktop_shell) WallpaperEngine::set_wallpaper(path);
+    }
 
     // Fast in-process palette extraction & cache emission (< 5ms, no python/pywal needed)
     auto dyn_theme = PaletteExtractor::extract_from_image(path);
