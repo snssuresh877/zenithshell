@@ -88,6 +88,7 @@ set(SOURCES
     src/shell/files/file_item.cpp
     src/shell/files/file_operations.cpp
     src/shell/files/file_shortcuts.cpp
+    src/shell/files/custom_actions.cpp
     src/shell/files/command_palette.cpp
     src/shell/files/inspector_panel.cpp
     src/shell/files/quick_preview.cpp

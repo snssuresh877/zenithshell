@@ -7,6 +7,7 @@
 #include "command_palette.hpp"
 #include "inspector_panel.hpp"
 #include "file_shortcuts.hpp"
+#include "custom_actions.hpp"
 #include "file_preferences_dialog.hpp"
 #include "quick_preview.hpp"
 #include "theme/theme_engine.hpp"
@@ -707,6 +708,7 @@ static GtkWidget* build_view_popover(GtkWidget* relative_to, FileManagerState* s
 // ── FileManagerWindow::create ────────────────────────────────────────────────
 GtkWidget* FileManagerWindow::create(const std::string& initial_path) {
     FileShortcuts::init();
+    CustomActionsManager::init();
     auto* state = new FileManagerState();
 
     state->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
