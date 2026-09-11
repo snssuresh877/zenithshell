@@ -23,6 +23,12 @@ struct SidebarData {
     std::string active_path;
     GtkWidget* listbox{nullptr};
     std::vector<GtkWidget*> place_rows;
+    // Live volume/mount monitoring
+    GVolumeMonitor* volume_monitor{nullptr};
+    gulong sid_volume_added{0};
+    gulong sid_volume_removed{0};
+    gulong sid_mount_added{0};
+    gulong sid_mount_removed{0};
 };
 
 static void populate_sidebar(SidebarData* data) {
@@ -203,8 +209,40 @@ GtkWidget* PlacesSidebar::create(NavigateCallback on_navigate) {
         }
     }), data);
 
+    // ── GVolumeMonitor: live USB plug/unplug ───────────────────────────────
+    data->volume_monitor = g_volume_monitor_get();
+    if (data->volume_monitor) {
+        // volume-added / volume-removed fire when a drive appears/disappears
+        data->sid_volume_added = g_signal_connect(data->volume_monitor, "volume-added",
+            G_CALLBACK(+[](GVolumeMonitor*, GVolume*, gpointer ud) {
+                populate_sidebar(static_cast<SidebarData*>(ud));
+            }), data);
+        data->sid_volume_removed = g_signal_connect(data->volume_monitor, "volume-removed",
+            G_CALLBACK(+[](GVolumeMonitor*, GVolume*, gpointer ud) {
+                populate_sidebar(static_cast<SidebarData*>(ud));
+            }), data);
+        // mount-added / mount-removed fire when a volume is actually mounted
+        data->sid_mount_added = g_signal_connect(data->volume_monitor, "mount-added",
+            G_CALLBACK(+[](GVolumeMonitor*, GMount*, gpointer ud) {
+                populate_sidebar(static_cast<SidebarData*>(ud));
+            }), data);
+        data->sid_mount_removed = g_signal_connect(data->volume_monitor, "mount-removed",
+            G_CALLBACK(+[](GVolumeMonitor*, GMount*, gpointer ud) {
+                populate_sidebar(static_cast<SidebarData*>(ud));
+            }), data);
+    }
+
     g_object_set_data_full(G_OBJECT(scroll), "sidebar_data", data, +[](gpointer d) {
-        delete static_cast<SidebarData*>(d);
+        auto* sd = static_cast<SidebarData*>(d);
+        // Disconnect volume monitor signals before destruction
+        if (sd->volume_monitor) {
+            if (sd->sid_volume_added)   g_signal_handler_disconnect(sd->volume_monitor, sd->sid_volume_added);
+            if (sd->sid_volume_removed) g_signal_handler_disconnect(sd->volume_monitor, sd->sid_volume_removed);
+            if (sd->sid_mount_added)    g_signal_handler_disconnect(sd->volume_monitor, sd->sid_mount_added);
+            if (sd->sid_mount_removed)  g_signal_handler_disconnect(sd->volume_monitor, sd->sid_mount_removed);
+            g_object_unref(sd->volume_monitor);
+        }
+        delete sd;
     });
 
     populate_sidebar(data);

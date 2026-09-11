@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <gtk/gtk.h>
 
 namespace zenith {
 
@@ -21,7 +22,17 @@ public:
     // Standard Desktop Clipboard Integration
     static void copy_to_clipboard(const std::vector<std::string>& paths, bool is_cut);
     static bool paste_from_clipboard(const std::string& target_dir);
+    // Paste with GTK progress dialog (shows when total > 1 MB)
+    static bool paste_from_clipboard_with_progress(const std::string& target_dir, GtkWindow* parent = nullptr);
     static bool has_clipboard_files();
+
+    // Archive operations (via file-roller)
+    static bool is_archive(const std::string& mime_type);
+    static void compress_files(const std::vector<std::string>& paths);
+    static void extract_archive(const std::string& archive_path, const std::string& target_dir);
+
+    // Open With dialog
+    static void open_with_dialog(const std::string& path, GtkWindow* parent = nullptr);
 };
 
 } // namespace zenith

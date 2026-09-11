@@ -305,10 +305,25 @@ static void show_context_menu(FileViewData* data, GdkEventButton* event) {
     std::vector<std::string> selected = FileViewWidget::get_selected_paths(data->root_box);
 
     if (!selected.empty()) {
-        // Items selected menu
+        // ── Open ──────────────────────────────────────────────────────────────
         GtkWidget* item_open = gtk_menu_item_new_with_label(selected.size() == 1 ? "Open" : "Open Selected");
         g_signal_connect_swapped(item_open, "activate", G_CALLBACK(FileViewWidget::action_open_selected), data->root_box);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_open);
+
+        // "Open With…" only for single file selection
+        if (selected.size() == 1) {
+            struct stat st;
+            if (!(stat(selected[0].c_str(), &st) == 0 && S_ISDIR(st.st_mode))) {
+                GtkWidget* item_open_with = gtk_menu_item_new_with_label("Open With…");
+                std::string* sel_path = new std::string(selected[0]);
+                g_object_set_data_full(G_OBJECT(item_open_with), "item_path", sel_path, [](gpointer p) { delete static_cast<std::string*>(p); });
+                g_signal_connect(item_open_with, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer) {
+                    auto* p = static_cast<std::string*>(g_object_get_data(G_OBJECT(mi), "item_path"));
+                    if (p) FileOperations::open_with_dialog(*p, nullptr);
+                }), nullptr);
+                gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_open_with);
+            }
+        }
 
         GtkWidget* item_term = gtk_menu_item_new_with_label("Open in Terminal");
         g_signal_connect_swapped(item_term, "activate", G_CALLBACK(FileViewWidget::action_open_terminal), data->root_box);
@@ -316,6 +331,49 @@ static void show_context_menu(FileViewData* data, GdkEventButton* event) {
 
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
 
+        // ── Archive: Extract Here (if archive selected) ───────────────────────
+        bool any_archive = false;
+        for (const auto& sp : selected) {
+            GFile* gf = g_file_new_for_path(sp.c_str());
+            GFileInfo* fi = g_file_query_info(gf, "standard::content-type",
+                                               G_FILE_QUERY_INFO_NONE, nullptr, nullptr);
+            if (fi) {
+                const char* ct = g_file_info_get_content_type(fi);
+                if (ct && FileOperations::is_archive(ct)) any_archive = true;
+                g_object_unref(fi);
+            }
+            g_object_unref(gf);
+            if (any_archive) break;
+        }
+
+        if (any_archive && selected.size() == 1) {
+            GtkWidget* item_extract = gtk_menu_item_new_with_label("Extract Here");
+            std::string* arc_path = new std::string(selected[0]);
+            std::string* tgt_dir  = new std::string(data->current_path);
+            g_object_set_data_full(G_OBJECT(item_extract), "arc_path", arc_path, [](gpointer p) { delete static_cast<std::string*>(p); });
+            g_object_set_data_full(G_OBJECT(item_extract), "tgt_dir",  tgt_dir,  [](gpointer p) { delete static_cast<std::string*>(p); });
+            g_signal_connect(item_extract, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer) {
+                auto* ap = static_cast<std::string*>(g_object_get_data(G_OBJECT(mi), "arc_path"));
+                auto* td = static_cast<std::string*>(g_object_get_data(G_OBJECT(mi), "tgt_dir"));
+                if (ap && td) FileOperations::extract_archive(*ap, *td);
+            }), nullptr);
+            gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_extract);
+            gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
+        }
+
+        // ── Compress ──────────────────────────────────────────────────────────
+        GtkWidget* item_compress = gtk_menu_item_new_with_label("Compress…");
+        std::vector<std::string>* sel_copy = new std::vector<std::string>(selected);
+        g_object_set_data_full(G_OBJECT(item_compress), "sel_paths", sel_copy, [](gpointer p) { delete static_cast<std::vector<std::string>*>(p); });
+        g_signal_connect(item_compress, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer) {
+            auto* paths = static_cast<std::vector<std::string>*>(g_object_get_data(G_OBJECT(mi), "sel_paths"));
+            if (paths) FileOperations::compress_files(*paths);
+        }), nullptr);
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_compress);
+
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
+
+        // ── Clipboard ─────────────────────────────────────────────────────────
         GtkWidget* item_cut = gtk_menu_item_new_with_label("Cut (Ctrl+X)");
         g_signal_connect_swapped(item_cut, "activate", G_CALLBACK(FileViewWidget::action_cut), data->root_box);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_cut);
@@ -326,6 +384,7 @@ static void show_context_menu(FileViewData* data, GdkEventButton* event) {
 
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
 
+        // ── Rename / Delete ───────────────────────────────────────────────────
         if (selected.size() == 1) {
             GtkWidget* item_rename = gtk_menu_item_new_with_label("Rename (F2)");
             g_signal_connect_swapped(item_rename, "activate", G_CALLBACK(FileViewWidget::action_rename_selected), data->root_box);
@@ -887,7 +946,12 @@ void FileViewWidget::action_paste(GtkWidget* widget) {
     auto* data = get_data(widget);
     if (!data || data->current_path.empty()) return;
 
-    FileOperations::paste_from_clipboard(data->current_path);
+    // Use progress-aware paste — shows dialog for files > 1 MB, silent for small files
+    GtkWindow* parent_win = GTK_WINDOW(gtk_widget_get_toplevel(widget));
+    FileOperations::paste_from_clipboard_with_progress(
+        data->current_path,
+        GTK_IS_WINDOW(parent_win) ? parent_win : nullptr
+    );
     refresh(widget);
 }
 
