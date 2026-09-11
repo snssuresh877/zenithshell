@@ -10,6 +10,7 @@
 #include <cstring>
 #include <sys/stat.h>
 #include <mutex>
+#include <thread>
 
 namespace zenith {
 
@@ -259,7 +260,7 @@ static void setup_file_monitor(FileViewData* data, const std::string& path) {
         data->file_monitor = nullptr;
     }
 
-    GFile* gfile = g_file_new_for_path(path.c_str());
+    GFile* gfile = g_file_parse_name(path.c_str());
     data->file_monitor = g_file_monitor_directory(gfile, G_FILE_MONITOR_WATCH_MOUNTS, nullptr, nullptr);
     g_object_unref(gfile);
 
@@ -363,7 +364,7 @@ static void show_context_menu(FileViewData* data, GdkEventButton* event) {
         // ── Archive: Extract Here (if archive selected) ───────────────────────
         bool any_archive = false;
         for (const auto& sp : selected) {
-            GFile* gf = g_file_new_for_path(sp.c_str());
+            GFile* gf = g_file_parse_name(sp.c_str());
             GFileInfo* fi = g_file_query_info(gf, "standard::content-type",
                                                G_FILE_QUERY_INFO_NONE, nullptr, nullptr);
             if (fi) {
@@ -533,10 +534,10 @@ static gboolean on_key_press(GtkWidget*, GdkEventKey* event, gpointer user_data)
             return TRUE;
         } else if (key == GDK_KEY_BackSpace) {
             if (data->current_path != "/" && data->on_navigate) {
-                GFile* current = g_file_new_for_path(data->current_path.c_str());
+                GFile* current = g_file_parse_name(data->current_path.c_str());
                 GFile* parent = g_file_get_parent(current);
                 if (parent) {
-                    char* parent_path = g_file_get_path(parent);
+                    char* parent_path = g_file_get_parse_name(parent);
                     if (parent_path) {
                         data->on_navigate(parent_path);
                         g_free(parent_path);
@@ -777,48 +778,61 @@ void FileViewWidget::load_directory(GtkWidget* widget, const std::string& path) 
 
     data->current_path = path;
     data->all_items.clear();
+    repopulate_store(data); // Clear the view immediately
 
-    GFile* dir = g_file_new_for_path(path.c_str());
-    GError* error = nullptr;
-    GFileEnumerator* enumerator = g_file_enumerate_children(
-        dir,
-        "standard::*,time::*",
-        G_FILE_QUERY_INFO_NONE,
-        nullptr,
-        &error
-    );
+    struct DirLoadTask {
+        GtkWidget* widget;
+        std::string path;
+        uint64_t gen;
+        std::vector<std::shared_ptr<FileItem>> items;
+    };
 
-    if (error) {
-        std::cerr << "[FileViewWidget] Failed to enumerate directory: " << error->message << "\n";
-        g_error_free(error);
-        g_object_unref(dir);
-        repopulate_store(data);
-        return;
-    }
+    g_object_ref(widget);
+    auto* task = new DirLoadTask{widget, path, my_generation, {}};
 
-    if (enumerator) {
-        while (true) {
-            GFileInfo* info = g_file_enumerator_next_file(enumerator, nullptr, nullptr);
-            if (!info) break;
+    std::thread([task]() {
+        GFile* dir = g_file_parse_name(task->path.c_str());
+        GError* error = nullptr;
+        GFileEnumerator* enumerator = g_file_enumerate_children(
+            dir,
+            "standard::*,time::*",
+            G_FILE_QUERY_INFO_NONE,
+            nullptr,
+            &error
+        );
 
-            const char* name = g_file_info_get_name(info);
-            GFile* child_file = g_file_get_child(dir, name);
+        if (error) {
+            std::cerr << "[FileViewWidget] Failed to enumerate directory: " << error->message << "\n";
+            g_error_free(error);
+        } else if (enumerator) {
+            while (true) {
+                GFileInfo* info = g_file_enumerator_next_file(enumerator, nullptr, nullptr);
+                if (!info) break;
 
-            // Fast path: icon-theme icons only — NO pixel reads here
-            auto item = FileItem::from_file_info(child_file, info, 48, 20);
-            if (item) {
-                data->all_items.push_back(item);
+                const char* name = g_file_info_get_name(info);
+                GFile* child_file = g_file_get_child(dir, name);
+                auto item = FileItem::from_file_info(child_file, info, 48, 20);
+                if (item) task->items.push_back(item);
+                g_object_unref(child_file);
+                g_object_unref(info);
             }
-
-            g_object_unref(child_file);
-            g_object_unref(info);
+            g_object_unref(enumerator);
         }
-        g_object_unref(enumerator);
-    }
-    g_object_unref(dir);
+        if (dir) g_object_unref(dir);
 
-    setup_file_monitor(data, path);
-    repopulate_store(data);   // ← directory appears instantly with theme icons
+        g_idle_add(+[](gpointer u) -> gboolean {
+            auto* t = static_cast<DirLoadTask*>(u);
+            auto* d = get_data(t->widget);
+            if (d && d->thumb_generation == t->gen) {
+                d->all_items = std::move(t->items);
+                setup_file_monitor(d, t->path);
+                repopulate_store(d);
+            }
+            g_object_unref(t->widget);
+            delete t;
+            return G_SOURCE_REMOVE;
+        }, task);
+    }).detach();   // ← directory appears instantly with theme icons
 
     // ── Async thumbnail loading ───────────────────────────────────────────────
     // Struct passed to each worker thread job (heap-allocated, worker frees it)
@@ -995,7 +1009,7 @@ static void run_search_job(gpointer job_data, gpointer) {
         std::string current = stack.back();
         stack.pop_back();
         
-        GFile* file = g_file_new_for_path(current.c_str());
+        GFile* file = g_file_parse_name(current.c_str());
         GFileEnumerator* enumerator = g_file_enumerate_children(
             file,
             "standard::*,time::*,access::*,unix::*",
@@ -1027,7 +1041,7 @@ static void run_search_job(gpointer job_data, gpointer) {
             std::string n_lower = name;
             std::transform(n_lower.begin(), n_lower.end(), n_lower.begin(), ::tolower);
             if (n_lower.find(q_lower) != std::string::npos) {
-                GFile* child_file = g_file_new_for_path(child_path.c_str());
+                GFile* child_file = g_file_parse_name(child_path.c_str());
                 auto item = FileItem::from_file_info(child_file, info, 64, 24);
                 if (item) batch.push_back(item);
                 g_object_unref(child_file);
@@ -1233,7 +1247,87 @@ void FileViewWidget::action_rename_selected(GtkWidget* widget) {
     if (!data) return;
 
     auto paths = get_selected_paths(widget);
-    if (paths.size() != 1) return;
+    if (paths.empty()) return;
+
+    if (paths.size() > 1) {
+        GtkWidget* toplevel = gtk_widget_get_toplevel(widget);
+        GtkWidget* dialog = gtk_dialog_new_with_buttons(
+            "Bulk Rename",
+            GTK_IS_WINDOW(toplevel) ? GTK_WINDOW(toplevel) : nullptr,
+            static_cast<GtkDialogFlags>(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
+            "_Cancel", GTK_RESPONSE_CANCEL,
+            "_Rename All", GTK_RESPONSE_ACCEPT,
+            nullptr
+        );
+        gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
+        gtk_widget_add_css_class(dialog, "zenith-files-dialog");
+
+        GtkWidget* content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+        gtk_container_set_border_width(GTK_CONTAINER(content), 16);
+        
+        GtkWidget* grid = gtk_grid_new();
+        gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
+        gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
+
+        GtkWidget* prefix_entry = gtk_entry_new();
+        GtkWidget* suffix_entry = gtk_entry_new();
+        GtkWidget* find_entry = gtk_entry_new();
+        GtkWidget* replace_entry = gtk_entry_new();
+
+        gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Prefix:"), 0, 0, 1, 1);
+        gtk_grid_attach(GTK_GRID(grid), prefix_entry, 1, 0, 1, 1);
+        
+        gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Suffix:"), 0, 1, 1, 1);
+        gtk_grid_attach(GTK_GRID(grid), suffix_entry, 1, 1, 1, 1);
+        
+        gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Find:"), 0, 2, 1, 1);
+        gtk_grid_attach(GTK_GRID(grid), find_entry, 1, 2, 1, 1);
+        
+        gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Replace:"), 0, 3, 1, 1);
+        gtk_grid_attach(GTK_GRID(grid), replace_entry, 1, 3, 1, 1);
+
+        gtk_box_pack_start(GTK_BOX(content), grid, TRUE, TRUE, 0);
+        gtk_widget_show_all(dialog);
+
+        gint res = gtk_dialog_run(GTK_DIALOG(dialog));
+        if (res == GTK_RESPONSE_ACCEPT) {
+            std::string prefix = gtk_entry_get_text(GTK_ENTRY(prefix_entry));
+            std::string suffix = gtk_entry_get_text(GTK_ENTRY(suffix_entry));
+            std::string find_str = gtk_entry_get_text(GTK_ENTRY(find_entry));
+            std::string replace_str = gtk_entry_get_text(GTK_ENTRY(replace_entry));
+
+            for (const auto& old_path : paths) {
+                GFile* f = g_file_parse_name(old_path.c_str());
+                char* name = g_file_get_basename(f);
+                if (!name) { g_object_unref(f); continue; }
+                
+                std::string filename(name);
+                g_free(name);
+
+                if (!find_str.empty()) {
+                    size_t pos = 0;
+                    while ((pos = filename.find(find_str, pos)) != std::string::npos) {
+                        filename.replace(pos, find_str.length(), replace_str);
+                        pos += replace_str.length();
+                    }
+                }
+
+                size_t dot = filename.find_last_of('.');
+                if (dot != std::string::npos && dot > 0) {
+                    filename.insert(dot, suffix);
+                    filename = prefix + filename;
+                } else {
+                    filename = prefix + filename + suffix;
+                }
+
+                g_file_set_display_name(f, filename.c_str(), nullptr, nullptr);
+                g_object_unref(f);
+            }
+            load_directory(widget, data->current_path);
+        }
+        gtk_widget_destroy(dialog);
+        return;
+    }
 
     const std::string& old_path = paths[0];
     size_t last_slash = old_path.find_last_of('/');
@@ -1435,7 +1529,7 @@ void FileViewWidget::action_properties(GtkWidget* widget) {
     std::string target_path = paths.empty() ? data->current_path : paths[0];
     if (target_path.empty()) return;
 
-    GFile* file = g_file_new_for_path(target_path.c_str());
+    GFile* file = g_file_parse_name(target_path.c_str());
     GFileInfo* info = g_file_query_info(
         file,
         "standard::*,time::*,access::*,unix::*",
@@ -1560,7 +1654,7 @@ void FileViewWidget::action_properties(GtkWidget* widget) {
                 auto* d = static_cast<std::pair<PermState*, int>*>(udata);
                 if (gtk_toggle_button_get_active(btn)) d->first->current_mode |= d->second;
                 else d->first->current_mode &= ~(d->second);
-                GFile* f = g_file_new_for_path(d->first->path.c_str());
+                GFile* f = g_file_parse_name(d->first->path.c_str());
                 g_file_set_attribute_uint32(f, G_FILE_ATTRIBUTE_UNIX_MODE, d->first->current_mode, G_FILE_QUERY_INFO_NONE, nullptr, nullptr);
                 g_object_unref(f);
             };

@@ -16,7 +16,7 @@ static bool s_clipboard_is_cut = false;
 bool FileOperations::launch_file(const std::string& path) {
     if (path.empty()) return false;
 
-    GFile* file = g_file_new_for_path(path.c_str());
+    GFile* file = g_file_parse_name(path.c_str());
     if (!file) return false;
 
     char* uri = g_file_get_uri(file);
@@ -88,7 +88,7 @@ bool FileOperations::create_file(const std::string& parent_path, const std::stri
 bool FileOperations::rename_item(const std::string& path, const std::string& new_name, std::string* out_new_path) {
     if (path.empty() || new_name.empty()) return false;
 
-    GFile* src = g_file_new_for_path(path.c_str());
+    GFile* src = g_file_parse_name(path.c_str());
     if (!src) return false;
 
     GError* error = nullptr;
@@ -103,7 +103,7 @@ bool FileOperations::rename_item(const std::string& path, const std::string& new
     }
 
     if (dst) {
-        char* new_p = g_file_get_path(dst);
+        char* new_p = g_file_get_parse_name(dst);
         if (new_p) {
             if (out_new_path) *out_new_path = new_p;
             g_free(new_p);
@@ -118,7 +118,7 @@ bool FileOperations::move_to_trash(const std::vector<std::string>& paths) {
     bool all_ok = true;
     for (const auto& p : paths) {
         if (p.empty()) continue;
-        GFile* f = g_file_new_for_path(p.c_str());
+        GFile* f = g_file_parse_name(p.c_str());
         if (f) {
             GError* err = nullptr;
             if (!g_file_trash(f, nullptr, &err)) {
@@ -155,7 +155,7 @@ void FileOperations::copy_to_clipboard(const std::vector<std::string>& paths, bo
     if (clip && !paths.empty()) {
         std::string uris;
         for (const auto& p : paths) {
-            GFile* f = g_file_new_for_path(p.c_str());
+            GFile* f = g_file_parse_name(p.c_str());
             if (f) {
                 char* u = g_file_get_uri(f);
                 if (u) {
@@ -177,7 +177,7 @@ bool FileOperations::has_clipboard_files() {
 bool FileOperations::paste_from_clipboard(const std::string& target_dir) {
     if (s_clipboard_paths.empty() || target_dir.empty()) return false;
 
-    GFile* target_folder = g_file_new_for_path(target_dir.c_str());
+    GFile* target_folder = g_file_parse_name(target_dir.c_str());
     if (!target_folder) return false;
 
     bool all_ok = true;
@@ -198,8 +198,8 @@ bool FileOperations::paste_from_clipboard(const std::string& target_dir) {
             dst_f = fs::path(target_dir) / (stem + " (" + std::to_string(count++) + ")" + ext);
         }
 
-        GFile* src = g_file_new_for_path(src_path.c_str());
-        GFile* dst = g_file_new_for_path(dst_f.string().c_str());
+        GFile* src = g_file_parse_name(src_path.c_str());
+        GFile* dst = g_file_parse_name(dst_f.string().c_str());
 
         if (src && dst) {
             GError* err = nullptr;
@@ -345,8 +345,8 @@ bool FileOperations::paste_from_clipboard_with_progress(const std::string& targe
             dst_f = fs::path(target_dir) / (stem + " (" + std::to_string(count++) + ")" + ext);
         }
 
-        GFile* src = g_file_new_for_path(src_path.c_str());
-        GFile* dst = g_file_new_for_path(dst_f.string().c_str());
+        GFile* src = g_file_parse_name(src_path.c_str());
+        GFile* dst = g_file_parse_name(dst_f.string().c_str());
 
         if (src && dst) {
             GError* err = nullptr;
@@ -461,7 +461,7 @@ void FileOperations::extract_archive(const std::string& archive_path, const std:
 void FileOperations::open_with_dialog(const std::string& path, GtkWindow* parent) {
     if (path.empty()) return;
 
-    GFile* gf = g_file_new_for_path(path.c_str());
+    GFile* gf = g_file_parse_name(path.c_str());
     GFileInfo* fi = g_file_query_info(gf, "standard::content-type", G_FILE_QUERY_INFO_NONE, nullptr, nullptr);
 
     const char* ctype = fi ? g_file_info_get_content_type(fi) : "application/octet-stream";

@@ -16,16 +16,24 @@
 
 namespace zenith {
 
-struct TabState {
+struct PaneState {
     GtkWidget* file_view{nullptr};
-    GtkWidget* tab_box{nullptr};
-    GtkWidget* tab_label{nullptr};
     std::string current_path;
     std::vector<std::string> back_history;
     std::vector<std::string> forward_history;
     int last_total_items{0};
     int last_selected_items{0};
     uint64_t last_selected_bytes{0};
+};
+
+struct TabState {
+    GtkWidget* paned{nullptr};
+    GtkWidget* tab_box{nullptr};
+    GtkWidget* tab_label{nullptr};
+    PaneState left_pane;
+    PaneState right_pane;
+    bool is_dual{false};
+    PaneState* active_pane{nullptr};
 };
 
 struct FileManagerState {
@@ -40,6 +48,7 @@ struct FileManagerState {
     GtkWidget* search_entry{nullptr};
     GtkWidget* btn_new_folder{nullptr};
     GtkWidget* btn_new_tab{nullptr};
+    GtkWidget* btn_dual_pane{nullptr};
     GtkWidget* btn_term{nullptr};
     GtkWidget* btn_hidden{nullptr};
     GtkWidget* btn_grid_view{nullptr};
@@ -58,9 +67,9 @@ struct FileManagerState {
 
 static void update_nav_buttons(FileManagerState* state) {
     if (!state || !state->active_tab) return;
-    gtk_widget_set_sensitive(state->btn_back, !state->active_tab->back_history.empty());
-    gtk_widget_set_sensitive(state->btn_forward, !state->active_tab->forward_history.empty());
-    gtk_widget_set_sensitive(state->btn_up, state->active_tab->current_path != "/");
+    gtk_widget_set_sensitive(state->btn_back, !state->active_tab->active_pane->back_history.empty());
+    gtk_widget_set_sensitive(state->btn_forward, !state->active_tab->active_pane->forward_history.empty());
+    gtk_widget_set_sensitive(state->btn_up, state->active_tab->active_pane->current_path != "/");
 }
 
 static void update_disk_space(FileManagerState* state, const std::string& path) {
@@ -80,14 +89,14 @@ static void update_status_text(FileManagerState* state) {
     if (!state || !state->status_label || !state->active_tab) return;
 
     std::string text;
-    if (state->active_tab->last_selected_items > 0) {
-        text = std::to_string(state->active_tab->last_selected_items) + " of " +
-               std::to_string(state->active_tab->last_total_items) + " selected";
-        if (state->active_tab->last_selected_bytes > 0) {
-            text += " (" + FileItem::format_size(state->active_tab->last_selected_bytes) + ")";
+    if (state->active_tab->active_pane->last_selected_items > 0) {
+        text = std::to_string(state->active_tab->active_pane->last_selected_items) + " of " +
+               std::to_string(state->active_tab->active_pane->last_total_items) + " selected";
+        if (state->active_tab->active_pane->last_selected_bytes > 0) {
+            text += " (" + FileItem::format_size(state->active_tab->active_pane->last_selected_bytes) + ")";
         }
     } else {
-        text = std::to_string(state->active_tab->last_total_items) + (state->active_tab->last_total_items == 1 ? " item" : " items");
+        text = std::to_string(state->active_tab->active_pane->last_total_items) + (state->active_tab->active_pane->last_total_items == 1 ? " item" : " items");
     }
 
     gtk_label_set_text(GTK_LABEL(state->status_label), text.c_str());
@@ -96,12 +105,12 @@ static void update_status_text(FileManagerState* state) {
 static void navigate_to(FileManagerState* state, const std::string& path, bool record_history = true) {
     if (!state || !state->active_tab || path.empty()) return;
 
-    if (record_history && !state->active_tab->current_path.empty() && state->active_tab->current_path != path) {
-        state->active_tab->back_history.push_back(state->active_tab->current_path);
-        state->active_tab->forward_history.clear();
+    if (record_history && !state->active_tab->active_pane->current_path.empty() && state->active_tab->active_pane->current_path != path) {
+        state->active_tab->active_pane->back_history.push_back(state->active_tab->active_pane->current_path);
+        state->active_tab->active_pane->forward_history.clear();
     }
 
-    state->active_tab->current_path = path;
+    state->active_tab->active_pane->current_path = path;
 
     // Update tab title
     std::string title = path;
@@ -122,41 +131,41 @@ static void navigate_to(FileManagerState* state, const std::string& path, bool r
 
     update_nav_buttons(state);
     PathBarWidget::set_path(state->path_bar, path);
-    PlacesSidebar::set_active_path(state->sidebar, path);
-    FileViewWidget::load_directory(state->active_tab->file_view, path);
+    if (state->active_tab->active_pane == &state->active_tab->left_pane) PlacesSidebar::set_active_path(state->sidebar, path);
+    FileViewWidget::load_directory(state->active_tab->active_pane->file_view, path);
     update_disk_space(state, path);
 }
 
 static void go_back(FileManagerState* state) {
-    if (!state || !state->active_tab || state->active_tab->back_history.empty()) return;
+    if (!state || !state->active_tab || state->active_tab->active_pane->back_history.empty()) return;
 
-    std::string prev = state->active_tab->back_history.back();
-    state->active_tab->back_history.pop_back();
+    std::string prev = state->active_tab->active_pane->back_history.back();
+    state->active_tab->active_pane->back_history.pop_back();
 
-    if (!state->active_tab->current_path.empty()) {
-        state->active_tab->forward_history.push_back(state->active_tab->current_path);
+    if (!state->active_tab->active_pane->current_path.empty()) {
+        state->active_tab->active_pane->forward_history.push_back(state->active_tab->active_pane->current_path);
     }
 
     navigate_to(state, prev, false);
 }
 
 static void go_forward(FileManagerState* state) {
-    if (!state || !state->active_tab || state->active_tab->forward_history.empty()) return;
+    if (!state || !state->active_tab || state->active_tab->active_pane->forward_history.empty()) return;
 
-    std::string next = state->active_tab->forward_history.back();
-    state->active_tab->forward_history.pop_back();
+    std::string next = state->active_tab->active_pane->forward_history.back();
+    state->active_tab->active_pane->forward_history.pop_back();
 
-    if (!state->active_tab->current_path.empty()) {
-        state->active_tab->back_history.push_back(state->active_tab->current_path);
+    if (!state->active_tab->active_pane->current_path.empty()) {
+        state->active_tab->active_pane->back_history.push_back(state->active_tab->active_pane->current_path);
     }
 
     navigate_to(state, next, false);
 }
 
 static void go_up(FileManagerState* state) {
-    if (!state || !state->active_tab || state->active_tab->current_path.empty() || state->active_tab->current_path == "/") return;
+    if (!state || !state->active_tab || state->active_tab->active_pane->current_path.empty() || state->active_tab->active_pane->current_path == "/") return;
 
-    GFile* cur = g_file_new_for_path(state->active_tab->current_path.c_str());
+    GFile* cur = g_file_new_for_path(state->active_tab->active_pane->current_path.c_str());
     GFile* parent = g_file_get_parent(cur);
     if (parent) {
         char* parent_path = g_file_get_path(parent);
@@ -179,7 +188,7 @@ static void go_home(FileManagerState* state) {
 static void close_tab(FileManagerState* state, TabState* tab) {
     if (!state || !tab || state->tabs.size() <= 1) return; // Don't close the last tab
 
-    int page_num = gtk_notebook_page_num(GTK_NOTEBOOK(state->notebook), tab->file_view);
+    int page_num = gtk_notebook_page_num(GTK_NOTEBOOK(state->notebook), tab->paned);
     if (page_num >= 0) {
         gtk_notebook_remove_page(GTK_NOTEBOOK(state->notebook), page_num);
     }
@@ -193,42 +202,88 @@ static void close_tab(FileManagerState* state, TabState* tab) {
     }
 }
 
-static void create_new_tab(FileManagerState* state, const std::string& initial_path) {
-    auto tab = std::make_unique<TabState>();
-    TabState* tab_ptr = tab.get();
-
-    tab_ptr->file_view = FileViewWidget::create(
-        [state, tab_ptr](const std::string& target) {
-            if (state->active_tab == tab_ptr) {
+static void create_pane_view(FileManagerState* state, TabState* tab_ptr, PaneState* pane) {
+    pane->file_view = FileViewWidget::create(
+        [state, tab_ptr, pane](const std::string& target) {
+            if (state->active_tab == tab_ptr && tab_ptr->active_pane == pane) {
                 navigate_to(state, target, true);
             } else {
-                if (!tab_ptr->current_path.empty() && tab_ptr->current_path != target) {
-                    tab_ptr->back_history.push_back(tab_ptr->current_path);
-                    tab_ptr->forward_history.clear();
+                if (!pane->current_path.empty() && pane->current_path != target) {
+                    pane->back_history.push_back(pane->current_path);
+                    pane->forward_history.clear();
                 }
-                tab_ptr->current_path = target;
-                
-                std::string base_name = target;
-                size_t last_slash = target.find_last_of('/');
-                if (last_slash != std::string::npos && last_slash != target.length() - 1) {
-                    base_name = target.substr(last_slash + 1);
+                pane->current_path = target;
+                if (tab_ptr->active_pane == pane && state->active_tab == tab_ptr) {
+                    std::string base_name = target;
+                    size_t last_slash = target.find_last_of('/');
+                    if (last_slash != std::string::npos && last_slash != target.length() - 1) {
+                        base_name = target.substr(last_slash + 1);
+                    }
+                    if (base_name.empty()) base_name = "/";
+                    if (tab_ptr->tab_label) gtk_label_set_text(GTK_LABEL(tab_ptr->tab_label), base_name.c_str());
                 }
-                if (base_name.empty()) base_name = "/";
-                if (tab_ptr->tab_label) gtk_label_set_text(GTK_LABEL(tab_ptr->tab_label), base_name.c_str());
-
-                FileViewWidget::load_directory(tab_ptr->file_view, target);
+                FileViewWidget::load_directory(pane->file_view, target);
             }
         },
-        [state, tab_ptr](int total, int sel_count, uint64_t sel_bytes) {
-            tab_ptr->last_total_items = total;
-            tab_ptr->last_selected_items = sel_count;
-            tab_ptr->last_selected_bytes = sel_bytes;
-            if (state->active_tab == tab_ptr) {
+        [state, tab_ptr, pane](int total, int sel_count, uint64_t sel_bytes) {
+            pane->last_total_items = total;
+            pane->last_selected_items = sel_count;
+            pane->last_selected_bytes = sel_bytes;
+            if (state->active_tab == tab_ptr && tab_ptr->active_pane == pane) {
                 update_status_text(state);
             }
         }
     );
+    auto focus_cb = +[](GtkWidget*, GdkEventFocus*, gpointer user_data) -> gboolean {
+        auto* d = static_cast<std::pair<FileManagerState*, std::pair<TabState*, PaneState*>>*>(user_data);
+        d->second.first->active_pane = d->second.second;
+        if (d->first->active_tab == d->second.first) {
+            PathBarWidget::set_path(d->first->path_bar, d->second.second->current_path);
+            update_nav_buttons(d->first);
+            update_status_text(d->first);
+            update_disk_space(d->first, d->second.second->current_path);
+        }
+        return FALSE;
+    };
+    g_signal_connect_data(pane->file_view, "focus-in-event", G_CALLBACK(focus_cb), new std::pair<FileManagerState*, std::pair<TabState*, PaneState*>>(state, {tab_ptr, pane}), [](gpointer d, GClosure*) {
+        delete static_cast<std::pair<FileManagerState*, std::pair<TabState*, PaneState*>>*>(d);
+    }, static_cast<GConnectFlags>(0));
+}
 
+static void toggle_dual_pane(FileManagerState* state) {
+    if (!state || !state->active_tab) return;
+    auto* tab = state->active_tab;
+    tab->is_dual = !tab->is_dual;
+    if (tab->is_dual) {
+        create_pane_view(state, tab, &tab->right_pane);
+        gtk_widget_show_all(tab->right_pane.file_view);
+        gtk_paned_pack2(GTK_PANED(tab->paned), tab->right_pane.file_view, TRUE, FALSE);
+        std::string cur = tab->left_pane.current_path;
+        tab->active_pane = &tab->right_pane;
+        navigate_to(state, cur, false);
+        gtk_widget_grab_focus(tab->right_pane.file_view);
+    } else {
+        gtk_widget_destroy(tab->right_pane.file_view);
+        tab->right_pane.file_view = nullptr;
+        tab->active_pane = &tab->left_pane;
+        PathBarWidget::set_path(state->path_bar, tab->active_pane->current_path);
+        update_nav_buttons(state);
+        update_status_text(state);
+        gtk_widget_grab_focus(tab->left_pane.file_view);
+    }
+}
+
+static void create_new_tab(FileManagerState* state, const std::string& initial_path) {
+    auto tab = std::make_unique<TabState>();
+    TabState* tab_ptr = tab.get();
+    
+    tab_ptr->paned = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
+    gtk_widget_show(tab_ptr->paned);
+
+    create_pane_view(state, tab_ptr, &tab_ptr->left_pane);
+    tab_ptr->active_pane = &tab_ptr->left_pane;
+    gtk_paned_pack1(GTK_PANED(tab_ptr->paned), tab_ptr->left_pane.file_view, TRUE, FALSE);
+    
     GtkWidget* tab_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
     tab_ptr->tab_box = tab_box;
     
@@ -244,9 +299,8 @@ static void create_new_tab(FileManagerState* state, const std::string& initial_p
 
     gtk_widget_show_all(tab_box);
     
-    int index = gtk_notebook_append_page(GTK_NOTEBOOK(state->notebook), tab_ptr->file_view, tab_box);
-    gtk_notebook_set_tab_reorderable(GTK_NOTEBOOK(state->notebook), tab_ptr->file_view, TRUE);
-    gtk_widget_show_all(tab_ptr->file_view);
+    int index = gtk_notebook_append_page(GTK_NOTEBOOK(state->notebook), tab_ptr->paned, tab_box);
+    gtk_notebook_set_tab_reorderable(GTK_NOTEBOOK(state->notebook), tab_ptr->paned, TRUE);
     
     state->tabs.push_back(std::move(tab));
     
@@ -267,7 +321,6 @@ static void create_new_tab(FileManagerState* state, const std::string& initial_p
         navigate_to(state, initial_path, false);
     }
 }
-
 static gboolean on_window_key_press(GtkWidget*, GdkEventKey* event, gpointer user_data) {
     auto* state = static_cast<FileManagerState*>(user_data);
     if (!state) return FALSE;
@@ -299,12 +352,12 @@ static gboolean on_window_key_press(GtkWidget*, GdkEventKey* event, gpointer use
             if (!active) {
                 gtk_widget_grab_focus(state->search_entry);
             } else if (state->active_tab) {
-                FileViewWidget::set_search_query(state->active_tab->file_view, "");
+                FileViewWidget::set_search_query(state->active_tab->active_pane->file_view, "");
             }
             return TRUE;
         } else if (key == GDK_KEY_t || key == GDK_KEY_T) {
             if (state->active_tab) {
-                create_new_tab(state, state->active_tab->current_path);
+                create_new_tab(state, state->active_tab->active_pane->current_path);
             } else {
                 create_new_tab(state, g_get_home_dir() ? g_get_home_dir() : "/");
             }
@@ -313,12 +366,12 @@ static gboolean on_window_key_press(GtkWidget*, GdkEventKey* event, gpointer use
             if (state->active_tab) close_tab(state, state->active_tab);
             return TRUE;
         } else if (key == GDK_KEY_1) {
-            if (state->active_tab) FileViewWidget::set_view_mode(state->active_tab->file_view, ViewMode::GRID);
+            if (state->active_tab) FileViewWidget::set_view_mode(state->active_tab->active_pane->file_view, ViewMode::GRID);
             gtk_widget_add_css_class(state->btn_grid_view, "files-btn-view-active");
             gtk_widget_remove_css_class(state->btn_list_view, "files-btn-view-active");
             return TRUE;
         } else if (key == GDK_KEY_2) {
-            if (state->active_tab) FileViewWidget::set_view_mode(state->active_tab->file_view, ViewMode::LIST);
+            if (state->active_tab) FileViewWidget::set_view_mode(state->active_tab->active_pane->file_view, ViewMode::LIST);
             gtk_widget_add_css_class(state->btn_list_view, "files-btn-view-active");
             gtk_widget_remove_css_class(state->btn_grid_view, "files-btn-view-active");
             return TRUE;
@@ -329,13 +382,16 @@ static gboolean on_window_key_press(GtkWidget*, GdkEventKey* event, gpointer use
                 gtk_entry_set_text(GTK_ENTRY(state->search_entry), "");
                 gtk_revealer_set_reveal_child(GTK_REVEALER(state->search_revealer), FALSE);
                 if (state->active_tab) {
-                    FileViewWidget::set_search_query(state->active_tab->file_view, "");
-                    gtk_widget_grab_focus(state->active_tab->file_view);
+                    FileViewWidget::set_search_query(state->active_tab->active_pane->file_view, "");
+                    gtk_widget_grab_focus(state->active_tab->active_pane->file_view);
                 }
                 return TRUE;
             }
+        } else if (key == GDK_KEY_F3) {
+            toggle_dual_pane(state);
+            return TRUE;
         } else if (key == GDK_KEY_F4) {
-            if (state->active_tab) FileOperations::open_terminal(state->active_tab->current_path);
+            if (state->active_tab) FileOperations::open_terminal(state->active_tab->active_pane->current_path);
             return TRUE;
         }
     }
@@ -404,9 +460,15 @@ GtkWidget* FileManagerWindow::create(const std::string& initial_path) {
     gtk_widget_set_tooltip_text(state->btn_new_tab, "New Tab (Ctrl+T)");
     gtk_widget_add_css_class(state->btn_new_tab, "files-btn-tool");
     g_signal_connect_swapped(state->btn_new_tab, "clicked", G_CALLBACK(+[](FileManagerState* s) {
-        create_new_tab(s, s->active_tab ? s->active_tab->current_path : (g_get_home_dir() ? g_get_home_dir() : "/"));
+        create_new_tab(s, s->active_tab ? s->active_tab->active_pane->current_path : (g_get_home_dir() ? g_get_home_dir() : "/"));
     }), state);
     gtk_box_pack_start(GTK_BOX(act_box), state->btn_new_tab, FALSE, FALSE, 0);
+
+    state->btn_dual_pane = gtk_button_new_from_icon_name("view-restore-symbolic", GTK_ICON_SIZE_BUTTON);
+    gtk_widget_set_tooltip_text(state->btn_dual_pane, "Split View (F3)");
+    gtk_widget_add_css_class(state->btn_dual_pane, "files-btn-tool");
+    g_signal_connect_swapped(state->btn_dual_pane, "clicked", G_CALLBACK(toggle_dual_pane), state);
+    gtk_box_pack_start(GTK_BOX(act_box), state->btn_dual_pane, FALSE, FALSE, 0);
 
     state->btn_search = gtk_button_new_from_icon_name("edit-find-symbolic", GTK_ICON_SIZE_BUTTON);
     gtk_widget_set_tooltip_text(state->btn_search, "Search Files (Ctrl+F)");
@@ -417,7 +479,7 @@ GtkWidget* FileManagerWindow::create(const std::string& initial_path) {
         if (!active) {
             gtk_widget_grab_focus(s->search_entry);
         } else {
-            if (s->active_tab) FileViewWidget::set_search_query(s->active_tab->file_view, "");
+            if (s->active_tab) FileViewWidget::set_search_query(s->active_tab->active_pane->file_view, "");
         }
     }), state);
     gtk_box_pack_start(GTK_BOX(act_box), state->btn_search, FALSE, FALSE, 0);
@@ -426,7 +488,7 @@ GtkWidget* FileManagerWindow::create(const std::string& initial_path) {
     gtk_widget_set_tooltip_text(state->btn_new_folder, "New Folder (Ctrl+Shift+N)");
     gtk_widget_add_css_class(state->btn_new_folder, "files-btn-tool");
     g_signal_connect_swapped(state->btn_new_folder, "clicked", G_CALLBACK(+[](FileManagerState* s) {
-        if (s->active_tab) FileViewWidget::action_new_folder(s->active_tab->file_view);
+        if (s->active_tab) FileViewWidget::action_new_folder(s->active_tab->active_pane->file_view);
     }), state);
     gtk_box_pack_start(GTK_BOX(act_box), state->btn_new_folder, FALSE, FALSE, 0);
 
@@ -434,7 +496,7 @@ GtkWidget* FileManagerWindow::create(const std::string& initial_path) {
     gtk_widget_set_tooltip_text(state->btn_term, "Open Terminal (F4)");
     gtk_widget_add_css_class(state->btn_term, "files-btn-tool");
     g_signal_connect_swapped(state->btn_term, "clicked", G_CALLBACK(+[](FileManagerState* s) {
-        if (s->active_tab) FileOperations::open_terminal(s->active_tab->current_path);
+        if (s->active_tab) FileOperations::open_terminal(s->active_tab->active_pane->current_path);
     }), state);
     gtk_box_pack_start(GTK_BOX(act_box), state->btn_term, FALSE, FALSE, 0);
 
@@ -444,7 +506,7 @@ GtkWidget* FileManagerWindow::create(const std::string& initial_path) {
     gtk_widget_add_css_class(state->btn_hidden, "files-btn-tool");
     g_signal_connect_swapped(state->btn_hidden, "toggled", G_CALLBACK(+[](FileManagerState* s) {
         gboolean act = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(s->btn_hidden));
-        for (auto& tab : s->tabs) FileViewWidget::set_show_hidden(tab->file_view, act);
+        for (auto& tab : s->tabs) { FileViewWidget::set_show_hidden(tab->left_pane.file_view, act); if (tab->is_dual) FileViewWidget::set_show_hidden(tab->right_pane.file_view, act); }
     }), state);
     gtk_box_pack_start(GTK_BOX(act_box), state->btn_hidden, FALSE, FALSE, 0);
 
@@ -456,7 +518,7 @@ GtkWidget* FileManagerWindow::create(const std::string& initial_path) {
     gtk_widget_set_tooltip_text(state->btn_grid_view, "Grid View (Ctrl+1)");
     gtk_widget_add_css_class(state->btn_grid_view, "files-btn-view-active");
     g_signal_connect_swapped(state->btn_grid_view, "clicked", G_CALLBACK(+[](FileManagerState* s) {
-        for (auto& tab : s->tabs) FileViewWidget::set_view_mode(tab->file_view, ViewMode::GRID);
+        for (auto& tab : s->tabs) { FileViewWidget::set_view_mode(tab->left_pane.file_view, ViewMode::GRID); if (tab->is_dual) FileViewWidget::set_view_mode(tab->right_pane.file_view, ViewMode::GRID); }
         gtk_widget_add_css_class(s->btn_grid_view, "files-btn-view-active");
         gtk_widget_remove_css_class(s->btn_list_view, "files-btn-view-active");
     }), state);
@@ -465,7 +527,7 @@ GtkWidget* FileManagerWindow::create(const std::string& initial_path) {
     state->btn_list_view = gtk_button_new_from_icon_name("view-list-symbolic", GTK_ICON_SIZE_BUTTON);
     gtk_widget_set_tooltip_text(state->btn_list_view, "List View (Ctrl+2)");
     g_signal_connect_swapped(state->btn_list_view, "clicked", G_CALLBACK(+[](FileManagerState* s) {
-        for (auto& tab : s->tabs) FileViewWidget::set_view_mode(tab->file_view, ViewMode::LIST);
+        for (auto& tab : s->tabs) { FileViewWidget::set_view_mode(tab->left_pane.file_view, ViewMode::LIST); if (tab->is_dual) FileViewWidget::set_view_mode(tab->right_pane.file_view, ViewMode::LIST); }
         gtk_widget_add_css_class(s->btn_list_view, "files-btn-view-active");
         gtk_widget_remove_css_class(s->btn_grid_view, "files-btn-view-active");
     }), state);
@@ -487,7 +549,7 @@ GtkWidget* FileManagerWindow::create(const std::string& initial_path) {
     gtk_entry_set_placeholder_text(GTK_ENTRY(state->search_entry), "Search in current folder...");
     g_signal_connect_swapped(state->search_entry, "search-changed", G_CALLBACK(+[](FileManagerState* s) {
         const char* q = gtk_entry_get_text(GTK_ENTRY(s->search_entry));
-        if (s->active_tab) FileViewWidget::set_search_query(s->active_tab->file_view, q ? q : "");
+        if (s->active_tab) FileViewWidget::set_search_query(s->active_tab->active_pane->file_view, q ? q : "");
     }), state);
     gtk_box_pack_start(GTK_BOX(search_box), state->search_entry, TRUE, TRUE, 0);
 
@@ -496,7 +558,7 @@ GtkWidget* FileManagerWindow::create(const std::string& initial_path) {
     g_signal_connect_swapped(btn_close_search, "clicked", G_CALLBACK(+[](FileManagerState* s) {
         gtk_entry_set_text(GTK_ENTRY(s->search_entry), "");
         gtk_revealer_set_reveal_child(GTK_REVEALER(s->search_revealer), FALSE);
-        if (s->active_tab) FileViewWidget::set_search_query(s->active_tab->file_view, "");
+        if (s->active_tab) FileViewWidget::set_search_query(s->active_tab->active_pane->file_view, "");
     }), state);
     gtk_box_pack_start(GTK_BOX(search_box), btn_close_search, FALSE, FALSE, 0);
 
@@ -522,15 +584,15 @@ GtkWidget* FileManagerWindow::create(const std::string& initial_path) {
         auto* s = static_cast<FileManagerState*>(user_data);
         GtkWidget* child = gtk_notebook_get_nth_page(notebook, page_num);
         for (auto& tab : s->tabs) {
-            if (tab->file_view == child) {
+            if (tab->paned == child) {
                 s->active_tab = tab.get();
-                PathBarWidget::set_path(s->path_bar, tab->current_path);
-                PlacesSidebar::set_active_path(s->sidebar, tab->current_path);
+                PathBarWidget::set_path(s->path_bar, tab->active_pane->current_path);
+                if (tab->active_pane == &tab->left_pane) PlacesSidebar::set_active_path(s->sidebar, tab->active_pane->current_path);
                 update_nav_buttons(s);
                 update_status_text(s);
-                update_disk_space(s, tab->current_path);
+                update_disk_space(s, tab->active_pane->current_path);
                 
-                std::string title = tab->current_path;
+                std::string title = tab->active_pane->current_path;
                 const char* home = g_get_home_dir();
                 if (home && title.rfind(home, 0) == 0) title = "~" + title.substr(strlen(home));
                 gtk_window_set_title(GTK_WINDOW(s->window), (title + " — Zenith Files").c_str());

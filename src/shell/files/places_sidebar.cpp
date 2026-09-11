@@ -64,8 +64,9 @@ static void populate_sidebar(SidebarData* data) {
     add_xdg_dir("Music", G_USER_DIRECTORY_MUSIC, "folder-music-symbolic", "");
     add_xdg_dir("Videos", G_USER_DIRECTORY_VIDEOS, "folder-videos-symbolic", "");
 
-    // Trash
+    // Trash & Network
     items.push_back({"Trash", "trash:///", "user-trash-symbolic", "", false});
+    items.push_back({"Network", "network:///", "network-workgroup-symbolic", "󰤨", false});
 
     // --- Section 2: Devices ---
     items.push_back({"Devices", "", "", "", true});
@@ -78,7 +79,7 @@ static void populate_sidebar(SidebarData* data) {
             GMount* mount = G_MOUNT(m->data);
             char* name = g_mount_get_name(mount);
             GFile* root = g_mount_get_root(mount);
-            char* p = root ? g_file_get_path(root) : nullptr;
+            char* p = root ? g_file_get_parse_name(root) : nullptr;
             if (p && name && std::string(p) != "/") {
                 items.push_back({name, p, "drive-removable-media-symbolic", "󰋊", false});
             }
@@ -114,7 +115,7 @@ static void populate_sidebar(SidebarData* data) {
 
             GFile* bf = g_file_new_for_uri(uri.c_str());
             if (bf) {
-                char* bp = g_file_get_path(bf);
+                char* bp = g_file_get_parse_name(bf);
                 if (bp && fs::exists(bp)) {
                     if (!header_added) {
                         items.push_back({"Bookmarks", "", "", "", true});

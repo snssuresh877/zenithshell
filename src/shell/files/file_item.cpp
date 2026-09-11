@@ -107,7 +107,7 @@ std::string FileItem::format_timestamp(time_t t) {
 std::shared_ptr<FileItem> FileItem::from_file_info(GFile* file, GFileInfo* info, int large_icon_size, int small_icon_size) {
     auto item = std::make_shared<FileItem>();
 
-    char* p = g_file_get_path(file);
+    char* p = g_file_get_parse_name(file);
     if (p) {
         item->path = p;
         g_free(p);
