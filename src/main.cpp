@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
         if (argc > 1) target_path = argv[1];
     } else if (argc > 1) {
         std::string arg1 = argv[1];
-        if (arg1 == "--files") {
+        if (arg1 == "--files" || arg1 == "files" || arg1 == "fm") {
             is_files_cmd = true;
             if (argc > 2) target_path = argv[2];
         }

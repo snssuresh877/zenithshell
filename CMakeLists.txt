@@ -87,6 +87,11 @@ set(SOURCES
     src/system/backlight_manager.cpp
     src/shell/files/file_item.cpp
     src/shell/files/file_operations.cpp
+    src/shell/files/file_shortcuts.cpp
+    src/shell/files/command_palette.cpp
+    src/shell/files/inspector_panel.cpp
+    src/shell/files/quick_preview.cpp
+    src/shell/files/file_preferences_dialog.cpp
     src/shell/files/path_bar_widget.cpp
     src/shell/files/places_sidebar.cpp
     src/shell/files/file_view_widget.cpp

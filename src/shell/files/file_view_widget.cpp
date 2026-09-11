@@ -1,6 +1,8 @@
 #include "file_view_widget.hpp"
 #include "file_item.hpp"
 #include "file_operations.hpp"
+#include "shell/files/quick_preview.hpp"
+#include "shell/files/places_sidebar.hpp"
 #include "theme/theme_engine.hpp"
 #include "../../gtk3_compat.hpp"
 
@@ -12,6 +14,9 @@
 #include <sys/stat.h>
 #include <mutex>
 #include <thread>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 namespace zenith {
 
@@ -56,6 +61,7 @@ struct FileViewData {
 
     FileViewWidget::NavigateCallback on_navigate;
     FileViewWidget::StatusCallback on_status;
+    FileViewWidget::SelectionCallback on_selection;
 
     // ── Async thumbnail generation ────────────────────────────────────────────
     // Each call to load_directory() bumps this counter. Thumbnail idle callbacks
@@ -510,6 +516,9 @@ static void on_row_activated(GtkTreeView*, GtkTreePath* path, GtkTreeViewColumn*
 static void on_selection_changed(gpointer, gpointer user_data) {
     auto* data = static_cast<FileViewData*>(user_data);
     update_status_bar(data);
+    if (data && data->on_selection) {
+        data->on_selection(FileViewWidget::get_selected_paths(data->root_box));
+    }
 }
 
 // Show right click context menu
@@ -524,6 +533,37 @@ static void show_context_menu(FileViewData* data, GdkEventButton* event) {
         GtkWidget* item_open = gtk_menu_item_new_with_label(selected.size() == 1 ? "Open" : "Open Selected");
         g_signal_connect_swapped(item_open, "activate", G_CALLBACK(FileViewWidget::action_open_selected), data->root_box);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_open);
+
+        // "Add / Remove Favorite" for single directory
+        if (selected.size() == 1 && fs::is_directory(selected[0])) {
+            bool is_fav = PlacesSidebar::is_favorite(selected[0]);
+            GtkWidget* item_fav = gtk_menu_item_new_with_label(is_fav ? "★ Remove from Favorites" : "★ Add to Favorites");
+            std::string* p_fav = new std::string(selected[0]);
+            g_object_set_data_full(G_OBJECT(item_fav), "fav_path", p_fav, [](gpointer p) { delete static_cast<std::string*>(p); });
+            g_signal_connect(item_fav, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer) {
+                auto* p = static_cast<std::string*>(g_object_get_data(G_OBJECT(mi), "fav_path"));
+                if (p) {
+                    if (PlacesSidebar::is_favorite(*p)) {
+                        PlacesSidebar::remove_favorite(*p);
+                    } else {
+                        PlacesSidebar::add_favorite(*p);
+                    }
+                }
+            }), nullptr);
+            gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_fav);
+        }
+
+        // "Quick Preview" for single file
+        if (selected.size() == 1) {
+            GtkWidget* item_qp = gtk_menu_item_new_with_label("Quick Preview (Space)");
+            std::string* p_qp = new std::string(selected[0]);
+            g_object_set_data_full(G_OBJECT(item_qp), "qp_path", p_qp, [](gpointer p) { delete static_cast<std::string*>(p); });
+            g_signal_connect(item_qp, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer) {
+                auto* p = static_cast<std::string*>(g_object_get_data(G_OBJECT(mi), "qp_path"));
+                if (p) QuickPreview::toggle(nullptr, *p);
+            }), nullptr);
+            gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_qp);
+        }
 
         // "Open With…" only for single file selection
         if (selected.size() == 1) {
@@ -767,6 +807,13 @@ static gboolean on_key_press(GtkWidget*, GdkEventKey* event, gpointer user_data)
         } else if (key == GDK_KEY_F5) {
             FileViewWidget::refresh(data->root_box);
             return TRUE;
+        } else if (key == GDK_KEY_space) {
+            auto paths = FileViewWidget::get_selected_paths(data->root_box);
+            if (!paths.empty()) {
+                GtkWindow* win = GTK_WINDOW(gtk_widget_get_toplevel(data->root_box));
+                QuickPreview::toggle(win, paths[0]);
+                return TRUE;
+            }
         }
     } else if (state == GDK_SHIFT_MASK) {
         if (key == GDK_KEY_Delete) {
@@ -828,10 +875,11 @@ static void on_column_clicked(GtkTreeViewColumn* col, gpointer user_data) {
     repopulate_store(data);
 }
 
-GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback on_status) {
+GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback on_status, SelectionCallback on_selection) {
     auto* data = new FileViewData();
     data->on_navigate = std::move(on_navigate);
     data->on_status = std::move(on_status);
+    data->on_selection = std::move(on_selection);
 
     data->root_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
     gtk_widget_add_css_class(data->root_box, "files-view-container");

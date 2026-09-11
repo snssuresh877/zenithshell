@@ -24,8 +24,9 @@ class FileViewWidget {
 public:
     using NavigateCallback = std::function<void(const std::string& path)>;
     using StatusCallback = std::function<void(int total_items, int selected_items, uint64_t selected_bytes)>;
+    using SelectionCallback = std::function<void(const std::vector<std::string>& selected_paths)>;
 
-    static GtkWidget* create(NavigateCallback on_navigate, StatusCallback on_status);
+    static GtkWidget* create(NavigateCallback on_navigate, StatusCallback on_status, SelectionCallback on_selection = nullptr);
     static void load_directory(GtkWidget* widget, const std::string& path);
     static std::string get_current_directory(GtkWidget* widget);
     static void refresh(GtkWidget* widget);

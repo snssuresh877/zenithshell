@@ -3459,3 +3459,193 @@ window.zenith-files-window {
     font-size: 11px;
     color: @zenith_accent;
 }
+
+/* ── Command Palette (Ctrl+K) ──────────────────────────────────────────────── */
+.files-palette-window {
+    background-color: @zenith_bg;
+    border: 1px solid @zenith_border_focus;
+    border-radius: 12px;
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.65);
+}
+
+.files-palette-entry {
+    background-color: @zenith_surface;
+    border: 1px solid @zenith_border;
+    border-radius: 8px;
+    font-size: 14px;
+    padding: 10px 14px;
+    color: @zenith_text_primary;
+}
+
+.files-palette-entry:focus {
+    border-color: @zenith_accent;
+    box-shadow: 0 0 0 1px @zenith_accent_glow;
+}
+
+.files-palette-row {
+    background-color: transparent;
+    border-radius: 6px;
+    padding: 6px 10px;
+    transition: background-color 100ms ease-in-out;
+}
+
+.files-palette-row:hover,
+.files-palette-row:selected {
+    background-color: @zenith_accent_soft;
+}
+
+.files-palette-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: @zenith_text_primary;
+}
+
+.files-palette-category {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: @zenith_text_muted;
+    letter-spacing: 0.5px;
+}
+
+.files-shortcut-key {
+    background-color: @zenith_surface_highlight;
+    border: 1px solid @zenith_border;
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: monospace;
+    font-size: 10.5px;
+    color: @zenith_accent;
+    font-weight: 600;
+}
+
+.files-palette-empty {
+    font-size: 12px;
+    color: @zenith_text_muted;
+    padding: 24px;
+}
+
+/* ── Inspector Panel (Ctrl+I) ──────────────────────────────────────────────── */
+.files-inspector-panel {
+    background-color: @zenith_bg_alt;
+    border-left: 1px solid @zenith_border;
+    padding: 12px;
+}
+
+.files-inspector-header {
+    border-bottom: 1px solid @zenith_border;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+
+.files-inspector-filename {
+    font-size: 13px;
+    font-weight: 700;
+    color: @zenith_text_primary;
+}
+
+.files-inspector-preview {
+    background-color: @zenith_surface;
+    border: 1px solid @zenith_border;
+    border-radius: 8px;
+    padding: 6px;
+    margin-bottom: 10px;
+}
+
+.files-inspector-key {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: @zenith_text_muted;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.files-inspector-val {
+    font-size: 11.5px;
+    color: @zenith_text_primary;
+}
+
+.files-inspector-btn {
+    background-color: @zenith_surface;
+    border: 1px solid @zenith_border;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: @zenith_text_secondary;
+}
+
+.files-inspector-btn:hover {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+    color: @zenith_accent;
+}
+
+/* ── Spacebar Quick Preview ───────────────────────────────────────────────── */
+.files-preview-window {
+    background-color: @zenith_bg;
+    border: 1px solid @zenith_border_focus;
+    border-radius: 12px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.75);
+}
+
+.files-preview-header {
+    background-color: @zenith_surface;
+    border-bottom: 1px solid @zenith_border;
+    padding: 8px 12px;
+}
+
+.files-preview-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: @zenith_text_primary;
+}
+
+.files-preview-meta {
+    font-size: 11px;
+    color: @zenith_text_muted;
+}
+
+.files-preview-text {
+    font-family: monospace;
+    font-size: 11.5px;
+    background-color: @zenith_surface;
+    color: @zenith_text_primary;
+    padding: 12px;
+}
+
+/* ── Modernized Sidebar & Preferences Center ───────────────────────────────── */
+.files-sidebar-section-header {
+    font-size: 9.5px;
+    font-weight: 800;
+    color: @zenith_text_muted;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 10px 10px 4px 10px;
+}
+
+.files-settings-dialog {
+    background-color: @zenith_bg;
+    border-radius: 12px;
+}
+
+.files-settings-sidebar {
+    background-color: @zenith_surface;
+    border-right: 1px solid @zenith_border;
+}
+
+.files-rebind-btn {
+    background-color: @zenith_surface_highlight;
+    border: 1px solid @zenith_border;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: monospace;
+    font-size: 11px;
+    color: @zenith_accent;
+    transition: all 120ms ease-in-out;
+}
+
+.files-rebind-btn:hover {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+}
+
