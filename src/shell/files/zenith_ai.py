@@ -1,83 +1,78 @@
 #!/usr/bin/env python3
-import sys, os, subprocess, json
+import sys, os, subprocess, json, urllib.request, mimetypes
 
 def show_error(msg):
     subprocess.run(["notify-send", "-u", "critical", "Zenith AI Error", msg])
     sys.exit(1)
 
-try:
-    from google import genai
-    from google.genai import types
-except ImportError:
-    show_error("Please install the google-genai python package: pip install google-genai")
-
-def get_api_key():
-    key_path = os.path.expanduser("~/.config/zenithshell/gemini_key.txt")
-    if os.path.exists(key_path):
-        with open(key_path, "r") as f:
-            return f.read().strip()
-    
-    # Prompt user for key
-    try:
-        result = subprocess.run(
-            ["zenity", "--entry", "--title=Zenith AI Setup", "--text=Enter your Google Gemini API Key:"],
-            capture_output=True, text=True
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            key = result.stdout.strip()
-            os.makedirs(os.path.dirname(key_path), exist_ok=True)
-            with open(key_path, "w") as f:
-                f.write(key)
-            return key
-    except FileNotFoundError:
-        show_error("Zenity is required for UI prompts.")
-    return None
-
 def show_result(title, content):
-    # Use zenity text info for a scrollable window
     process = subprocess.Popen(
-        ["zenity", "--text-info", f"--title={title}", "--width=600", "--height=500"],
+        ["zenity", "--text-info", f"--title={title}", "--width=700", "--height=600"],
         stdin=subprocess.PIPE
     )
-    process.communicate(input=content.encode('utf-8'))
+    process.communicate(input=content.encode('utf-8', errors='ignore'))
+
+def extract_text(filepath):
+    mime, _ = mimetypes.guess_type(filepath)
+    ext = os.path.splitext(filepath)[1].lower()
+    
+    if ext == ".pdf":
+        result = subprocess.run(["pdftotext", filepath, "-"], capture_output=True, text=True)
+        return result.stdout
+    elif mime and mime.startswith("image/"):
+        result = subprocess.run(["tesseract", filepath, "stdout"], capture_output=True, text=True)
+        return result.stdout
+    else:
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                return f.read()
+        except UnicodeDecodeError:
+            show_error("Could not read text from this file type.")
+            return ""
+
+def call_ollama(prompt, context_text):
+    # We will use qwen2.5-coder:3b since it's already installed on the system
+    # We truncate context to ~12000 chars to avoid blowing up the context window
+    data = {
+        "model": "qwen2.5-coder:3b",
+        "prompt": f"{prompt}\n\nDocument Content:\n{context_text[:12000]}",
+        "stream": False
+    }
+    
+    req = urllib.request.Request("http://localhost:11434/api/generate", data=json.dumps(data).encode("utf-8"), headers={"Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req) as response:
+            result = json.loads(response.read().decode("utf-8"))
+            return result.get("response", "")
+    except Exception as e:
+        show_error(f"Ollama local API error: {e}")
 
 def analyze_file(action, filepath):
-    key = get_api_key()
-    if not key:
-        show_error("API key is required.")
+    subprocess.run(["notify-send", "-i", "applications-science", "Zenith AI", "Analyzing file locally using Ollama..."])
     
-    client = genai.Client(api_key=key)
-    
+    text = extract_text(filepath)
+    if not text.strip():
+        show_error("No text could be extracted from the file.")
+        
+    if action == "extract_text":
+        show_result("Extracted Text", text)
+        return
+
     prompts = {
-        "extract_text": "Extract all text from this file verbatim.",
-        "summary": "Provide a concise but comprehensive summary of this document.",
-        "tables": "Extract all tables or structured tabular data from this file and output it in Markdown table format.",
-        "invoice": "Extract all invoice information: Invoice Number, Date, Vendor Name, Total Amount, and Line Items. Output as JSON or structured Markdown.",
-        "product": "Identify the product in this image. Give the brand, model, and a brief description.",
-        "tags": "Generate a comma-separated list of 10 relevant tags for this file.",
-        "keywords": "Generate SEO-optimized keywords for this file."
+        "summary": "Please provide a concise but comprehensive summary of the following document.",
+        "tables": "Extract any tables or structured tabular data from the following text and output it in Markdown table format.",
+        "invoice": "Extract invoice information from the following text: Invoice Number, Date, Vendor Name, Total Amount, and Line Items. Format it clearly.",
+        "product": "Identify the product or item described in the following text. Give the brand, model, and a brief description.",
+        "tags": "Generate a comma-separated list of 10 relevant tags for the following document.",
+        "keywords": "Generate 5-10 SEO-optimized keywords for the following document."
     }
     
     prompt = prompts.get(action)
     if not prompt:
         show_error(f"Unknown action: {action}")
         
-    subprocess.run(["notify-send", "-i", "applications-science", "Zenith AI", "Analyzing file..."])
-    
-    try:
-        # Upload file using the Files API (supports images, PDFs, text)
-        uploaded_file = client.files.upload(file=filepath)
-        
-        # We will use gemini-2.5-flash as it supports multimodal and is fast
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=[uploaded_file, prompt]
-        )
-        
-        show_result(f"AI Result: {action}", response.text)
-        
-    except Exception as e:
-        show_error(str(e))
+    result = call_ollama(prompt, text)
+    show_result(f"AI Result: {action}", result)
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
