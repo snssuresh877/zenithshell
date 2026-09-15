@@ -540,6 +540,50 @@ static void show_context_menu(FileViewData* data, GdkEventButton* event) {
         g_signal_connect_swapped(item_open, "activate", G_CALLBACK(FileViewWidget::action_open_selected), data->root_box);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_open);
 
+        // AI Actions (Single File)
+        if (selected.size() == 1 && fs::is_regular_file(selected[0])) {
+            GtkWidget* ai_item = gtk_menu_item_new_with_label("✨ AI Analysis");
+            GtkWidget* ai_menu = gtk_menu_new();
+            gtk_menu_item_set_submenu(GTK_MENU_ITEM(ai_item), ai_menu);
+            
+            struct AiAction { const char* label; const char* action; };
+            std::vector<AiAction> actions = {
+                {"Extract Text", "extract_text"},
+                {"Summarize Document", "summary"},
+                {"Extract Tables", "tables"},
+                {"Extract Invoice Info", "invoice"},
+                {"Identify Product (Image)", "product"},
+                {"Generate Tags", "tags"},
+                {"Generate Keywords", "keywords"}
+            };
+            
+            for (const auto& act : actions) {
+                GtkWidget* sub_item = gtk_menu_item_new_with_label(act.label);
+                
+                // Pack data
+                std::pair<std::string, std::string>* data_pair = new std::pair<std::string, std::string>(act.action, selected[0]);
+                g_object_set_data_full(G_OBJECT(sub_item), "ai_data", data_pair, [](gpointer p) {
+                    delete static_cast<std::pair<std::string, std::string>*>(p);
+                });
+                
+                auto cb = +[](GtkMenuItem* mi, gpointer) {
+                    auto* p = static_cast<std::pair<std::string, std::string>*>(g_object_get_data(G_OBJECT(mi), "ai_data"));
+                    if (p) {
+                        std::string cmd = "~/.local/share/zenithshell/zenith_ai.py " + p->first + " \"" + p->second + "\" &";
+                        int ret = system(cmd.c_str());
+                        (void)ret;
+                    }
+                };
+                g_signal_connect(sub_item, "activate", G_CALLBACK(cb), nullptr);
+                
+                gtk_menu_shell_append(GTK_MENU_SHELL(ai_menu), sub_item);
+            }
+            gtk_menu_shell_append(GTK_MENU_SHELL(menu), ai_item);
+            
+            GtkWidget* sep = gtk_separator_menu_item_new();
+            gtk_menu_shell_append(GTK_MENU_SHELL(menu), sep);
+        }
+
         // "Add / Remove Favorite" for single directory
         if (selected.size() == 1 && fs::is_directory(selected[0])) {
             bool is_fav = PlacesSidebar::is_favorite(selected[0]);
