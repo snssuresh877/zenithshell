@@ -3,6 +3,7 @@
 #include "shell/files/undo_manager.hpp"
 #include "gtk3_compat.hpp"
 #include <gio/gio.h>
+#include <gio/gdesktopappinfo.h>
 #include <gtk/gtk.h>
 #include <filesystem>
 #include <fstream>
@@ -17,6 +18,41 @@ static bool s_clipboard_is_cut = false;
 
 bool FileOperations::launch_file(const std::string& path) {
     if (path.empty()) return false;
+
+    // Custom handling for .desktop application shortcuts
+    if (path.length() > 8 && path.substr(path.length() - 8) == ".desktop") {
+        GDesktopAppInfo* app = g_desktop_app_info_new_from_filename(path.c_str());
+        if (app) {
+            bool is_terminal = g_desktop_app_info_get_boolean(app, "Terminal");
+            if (is_terminal) {
+                const char* exec = g_app_info_get_commandline(G_APP_INFO(app));
+                if (exec) {
+                    std::string cmd = exec;
+                    std::string bad[] = {"%f", "%F", "%u", "%U", "%c", "%k"};
+                    for (const auto& b : bad) {
+                        size_t pos;
+                        while ((pos = cmd.find(b)) != std::string::npos) {
+                            cmd.replace(pos, b.length(), "");
+                        }
+                    }
+                    std::string term_cmd = "foot -e " + cmd;
+                    g_spawn_command_line_async(term_cmd.c_str(), nullptr);
+                    g_object_unref(app);
+                    return true;
+                }
+            } else {
+                GError* err = nullptr;
+                gboolean success = g_app_info_launch(G_APP_INFO(app), nullptr, nullptr, &err);
+                if (err) {
+                    std::cerr << "[ZenithFiles] Error launching desktop file: " << err->message << std::endl;
+                    g_error_free(err);
+                }
+                g_object_unref(app);
+                return success;
+            }
+            g_object_unref(app);
+        }
+    }
 
     GFile* file = g_file_parse_name(path.c_str());
     if (!file) return false;
