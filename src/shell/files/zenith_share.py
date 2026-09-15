@@ -1,5 +1,26 @@
 #!/usr/bin/env python3
-import http.server, socketserver, socket, sys, os, uuid, urllib.parse, threading
+import http.server, socketserver, socket, sys, os, uuid, urllib.parse, threading, json, datetime
+
+def log_transfer(direction, filename, size_bytes):
+    try:
+        history_file = os.path.expanduser("~/.config/zenithshell/transfer_history.json")
+        os.makedirs(os.path.dirname(history_file), exist_ok=True)
+        entry = {
+            "timestamp": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "direction": direction,
+            "filename": filename,
+            "size_bytes": size_bytes
+        }
+        history = []
+        if os.path.exists(history_file):
+            with open(history_file, "r") as f:
+                history = json.load(f)
+        history.insert(0, entry)
+        history = history[:100]
+        with open(history_file, "w") as f:
+            json.dump(history, f, indent=4)
+    except Exception as e:
+        print(f"Log error: {e}")
 
 def get_local_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -67,6 +88,7 @@ if mode == "send":
                 self.end_headers()
                 with open(target_path, 'rb') as f:
                     self.copyfile(f, self.wfile)
+                log_transfer("Sent", filename, file_size)
             elif parsed.path.rstrip('/') == f"/d/{token}":
                 encoded = html.encode('utf-8')
                 self.send_response(200)
@@ -189,6 +211,7 @@ elif mode == "recv":
                         f.write(chunk)
                         remaining -= len(chunk)
                     
+                log_transfer("Received", filename, length)
                 self.send_response(200)
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()

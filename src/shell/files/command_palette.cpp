@@ -38,6 +38,7 @@ static std::vector<PaletteAction> get_default_actions() {
         {"trash_items", "Move Selected to Trash", "File Operations", "user-trash-symbolic", "trash_items"},
         {"delete_permanent", "Permanently Delete Selected", "File Operations", "edit-delete-symbolic", "delete_permanent"},
         {"select_all", "Select All Files", "File Operations", "edit-select-all-symbolic", "select_all"},
+        {"transfer_history", "View Wi-Fi Transfer History", "Sharing", "network-workgroup-symbolic", ""},
         {"refresh_view", "Refresh Folder", "File Operations", "view-refresh-symbolic", "refresh_view"},
 
         // Tools & View

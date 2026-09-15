@@ -11,6 +11,7 @@
 #include "shell/files/custom_actions.hpp"
 #include "shell/files/file_preferences_dialog.hpp"
 #include "shell/files/quick_preview.hpp"
+#include "shell/files/transfer_history_dialog.hpp"
 
 #include "gtk3_compat.hpp"
 
@@ -332,6 +333,7 @@ static void execute_action(FileManagerState* state, const std::string& action_id
     else if (action_id == "trash_items") { if (state->active_tab) FileViewWidget::action_trash_selected(state->active_tab->active_pane->file_view); }
     else if (action_id == "delete_permanent") { if (state->active_tab) FileViewWidget::action_delete_selected(state->active_tab->active_pane->file_view); }
     else if (action_id == "select_all") { if (state->active_tab) FileViewWidget::select_all(state->active_tab->active_pane->file_view); }
+    else if (action_id == "transfer_history") { TransferHistoryDialog::show(GTK_WINDOW(state->window)); }
     else if (action_id == "refresh_view") { if (state->active_tab) FileViewWidget::refresh(state->active_tab->active_pane->file_view); }
     else if (action_id == "search_files") {
         gboolean active = gtk_revealer_get_reveal_child(GTK_REVEALER(state->search_revealer));
