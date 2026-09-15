@@ -40,6 +40,14 @@ void CustomActionsManager::write_default_config() {
     });
 
     j.push_back({
+        {"id", "extract_text_ocr"},
+        {"name", "Extract Text (OCR)"},
+        {"icon", "edit-select-all-symbolic"},
+        {"command", "zenith-ocr \"%f\""},
+        {"patterns", {"*.jpg", "*.png", "*.jpeg", "*.webp", "*.bmp"}}
+    });
+
+    j.push_back({
         {"id", "edit_as_root"},
         {"name", "Edit as Root"},
         {"icon", "text-editor-symbolic"},

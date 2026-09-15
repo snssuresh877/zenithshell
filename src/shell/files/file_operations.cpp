@@ -1,5 +1,6 @@
 #include <sys/wait.h>
 #include "shell/files/file_operations.hpp"
+#include "shell/files/undo_manager.hpp"
 #include "gtk3_compat.hpp"
 #include <gio/gio.h>
 #include <gtk/gtk.h>
@@ -117,6 +118,7 @@ bool FileOperations::rename_item(const std::string& path, const std::string& new
 
 bool FileOperations::move_to_trash(const std::vector<std::string>& paths) {
     bool all_ok = true;
+    std::vector<std::string> success_paths;
     for (const auto& p : paths) {
         if (p.empty()) continue;
         GFile* f = g_file_parse_name(p.c_str());
@@ -128,9 +130,14 @@ bool FileOperations::move_to_trash(const std::vector<std::string>& paths) {
                     g_error_free(err);
                 }
                 all_ok = false;
+            } else {
+                success_paths.push_back(p);
             }
             g_object_unref(f);
         }
+    }
+    if (!success_paths.empty()) {
+        UndoManager::push_action({UndoOpType::TRASH, success_paths, {}});
     }
     return all_ok;
 }

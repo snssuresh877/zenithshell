@@ -55,6 +55,7 @@ set(SOURCES
     src/main.cpp
     src/app/app.cpp
     src/shell/files/file_item.cpp 
+    src/shell/files/undo_manager.cpp
     src/shell/files/file_operations.cpp 
     src/shell/files/file_shortcuts.cpp 
     src/shell/files/custom_actions.cpp 
