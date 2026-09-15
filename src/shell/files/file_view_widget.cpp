@@ -1,10 +1,11 @@
-#include "file_view_widget.hpp"
-#include "file_item.hpp"
-#include "file_operations.hpp"
+#include "shell/files/file_view_widget.hpp"
+#include "shell/files/file_item.hpp"
+#include "shell/files/file_operations.hpp"
+#include "shell/files/bulk_rename_dialog.hpp"
 #include "shell/files/quick_preview.hpp"
 #include "shell/files/places_sidebar.hpp"
-#include "theme/theme_engine.hpp"
-#include "../../gtk3_compat.hpp"
+
+#include "gtk3_compat.hpp"
 
 #include <glib/gstdio.h>
 #include <gdk/gdkkeysyms.h>
@@ -72,7 +73,13 @@ struct FileViewData {
     
     bool is_searching{false};
     uint64_t search_generation{0};
+
     GThreadPool* search_pool{nullptr};
+    
+    // Type-Ahead Search
+    GtkWidget* typeahead_popover{nullptr};
+    GtkWidget* typeahead_entry{nullptr};
+
 };
 
 static void file_view_data_free(gpointer user_data) {
@@ -421,9 +428,8 @@ static void on_monitor_changed(GFileMonitor*, GFile*, GFile*, GFileMonitorEvent 
     auto* data = static_cast<FileViewData*>(user_data);
     if (!data) return;
 
-    // Filter uninteresting events
-    if (event_type == G_FILE_MONITOR_EVENT_CHANGED ||
-        event_type == G_FILE_MONITOR_EVENT_CHANGES_DONE_HINT ||
+    // Filter uninteresting events (ignoring _CHANGED which fires thousands of times during downloads)
+    if (event_type == G_FILE_MONITOR_EVENT_CHANGES_DONE_HINT ||
         event_type == G_FILE_MONITOR_EVENT_DELETED ||
         event_type == G_FILE_MONITOR_EVENT_CREATED ||
         event_type == G_FILE_MONITOR_EVENT_MOVED_IN ||
@@ -572,10 +578,13 @@ static void show_context_menu(FileViewData* data, GdkEventButton* event) {
                 GtkWidget* item_open_with = gtk_menu_item_new_with_label("Open With…");
                 std::string* sel_path = new std::string(selected[0]);
                 g_object_set_data_full(G_OBJECT(item_open_with), "item_path", sel_path, [](gpointer p) { delete static_cast<std::string*>(p); });
-                g_signal_connect(item_open_with, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer) {
+                g_signal_connect(item_open_with, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer udata) {
                     auto* p = static_cast<std::string*>(g_object_get_data(G_OBJECT(mi), "item_path"));
-                    if (p) FileOperations::open_with_dialog(*p, nullptr);
-                }), nullptr);
+                    GtkWidget* widget = GTK_WIDGET(udata);
+                    GtkWidget* toplevel = gtk_widget_get_toplevel(widget);
+                    GtkWindow* parent_win = GTK_IS_WINDOW(toplevel) ? GTK_WINDOW(toplevel) : nullptr;
+                    if (p) FileOperations::open_with_dialog(*p, parent_win);
+                }), data->root_box);
                 gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_open_with);
             }
         }
@@ -614,6 +623,24 @@ static void show_context_menu(FileViewData* data, GdkEventButton* event) {
             }), nullptr);
             gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_extract);
             gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
+        }
+
+        // ── Share via QR (Local Network) ──────────────────────────────────────
+        if (selected.size() == 1) {
+            struct stat st;
+            if (stat(selected[0].c_str(), &st) == 0 && !S_ISDIR(st.st_mode)) {
+                GtkWidget* item_share = gtk_menu_item_new_with_label("Share via QR (Wi-Fi)");
+                std::string* sel_path = new std::string(selected[0]);
+                g_object_set_data_full(G_OBJECT(item_share), "item_path", sel_path, [](gpointer p) { delete static_cast<std::string*>(p); });
+                g_signal_connect(item_share, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer udata) {
+                    auto* p = static_cast<std::string*>(g_object_get_data(G_OBJECT(mi), "item_path"));
+                    GtkWidget* widget = GTK_WIDGET(udata);
+                    GtkWidget* toplevel = gtk_widget_get_toplevel(widget);
+                    GtkWindow* parent_win = GTK_IS_WINDOW(toplevel) ? GTK_WINDOW(toplevel) : nullptr;
+                    if (p) FileOperations::share_via_qr(*p, parent_win);
+                }), data->root_box);
+                gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_share);
+            }
         }
 
         // ── Compress ──────────────────────────────────────────────────────────
@@ -655,7 +682,7 @@ static void show_context_menu(FileViewData* data, GdkEventButton* event) {
                         g_object_set_data_full(G_OBJECT(item_wp), "wp_path", wp_path, [](gpointer p) { delete static_cast<std::string*>(p); });
                         g_signal_connect(item_wp, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer) {
                             auto* p = static_cast<std::string*>(g_object_get_data(G_OBJECT(mi), "wp_path"));
-                            if (p) ThemeEngine::set_wallpaper(*p);
+                            // if (p) ThemeEngine::set_wallpaper(*p);
                         }), nullptr);
                         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_wp);
                     }
@@ -694,6 +721,19 @@ static void show_context_menu(FileViewData* data, GdkEventButton* event) {
         GtkWidget* item_file = gtk_menu_item_new_with_label("New Document");
         g_signal_connect_swapped(item_file, "activate", G_CALLBACK(FileViewWidget::action_new_file), data->root_box);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_file);
+
+        GtkWidget* item_recv = gtk_menu_item_new_with_label("Receive Files (Wi-Fi)");
+        g_signal_connect(item_recv, "activate", G_CALLBACK(+[](GtkMenuItem*, gpointer udata) {
+            auto* d = get_data(GTK_WIDGET(udata));
+            if (!d || d->current_path.empty()) return;
+            GtkWidget* toplevel = gtk_widget_get_toplevel(GTK_WIDGET(udata));
+            GtkWindow* parent_win = GTK_IS_WINDOW(toplevel) ? GTK_WINDOW(toplevel) : nullptr;
+            FileOperations::receive_via_qr(d->current_path, parent_win);
+            FileViewWidget::refresh(GTK_WIDGET(udata));
+        }), data->root_box);
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_recv);
+        
+
 
         GtkWidget* item_term = gtk_menu_item_new_with_label("Open Terminal Here");
         g_signal_connect_swapped(item_term, "activate", G_CALLBACK(FileViewWidget::action_open_terminal), data->root_box);
@@ -772,12 +812,27 @@ static gboolean on_tree_button_press(GtkWidget* widget, GdkEventButton* event, g
     return FALSE;
 }
 
-static gboolean on_key_press(GtkWidget*, GdkEventKey* event, gpointer user_data) {
+static gboolean on_key_press(GtkWidget* widget, GdkEventKey* event, gpointer user_data) {
     auto* data = static_cast<FileViewData*>(user_data);
     if (!data) return FALSE;
 
     guint key = event->keyval;
     guint state = event->state & gtk_accelerator_get_default_mod_mask();
+
+    // Type-Ahead Search intercept
+    if (state == 0 || state == GDK_SHIFT_MASK) {
+        guint32 unicode = gdk_keyval_to_unicode(key);
+        if (unicode >= 32 && unicode != 127 && key != GDK_KEY_Escape && key != GDK_KEY_Return && key != GDK_KEY_KP_Enter && key != GDK_KEY_Tab) {
+            if (!gtk_widget_get_visible(data->typeahead_popover)) {
+                gtk_entry_set_text(GTK_ENTRY(data->typeahead_entry), "");
+                gtk_popover_popup(GTK_POPOVER(data->typeahead_popover));
+            }
+            gtk_widget_grab_focus(data->typeahead_entry);
+            // Forward event to entry so it inputs the character
+            gtk_search_entry_handle_event(GTK_SEARCH_ENTRY(data->typeahead_entry), (GdkEvent*)event);
+            return TRUE;
+        }
+    }
 
     if (state == 0) {
         if (key == GDK_KEY_Return || key == GDK_KEY_KP_Enter) {
@@ -807,6 +862,46 @@ static gboolean on_key_press(GtkWidget*, GdkEventKey* event, gpointer user_data)
         } else if (key == GDK_KEY_F5) {
             FileViewWidget::refresh(data->root_box);
             return TRUE;
+        } else if (key == GDK_KEY_Left || key == GDK_KEY_Right) {
+            if (data->view_mode == ViewMode::GRID) {
+                GList* selected = gtk_icon_view_get_selected_items(GTK_ICON_VIEW(data->icon_view));
+                if (selected) {
+                    GtkTreePath* path = (GtkTreePath*)selected->data;
+                    int idx = gtk_tree_path_get_indices(path)[0];
+                    GtkTreeModel* model = gtk_icon_view_get_model(GTK_ICON_VIEW(data->icon_view));
+                    int max_items = gtk_tree_model_iter_n_children(model, nullptr);
+                    
+                    if (key == GDK_KEY_Left && idx > 0) {
+                        idx--;
+                    } else if (key == GDK_KEY_Right && idx < max_items - 1) {
+                        idx++;
+                    } else {
+                        g_list_free_full(selected, (GDestroyNotify)gtk_tree_path_free);
+                        return FALSE; // Let default handle if out of bounds (though it won't do much)
+                    }
+                    
+                    GtkTreePath* new_path = gtk_tree_path_new_from_indices(idx, -1);
+                    gtk_icon_view_unselect_all(GTK_ICON_VIEW(data->icon_view));
+                    gtk_icon_view_select_path(GTK_ICON_VIEW(data->icon_view), new_path);
+                    gtk_icon_view_set_cursor(GTK_ICON_VIEW(data->icon_view), new_path, nullptr, FALSE);
+                    gtk_icon_view_scroll_to_path(GTK_ICON_VIEW(data->icon_view), new_path, FALSE, 0.0, 0.0);
+                    gtk_tree_path_free(new_path);
+                    g_list_free_full(selected, (GDestroyNotify)gtk_tree_path_free);
+                    return TRUE;
+                } else {
+                    // If nothing selected, select first item on Right, last on Left? 
+                    // Let's just select the first item on any arrow key
+                    GtkTreeModel* model = gtk_icon_view_get_model(GTK_ICON_VIEW(data->icon_view));
+                    if (gtk_tree_model_iter_n_children(model, nullptr) > 0) {
+                        GtkTreePath* new_path = gtk_tree_path_new_from_indices(0, -1);
+                        gtk_icon_view_select_path(GTK_ICON_VIEW(data->icon_view), new_path);
+                        gtk_icon_view_set_cursor(GTK_ICON_VIEW(data->icon_view), new_path, nullptr, FALSE);
+                        gtk_icon_view_scroll_to_path(GTK_ICON_VIEW(data->icon_view), new_path, FALSE, 0.0, 0.0);
+                        gtk_tree_path_free(new_path);
+                        return TRUE;
+                    }
+                }
+            }
         } else if (key == GDK_KEY_space) {
             auto paths = FileViewWidget::get_selected_paths(data->root_box);
             if (!paths.empty()) {
@@ -1048,13 +1143,75 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
     gtk_drag_dest_set(data->tree_view, GTK_DEST_DEFAULT_ALL, dnd_targets, 1, static_cast<GdkDragAction>(GDK_ACTION_COPY | GDK_ACTION_MOVE));
     g_signal_connect(data->tree_view, "drag-data-received", G_CALLBACK(on_drag_data_received), data);
 
-    gtk_tree_view_set_enable_search(GTK_TREE_VIEW(data->tree_view), TRUE);
-    gtk_tree_view_set_search_column(GTK_TREE_VIEW(data->tree_view), COL_NAME);
+
 
     gtk_container_add(GTK_CONTAINER(data->list_scrolled), data->tree_view);
     gtk_stack_add_named(GTK_STACK(data->stack), data->list_scrolled, "list");
 
     gtk_stack_set_visible_child_name(GTK_STACK(data->stack), "grid");
+
+
+    // ── Type-Ahead Search Popover ──────────────────────────────────────────────
+    data->typeahead_popover = gtk_popover_new(data->root_box);
+    gtk_popover_set_position(GTK_POPOVER(data->typeahead_popover), GTK_POS_BOTTOM);
+    gtk_widget_set_halign(data->typeahead_popover, GTK_ALIGN_END);
+    gtk_widget_set_valign(data->typeahead_popover, GTK_ALIGN_END);
+    
+    data->typeahead_entry = gtk_search_entry_new();
+    gtk_widget_set_margin_start(data->typeahead_entry, 6);
+    gtk_widget_set_margin_end(data->typeahead_entry, 6);
+    gtk_widget_set_margin_top(data->typeahead_entry, 6);
+    gtk_widget_set_margin_bottom(data->typeahead_entry, 6);
+    gtk_entry_set_width_chars(GTK_ENTRY(data->typeahead_entry), 25);
+    gtk_container_add(GTK_CONTAINER(data->typeahead_popover), data->typeahead_entry);
+    gtk_widget_show(data->typeahead_entry);
+
+    g_signal_connect(data->typeahead_entry, "search-changed", G_CALLBACK(+[](GtkSearchEntry* entry, gpointer user_data) {
+        auto* d = static_cast<FileViewData*>(user_data);
+        const char* text = gtk_entry_get_text(GTK_ENTRY(entry));
+        if (!text || !*text) return;
+        
+        std::string lower_query = g_utf8_strdown(text, -1);
+        
+        GtkTreeIter iter;
+        gboolean valid = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(d->store), &iter);
+        while (valid) {
+            gchar* name = nullptr;
+            gtk_tree_model_get(GTK_TREE_MODEL(d->store), &iter, COL_NAME, &name, -1);
+            if (name) {
+                std::string lower_name = g_utf8_strdown(name, -1);
+                g_free(name);
+                if (lower_name.find(lower_query) == 0) {
+                    GtkTreePath* path = gtk_tree_model_get_path(GTK_TREE_MODEL(d->store), &iter);
+                    
+                    if (d->view_mode == ViewMode::GRID) {
+                        gtk_icon_view_select_path(GTK_ICON_VIEW(d->icon_view), path);
+                        gtk_icon_view_scroll_to_path(GTK_ICON_VIEW(d->icon_view), path, FALSE, 0.5, 0.5);
+                    } else {
+                        GtkTreeSelection* sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(d->tree_view));
+                        gtk_tree_selection_select_path(sel, path);
+                        gtk_tree_view_scroll_to_cell(GTK_TREE_VIEW(d->tree_view), path, nullptr, FALSE, 0.5, 0.5);
+                    }
+                    gtk_tree_path_free(path);
+                    break;
+                }
+            }
+            valid = gtk_tree_model_iter_next(GTK_TREE_MODEL(d->store), &iter);
+        }
+    }), data);
+    
+    g_signal_connect(data->typeahead_entry, "activate", G_CALLBACK(+[](GtkEntry*, gpointer user_data) {
+        auto* d = static_cast<FileViewData*>(user_data);
+        gtk_popover_popdown(GTK_POPOVER(d->typeahead_popover));
+        if (d->view_mode == ViewMode::GRID) gtk_widget_grab_focus(d->icon_view);
+        else gtk_widget_grab_focus(d->tree_view);
+        FileViewWidget::action_open_selected(d->root_box);
+    }), data);
+
+    g_signal_connect(data->typeahead_popover, "closed", G_CALLBACK(+[](GtkPopover*, gpointer user_data) {
+        auto* d = static_cast<FileViewData*>(user_data);
+        gtk_entry_set_text(GTK_ENTRY(d->typeahead_entry), "");
+    }), data);
 
     g_object_set_data_full(G_OBJECT(data->root_box), "file_view_data", data, file_view_data_free);
     return data->root_box;
@@ -1122,6 +1279,20 @@ void FileViewWidget::load_directory(GtkWidget* widget, const std::string& path) 
                 setup_file_monitor(d, t->path);
                 repopulate_store(d);
                 dispatch_thumbnails(d, t->gen);
+                
+                // Auto-select first item and grab focus
+                if (!d->filtered_items.empty()) {
+                    GtkTreePath* path = gtk_tree_path_new_from_indices(0, -1);
+                    if (d->view_mode == ViewMode::GRID) {
+                        gtk_icon_view_select_path(GTK_ICON_VIEW(d->icon_view), path);
+                        gtk_icon_view_set_cursor(GTK_ICON_VIEW(d->icon_view), path, nullptr, FALSE);
+                        gtk_widget_grab_focus(d->icon_view);
+                    } else {
+                        gtk_tree_view_set_cursor(GTK_TREE_VIEW(d->tree_view), path, nullptr, FALSE);
+                        gtk_widget_grab_focus(d->tree_view);
+                    }
+                    gtk_tree_path_free(path);
+                }
             }
             g_object_unref(t->widget);
             delete t;
@@ -1487,81 +1658,13 @@ void FileViewWidget::action_rename_selected(GtkWidget* widget) {
 
     if (paths.size() > 1) {
         GtkWidget* toplevel = gtk_widget_get_toplevel(widget);
-        GtkWidget* dialog = gtk_dialog_new_with_buttons(
-            "Bulk Rename",
+        BulkRenameDialog::show(
             GTK_IS_WINDOW(toplevel) ? GTK_WINDOW(toplevel) : nullptr,
-            static_cast<GtkDialogFlags>(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
-            "_Cancel", GTK_RESPONSE_CANCEL,
-            "_Rename All", GTK_RESPONSE_ACCEPT,
-            nullptr
-        );
-        gtk_dialog_set_default_response(GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
-        gtk_widget_add_css_class(dialog, "zenith-files-dialog");
-
-        GtkWidget* content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
-        gtk_container_set_border_width(GTK_CONTAINER(content), 16);
-        
-        GtkWidget* grid = gtk_grid_new();
-        gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
-        gtk_grid_set_column_spacing(GTK_GRID(grid), 12);
-
-        GtkWidget* prefix_entry = gtk_entry_new();
-        GtkWidget* suffix_entry = gtk_entry_new();
-        GtkWidget* find_entry = gtk_entry_new();
-        GtkWidget* replace_entry = gtk_entry_new();
-
-        gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Prefix:"), 0, 0, 1, 1);
-        gtk_grid_attach(GTK_GRID(grid), prefix_entry, 1, 0, 1, 1);
-        
-        gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Suffix:"), 0, 1, 1, 1);
-        gtk_grid_attach(GTK_GRID(grid), suffix_entry, 1, 1, 1, 1);
-        
-        gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Find:"), 0, 2, 1, 1);
-        gtk_grid_attach(GTK_GRID(grid), find_entry, 1, 2, 1, 1);
-        
-        gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Replace:"), 0, 3, 1, 1);
-        gtk_grid_attach(GTK_GRID(grid), replace_entry, 1, 3, 1, 1);
-
-        gtk_box_pack_start(GTK_BOX(content), grid, TRUE, TRUE, 0);
-        gtk_widget_show_all(dialog);
-
-        gint res = gtk_dialog_run(GTK_DIALOG(dialog));
-        if (res == GTK_RESPONSE_ACCEPT) {
-            std::string prefix = gtk_entry_get_text(GTK_ENTRY(prefix_entry));
-            std::string suffix = gtk_entry_get_text(GTK_ENTRY(suffix_entry));
-            std::string find_str = gtk_entry_get_text(GTK_ENTRY(find_entry));
-            std::string replace_str = gtk_entry_get_text(GTK_ENTRY(replace_entry));
-
-            for (const auto& old_path : paths) {
-                GFile* f = g_file_parse_name(old_path.c_str());
-                char* name = g_file_get_basename(f);
-                if (!name) { g_object_unref(f); continue; }
-                
-                std::string filename(name);
-                g_free(name);
-
-                if (!find_str.empty()) {
-                    size_t pos = 0;
-                    while ((pos = filename.find(find_str, pos)) != std::string::npos) {
-                        filename.replace(pos, find_str.length(), replace_str);
-                        pos += replace_str.length();
-                    }
-                }
-
-                size_t dot = filename.find_last_of('.');
-                if (dot != std::string::npos && dot > 0) {
-                    filename.insert(dot, suffix);
-                    filename = prefix + filename;
-                } else {
-                    filename = prefix + filename + suffix;
-                }
-
-                g_file_set_display_name(f, filename.c_str(), nullptr, nullptr);
-                g_object_unref(f);
+            paths,
+            [data]() {
+                FileViewWidget::refresh(data->root_box);
             }
-            load_directory(widget, data->current_path);
-        }
-        gtk_widget_destroy(dialog);
+        );
         return;
     }
 
@@ -1850,6 +1953,58 @@ void FileViewWidget::action_properties(GtkWidget* widget) {
     add_row(row++, "Location:", item->path);
     add_row(row++, "Size:", item->formatted_size + " (" + std::to_string(item->size) + " bytes)");
     add_row(row++, "Modified:", item->formatted_date);
+
+    // Checksum Row
+    GtkWidget* chk_lbl = gtk_label_new("SHA256:");
+    gtk_label_set_xalign(GTK_LABEL(chk_lbl), 0.0f);
+    gtk_widget_add_css_class(chk_lbl, "files-prop-key");
+    gtk_grid_attach(GTK_GRID(grid), chk_lbl, 0, row, 1, 1);
+    
+    GtkWidget* chk_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    GtkWidget* chk_btn = gtk_button_new_with_label("Calculate");
+    gtk_box_pack_start(GTK_BOX(chk_box), chk_btn, FALSE, FALSE, 0);
+    gtk_grid_attach(GTK_GRID(grid), chk_box, 1, row++, 1, 1);
+    
+    struct ChkData {
+        GtkWidget* box;
+        GtkWidget* btn;
+        std::string path;
+    };
+    auto* chk_data = new ChkData{chk_box, chk_btn, item->path};
+    g_signal_connect_data(chk_btn, "clicked", G_CALLBACK(+[](GtkButton* btn, gpointer udata) {
+        auto* d = static_cast<ChkData*>(udata);
+        gtk_widget_set_sensitive(d->btn, FALSE);
+        gtk_button_set_label(GTK_BUTTON(d->btn), "Calculating...");
+        
+        std::thread([d]() {
+            std::string cmd = "sha256sum \"" + d->path + "\" | awk '{print $1}'";
+            char buffer[128];
+            std::string result = "";
+            FILE* pipe = popen(cmd.c_str(), "r");
+            if (pipe) {
+                while (fgets(buffer, sizeof(buffer), pipe) != nullptr) {
+                    result += buffer;
+                }
+                pclose(pipe);
+            }
+            if (!result.empty() && result.back() == '\n') result.pop_back();
+            
+            struct ResultData { ChkData* d; std::string res; };
+            auto* rd = new ResultData{d, result};
+            
+            g_idle_add(+[](gpointer ud) -> gboolean {
+                auto* rd2 = static_cast<ResultData*>(ud);
+                gtk_widget_destroy(rd2->d->btn);
+                GtkWidget* res_lbl = gtk_label_new(rd2->res.c_str());
+                gtk_label_set_selectable(GTK_LABEL(res_lbl), TRUE);
+                gtk_widget_add_css_class(res_lbl, "files-prop-val");
+                gtk_box_pack_start(GTK_BOX(rd2->d->box), res_lbl, FALSE, FALSE, 0);
+                gtk_widget_show_all(rd2->d->box);
+                delete rd2;
+                return G_SOURCE_REMOVE;
+            }, rd);
+        }).detach();
+    }), chk_data, [](gpointer d, GClosure*) { delete static_cast<ChkData*>(d); }, static_cast<GConnectFlags>(0));
 
     gtk_box_pack_start(GTK_BOX(content), grid, TRUE, TRUE, 0);
 

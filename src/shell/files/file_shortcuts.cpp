@@ -67,18 +67,18 @@ void FileShortcuts::init() {
     add("refresh_view", "Refresh Current Directory", "File Operations", GDK_KEY_F5, 0);
 
     // ── 3. View, Tools & Panels ───────────────────────────────────────────────
-    add("command_palette", "Command Palette", "View & Tools", GDK_KEY_k, GDK_CONTROL_MASK);
-    add("inspector", "Toggle Inspector Panel", "View & Tools", GDK_KEY_i, GDK_CONTROL_MASK);
-    add("quick_preview", "Quick Preview (QuickLook)", "View & Tools", GDK_KEY_space, 0);
-    add("search_files", "Search in Current Folder", "View & Tools", GDK_KEY_f, GDK_CONTROL_MASK);
-    add("open_terminal", "Open Terminal Here", "View & Tools", GDK_KEY_F4, 0);
-    add("toggle_hidden", "Toggle Hidden Files", "View & Tools", GDK_KEY_h, GDK_CONTROL_MASK);
-    add("view_grid", "Switch to Grid View", "View & Tools", GDK_KEY_1, GDK_CONTROL_MASK);
-    add("view_list", "Switch to List View", "View & Tools", GDK_KEY_2, GDK_CONTROL_MASK);
-    add("zoom_in", "Zoom In (Increase Size)", "View & Tools", GDK_KEY_equal, GDK_CONTROL_MASK);
-    add("zoom_out", "Zoom Out (Decrease Size)", "View & Tools", GDK_KEY_minus, GDK_CONTROL_MASK);
-    add("zoom_reset", "Reset Zoom to Standard", "View & Tools", GDK_KEY_0, GDK_CONTROL_MASK);
-    add("preferences", "Open Preferences", "View & Tools", GDK_KEY_comma, GDK_CONTROL_MASK);
+    add("command_palette", "Command Palette", "View &amp; Tools", GDK_KEY_k, GDK_CONTROL_MASK);
+    add("inspector", "Toggle Inspector Panel", "View &amp; Tools", GDK_KEY_i, GDK_CONTROL_MASK);
+    add("quick_preview", "Quick Preview (QuickLook)", "View &amp; Tools", GDK_KEY_space, 0);
+    add("search_files", "Search in Current Folder", "View &amp; Tools", GDK_KEY_f, GDK_CONTROL_MASK);
+    add("open_terminal", "Open Terminal Here", "View &amp; Tools", GDK_KEY_F4, 0);
+    add("toggle_hidden", "Toggle Hidden Files", "View &amp; Tools", GDK_KEY_h, GDK_CONTROL_MASK);
+    add("view_grid", "Switch to Grid View", "View &amp; Tools", GDK_KEY_1, GDK_CONTROL_MASK);
+    add("view_list", "Switch to List View", "View &amp; Tools", GDK_KEY_2, GDK_CONTROL_MASK);
+    add("zoom_in", "Zoom In (Increase Size)", "View &amp; Tools", GDK_KEY_equal, GDK_CONTROL_MASK);
+    add("zoom_out", "Zoom Out (Decrease Size)", "View &amp; Tools", GDK_KEY_minus, GDK_CONTROL_MASK);
+    add("zoom_reset", "Reset Zoom to Standard", "View &amp; Tools", GDK_KEY_0, GDK_CONTROL_MASK);
+    add("preferences", "Open Preferences", "View &amp; Tools", GDK_KEY_comma, GDK_CONTROL_MASK);
 
     load();
 }

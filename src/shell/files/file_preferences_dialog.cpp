@@ -1,3 +1,4 @@
+#include "shell/files/file_manager_state.hpp"
 #include "shell/files/file_preferences_dialog.hpp"
 #include "shell/files/file_shortcuts.hpp"
 #include "shell/files/file_view_widget.hpp"
@@ -8,59 +9,8 @@
 namespace zenith {
 
 // Forward declaration of internal state
-struct PaneState {
-    GtkWidget* file_view{nullptr};
-    std::string current_path;
-    std::vector<std::string> back_history;
-    std::vector<std::string> forward_history;
-    int last_total_items{0};
-    int last_selected_items{0};
-    uint64_t last_selected_bytes{0};
-};
 
-struct TabState {
-    GtkWidget* paned{nullptr};
-    PaneState left_pane;
-    PaneState right_pane;
-    PaneState* active_pane{&left_pane};
-    bool is_dual{false};
-    GtkWidget* tab_box{nullptr};
-    GtkWidget* tab_label{nullptr};
-};
 
-struct FileManagerState {
-    GtkWidget* window{nullptr};
-    GtkWidget* btn_back{nullptr};
-    GtkWidget* btn_forward{nullptr};
-    GtkWidget* btn_up{nullptr};
-    GtkWidget* btn_home{nullptr};
-    GtkWidget* path_bar{nullptr};
-    GtkWidget* btn_search{nullptr};
-    GtkWidget* search_revealer{nullptr};
-    GtkWidget* search_entry{nullptr};
-    GtkWidget* btn_new_folder{nullptr};
-    GtkWidget* btn_new_tab{nullptr};
-    GtkWidget* btn_dual_pane{nullptr};
-    GtkWidget* btn_term{nullptr};
-    GtkWidget* btn_hidden{nullptr};
-    GtkWidget* btn_grid_view{nullptr};
-    GtkWidget* btn_list_view{nullptr};
-    GtkWidget* btn_settings{nullptr};
-    GtkWidget* btn_inspector{nullptr};
-
-    GtkWidget* main_paned{nullptr};
-    GtkWidget* sidebar{nullptr};
-    GtkWidget* center_paned{nullptr};
-    GtkWidget* inspector_panel{nullptr};
-    bool inspector_visible{false};
-    
-    GtkWidget* notebook{nullptr};
-    std::vector<std::unique_ptr<TabState>> tabs;
-    TabState* active_tab{nullptr};
-
-    GtkWidget* status_label{nullptr};
-    GtkWidget* disk_label{nullptr};
-};
 
 static void show_rebind_dialog(GtkWindow* parent, const ShortcutDef& def, std::function<void()> on_rebound) {
     GtkWidget* dialog = gtk_dialog_new_with_buttons(
@@ -150,7 +100,7 @@ void FilePreferencesDialog::show(FileManagerState* state) {
         GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 14);
         gtk_container_set_border_width(GTK_CONTAINER(vbox), 16);
 
-        GtkWidget* sec1 = gtk_label_new("<b>Startup & Behavior</b>");
+        GtkWidget* sec1 = gtk_label_new("<b>Startup &amp; Behavior</b>");
         gtk_label_set_use_markup(GTK_LABEL(sec1), TRUE);
         gtk_label_set_xalign(GTK_LABEL(sec1), 0.0f);
         gtk_widget_add_css_class(sec1, "files-prop-title");
@@ -189,7 +139,7 @@ void FilePreferencesDialog::show(FileManagerState* state) {
         GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 14);
         gtk_container_set_border_width(GTK_CONTAINER(vbox), 16);
 
-        GtkWidget* size_header = gtk_label_new("<b>Grid View Folder & Icon Size</b>");
+        GtkWidget* size_header = gtk_label_new("<b>Grid View Folder &amp; Icon Size</b>");
         gtk_label_set_use_markup(GTK_LABEL(size_header), TRUE);
         gtk_label_set_xalign(GTK_LABEL(size_header), 0.0f);
         gtk_widget_add_css_class(size_header, "files-prop-title");
@@ -268,7 +218,7 @@ void FilePreferencesDialog::show(FileManagerState* state) {
         g_signal_connect(chk_hidden, "toggled", G_CALLBACK(+[](GtkToggleButton* btn, gpointer user_data) {
             auto* s = static_cast<FileManagerState*>(user_data);
             gboolean act = gtk_toggle_button_get_active(btn);
-            gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(s->btn_hidden), act);
+            gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(s->view_hidden_check), act);
             for (auto& tab : s->tabs) {
                 FileViewWidget::set_show_hidden(tab->left_pane.file_view, act);
                 if (tab->is_dual) FileViewWidget::set_show_hidden(tab->right_pane.file_view, act);
@@ -284,7 +234,7 @@ void FilePreferencesDialog::show(FileManagerState* state) {
         GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 14);
         gtk_container_set_border_width(GTK_CONTAINER(vbox), 16);
 
-        GtkWidget* perf_hdr = gtk_label_new("<b>Performance & Background Services</b>");
+        GtkWidget* perf_hdr = gtk_label_new("<b>Performance &amp; Background Services</b>");
         gtk_label_set_use_markup(GTK_LABEL(perf_hdr), TRUE);
         gtk_label_set_xalign(GTK_LABEL(perf_hdr), 0.0f);
         gtk_widget_add_css_class(perf_hdr, "files-prop-title");

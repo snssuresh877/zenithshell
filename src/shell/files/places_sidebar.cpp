@@ -19,6 +19,7 @@ struct PlaceItem {
     std::string glyph_icon;
     bool is_header{false};
     bool is_favorite{false};
+    GVolume* volume{nullptr};
 };
 
 struct SidebarData {
@@ -147,25 +148,35 @@ static void populate_sidebar(SidebarData* data) {
 
     // --- Section 2: Locations & Devices ---
     items.push_back({"Locations", "", "", "", true, false});
-    items.push_back({"File System", "/", "drive-harddisk-symbolic", "󰋊", false, false});
+    items.push_back({"File System", "/", "drive-harddisk-symbolic", "󰋊", false, false, nullptr});
 
     GVolumeMonitor* monitor = g_volume_monitor_get();
     if (monitor) {
-        GList* mounts = g_volume_monitor_get_mounts(monitor);
-        for (GList* m = mounts; m != nullptr; m = g_list_next(m)) {
-            GMount* mount = G_MOUNT(m->data);
-            char* name = g_mount_get_name(mount);
-            GFile* root = g_mount_get_root(mount);
-            char* p = root ? g_file_get_parse_name(root) : nullptr;
-            if (p && name && std::string(p) != "/") {
-                items.push_back({name, p, "drive-removable-media-symbolic", "󰋊", false, false});
+        GList* volumes = g_volume_monitor_get_volumes(monitor);
+        for (GList* v = volumes; v != nullptr; v = g_list_next(v)) {
+            GVolume* vol = G_VOLUME(v->data);
+            char* name = g_volume_get_name(vol);
+            
+            std::string path = "";
+            GMount* mount = g_volume_get_mount(vol);
+            if (mount) {
+                GFile* root = g_mount_get_root(mount);
+                if (root) {
+                    char* p = g_file_get_parse_name(root);
+                    if (p) { path = p; g_free(p); }
+                    g_object_unref(root);
+                }
+                g_object_unref(mount);
             }
-            if (p) g_free(p);
-            if (root) g_object_unref(root);
+            
+            if (name && path != "/") {
+                g_object_ref(vol); // keep a reference for the PlaceItem
+                items.push_back({name, path, "drive-removable-media-symbolic", "󰋊", false, false, vol});
+            }
             if (name) g_free(name);
-            g_object_unref(mount);
+            g_object_unref(vol);
         }
-        g_list_free(mounts);
+        g_list_free(volumes);
         g_object_unref(monitor);
     }
 
@@ -268,6 +279,11 @@ static void populate_sidebar(SidebarData* data) {
         g_object_set_data_full(G_OBJECT(row), "place_path", dest, +[](gpointer d) {
             delete static_cast<std::string*>(d);
         });
+        if (item.volume) {
+            g_object_set_data_full(G_OBJECT(row), "place_volume", item.volume, +[](gpointer d) {
+                g_object_unref(G_VOLUME(d));
+            });
+        }
 
         // Context menu for Favorites & Devices
         if (item.is_favorite) {
@@ -334,7 +350,40 @@ GtkWidget* PlacesSidebar::create(NavigateCallback on_navigate) {
     g_signal_connect(listbox, "row-activated", G_CALLBACK(+[](GtkListBox*, GtkListBoxRow* row, gpointer user_data) {
         auto* d = static_cast<SidebarData*>(user_data);
         auto* target_path = static_cast<std::string*>(g_object_get_data(G_OBJECT(row), "place_path"));
-        if (d && d->on_navigate && target_path) {
+        auto* vol = static_cast<GVolume*>(g_object_get_data(G_OBJECT(row), "place_volume"));
+
+        if (vol && (!target_path || target_path->empty())) {
+            // Need to mount it natively using GIO!
+            GMountOperation* op = gtk_mount_operation_new(nullptr);
+            g_volume_mount(vol, G_MOUNT_MOUNT_NONE, op, nullptr, +[](GObject* source, GAsyncResult* res, gpointer ud) {
+                GError* err = nullptr;
+                g_volume_mount_finish(G_VOLUME(source), res, &err);
+                if (err) {
+                    std::cerr << "ZenithFiles Auto-Mount error: " << err->message << std::endl;
+                    g_error_free(err);
+                } else {
+                    // It mounted successfully!
+                    GMount* m = g_volume_get_mount(G_VOLUME(source));
+                    if (m) {
+                        GFile* r = g_mount_get_root(m);
+                        if (r) {
+                            char* p = g_file_get_parse_name(r);
+                            if (p) {
+                                auto* d2 = static_cast<SidebarData*>(ud);
+                                if (d2 && d2->on_navigate) d2->on_navigate(p);
+                                g_free(p);
+                            }
+                            g_object_unref(r);
+                        }
+                        g_object_unref(m);
+                    }
+                }
+            }, d);
+            g_object_unref(op);
+            return;
+        }
+
+        if (d && d->on_navigate && target_path && !target_path->empty()) {
             d->on_navigate(*target_path);
         }
     }), data);
@@ -342,13 +391,33 @@ GtkWidget* PlacesSidebar::create(NavigateCallback on_navigate) {
     // Volume / Mount signals
     data->volume_monitor = g_volume_monitor_get();
     if (data->volume_monitor) {
-        auto on_vol_changed = +[](GVolumeMonitor*, gpointer, gpointer user_data) {
+        auto on_vol_added = +[](GVolumeMonitor*, GVolume* vol, gpointer user_data) {
+            char* name = g_volume_get_name(vol);
+            if (name) {
+                std::string msg = "Detected: " + std::string(name);
+                const char* argv[] = { "notify-send", "-a", "Zenith Files", "-i", "drive-removable-media", "Device Connected", msg.c_str(), nullptr };
+                g_spawn_async(nullptr, (char**)argv, nullptr, G_SPAWN_SEARCH_PATH, nullptr, nullptr, nullptr, nullptr);
+                g_free(name);
+            }
             populate_sidebar(static_cast<SidebarData*>(user_data));
         };
-        data->sid_volume_added = g_signal_connect(data->volume_monitor, "volume-added", G_CALLBACK(on_vol_changed), data);
-        data->sid_volume_removed = g_signal_connect(data->volume_monitor, "volume-removed", G_CALLBACK(on_vol_changed), data);
-        data->sid_mount_added = g_signal_connect(data->volume_monitor, "mount-added", G_CALLBACK(on_vol_changed), data);
-        data->sid_mount_removed = g_signal_connect(data->volume_monitor, "mount-removed", G_CALLBACK(on_vol_changed), data);
+        auto on_vol_removed = +[](GVolumeMonitor*, GVolume* vol, gpointer user_data) {
+            char* name = g_volume_get_name(vol);
+            if (name) {
+                std::string msg = "Removed: " + std::string(name);
+                const char* argv[] = { "notify-send", "-a", "Zenith Files", "-i", "drive-removable-media", "Device Disconnected", msg.c_str(), nullptr };
+                g_spawn_async(nullptr, (char**)argv, nullptr, G_SPAWN_SEARCH_PATH, nullptr, nullptr, nullptr, nullptr);
+                g_free(name);
+            }
+            populate_sidebar(static_cast<SidebarData*>(user_data));
+        };
+        auto on_mount_changed = +[](GVolumeMonitor*, GMount*, gpointer user_data) {
+            populate_sidebar(static_cast<SidebarData*>(user_data));
+        };
+        data->sid_volume_added = g_signal_connect(data->volume_monitor, "volume-added", G_CALLBACK(on_vol_added), data);
+        data->sid_volume_removed = g_signal_connect(data->volume_monitor, "volume-removed", G_CALLBACK(on_vol_removed), data);
+        data->sid_mount_added = g_signal_connect(data->volume_monitor, "mount-added", G_CALLBACK(on_mount_changed), data);
+        data->sid_mount_removed = g_signal_connect(data->volume_monitor, "mount-removed", G_CALLBACK(on_mount_changed), data);
     }
 
     g_object_set_data_full(G_OBJECT(scroll), "sidebar_data", data, +[](gpointer d) {

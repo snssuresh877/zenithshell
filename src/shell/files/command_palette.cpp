@@ -1,6 +1,6 @@
 #include "shell/files/command_palette.hpp"
 #include "shell/files/file_shortcuts.hpp"
-#include "../../gtk3_compat.hpp"
+#include "gtk3_compat.hpp"
 #include <algorithm>
 #include <iostream>
 
@@ -41,18 +41,18 @@ static std::vector<PaletteAction> get_default_actions() {
         {"refresh_view", "Refresh Folder", "File Operations", "view-refresh-symbolic", "refresh_view"},
 
         // Tools & View
-        {"search_files", "Search in Current Directory", "View & Tools", "edit-find-symbolic", "search_files"},
-        {"open_terminal", "Open Terminal Here", "View & Tools", "utilities-terminal-symbolic", "open_terminal"},
-        {"inspector", "Toggle Inspector Panel", "View & Tools", "dialog-information-symbolic", "inspector"},
-        {"quick_preview", "Quick Preview Selected (QuickLook)", "View & Tools", "view-reveal-symbolic", "quick_preview"},
-        {"toggle_hidden", "Toggle Show Hidden Files", "View & Tools", "view-conceal-symbolic", "toggle_hidden"},
-        {"view_grid", "Switch to Grid View", "View & Tools", "view-grid-symbolic", "view_grid"},
-        {"view_list", "Switch to List View", "View & Tools", "view-list-symbolic", "view_list"},
-        {"zoom_in", "Zoom In (Bigger Icons)", "View & Tools", "zoom-in-symbolic", "zoom_in"},
-        {"zoom_out", "Zoom Out (Smaller Icons)", "View & Tools", "zoom-out-symbolic", "zoom_out"},
-        {"zoom_reset", "Reset Zoom to Normal (96px)", "View & Tools", "zoom-original-symbolic", "zoom_reset"},
-        {"set_wallpaper", "Set Selected as Wallpaper", "View & Tools", "preferences-desktop-wallpaper-symbolic", ""},
-        {"properties", "Show File Properties & Permissions", "View & Tools", "document-properties-symbolic", ""},
+        {"search_files", "Search in Current Directory", "View &amp; Tools", "edit-find-symbolic", "search_files"},
+        {"open_terminal", "Open Terminal Here", "View &amp; Tools", "utilities-terminal-symbolic", "open_terminal"},
+        {"inspector", "Toggle Inspector Panel", "View &amp; Tools", "dialog-information-symbolic", "inspector"},
+        {"quick_preview", "Quick Preview Selected (QuickLook)", "View &amp; Tools", "view-reveal-symbolic", "quick_preview"},
+        {"toggle_hidden", "Toggle Show Hidden Files", "View &amp; Tools", "view-conceal-symbolic", "toggle_hidden"},
+        {"view_grid", "Switch to Grid View", "View &amp; Tools", "view-grid-symbolic", "view_grid"},
+        {"view_list", "Switch to List View", "View &amp; Tools", "view-list-symbolic", "view_list"},
+        {"zoom_in", "Zoom In (Bigger Icons)", "View &amp; Tools", "zoom-in-symbolic", "zoom_in"},
+        {"zoom_out", "Zoom Out (Smaller Icons)", "View &amp; Tools", "zoom-out-symbolic", "zoom_out"},
+        {"zoom_reset", "Reset Zoom to Normal (96px)", "View &amp; Tools", "zoom-original-symbolic", "zoom_reset"},
+        {"set_wallpaper", "Set Selected as Wallpaper", "View &amp; Tools", "preferences-desktop-wallpaper-symbolic", ""},
+        {"properties", "Show File Properties & Permissions", "View &amp; Tools", "document-properties-symbolic", ""},
         {"preferences", "Open Zenith Preferences & Shortcuts", "Application", "emblem-system-symbolic", "preferences"}
     };
 }

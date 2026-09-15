@@ -1,3 +1,4 @@
+#include <sys/wait.h>
 #include "shell/files/file_operations.hpp"
 #include "gtk3_compat.hpp"
 #include <gio/gio.h>
@@ -265,7 +266,7 @@ static void on_file_progress(goffset current, goffset total, gpointer user_data)
 
     std::string txt = "Copying: " + ctx->current_name +
                       " (" + std::to_string(ctx->file_num) + "/" +
-                      std::to_string(ctx->file_total) + ")";
+                      std::to_string(ctx->file_total) + ")PY";
     gtk_label_set_text(GTK_LABEL(ctx->label), txt.c_str());
 
     // Pump GTK events to keep Cancel button responsive
@@ -493,3 +494,73 @@ void FileOperations::open_with_dialog(const std::string& path, GtkWindow* parent
 }
 
 } // namespace zenith
+
+void zenith::FileOperations::share_via_qr(const std::string& path, GtkWindow* parent) {
+    if (path.empty()) return;
+    std::string script_path = std::string(getenv("HOME")) + "/.local/share/zenithshell/zenith_share.py";
+    GPid pid; gint out_fd;
+    const char* argv[] = { "python3", script_path.c_str(), "send", path.c_str(), nullptr };
+    if (!g_spawn_async_with_pipes(nullptr, (char**)argv, nullptr, (GSpawnFlags)(G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_SEARCH_PATH), nullptr, nullptr, &pid, nullptr, &out_fd, nullptr, nullptr)) return;
+    char buf[256]; std::string url = "", full_out = "";
+    for(int i=0; i<10; ++i) {
+        ssize_t bytes_read = read(out_fd, buf, sizeof(buf) - 1);
+        if (bytes_read > 0) {
+            buf[bytes_read] = '\0'; full_out += buf;
+            size_t pos = full_out.find("URL:");
+            if (pos != std::string::npos) {
+                url = full_out.substr(pos + 4); url.erase(url.find_last_not_of(" \n\r\t") + 1); break;
+            }
+        } else break;
+    }
+    if (url.empty()) {
+        kill(pid, SIGKILL); waitpid(pid, nullptr, 0); g_spawn_close_pid(pid); return;
+    }
+    std::string qr_png = "/tmp/zenith_qr_" + std::to_string(pid) + ".png";
+    std::string qr_cmd = "qrencode -s 6 -o '" + qr_png + "' '" + url + "'";
+    if(system(qr_cmd.c_str())){};
+    GtkWidget* dialog = gtk_dialog_new_with_buttons("Zenith Share (Wi-Fi)", parent, static_cast<GtkDialogFlags>(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT), "Stop Sharing", GTK_RESPONSE_CLOSE, nullptr);
+    gtk_widget_add_css_class(dialog, "zenith-files-dialog");
+    GtkWidget* content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    gtk_box_set_spacing(GTK_BOX(content), 16); gtk_container_set_border_width(GTK_CONTAINER(content), 24);
+    GtkWidget* img = gtk_image_new_from_file(qr_png.c_str()); gtk_box_pack_start(GTK_BOX(content), img, TRUE, TRUE, 0);
+    GtkWidget* lbl = gtk_label_new(("Scan with your phone to download:\n" + fs::path(path).filename().string()).c_str());
+    gtk_label_set_justify(GTK_LABEL(lbl), GTK_JUSTIFY_CENTER); gtk_widget_add_css_class(lbl, "files-prop-title"); gtk_box_pack_start(GTK_BOX(content), lbl, FALSE, FALSE, 0);
+    GtkWidget* url_lbl = gtk_label_new(url.c_str()); gtk_label_set_selectable(GTK_LABEL(url_lbl), TRUE); gtk_widget_add_css_class(url_lbl, "files-prop-val"); gtk_box_pack_start(GTK_BOX(content), url_lbl, FALSE, FALSE, 0);
+    gtk_widget_show_all(dialog); gtk_dialog_run(GTK_DIALOG(dialog));
+    kill(pid, SIGKILL); waitpid(pid, nullptr, 0); g_spawn_close_pid(pid); unlink(qr_png.c_str()); gtk_widget_destroy(dialog);
+}
+
+void zenith::FileOperations::receive_via_qr(const std::string& target_dir, GtkWindow* parent) {
+    if (target_dir.empty()) return;
+    std::string script_path = std::string(getenv("HOME")) + "/.local/share/zenithshell/zenith_share.py";
+    GPid pid; gint out_fd;
+    const char* argv[] = { "python3", script_path.c_str(), "recv", target_dir.c_str(), nullptr };
+    if (!g_spawn_async_with_pipes(nullptr, (char**)argv, nullptr, (GSpawnFlags)(G_SPAWN_DO_NOT_REAP_CHILD | G_SPAWN_SEARCH_PATH), nullptr, nullptr, &pid, nullptr, &out_fd, nullptr, nullptr)) return;
+    char buf[256]; std::string url = "", full_out = "";
+    for(int i=0; i<10; ++i) {
+        ssize_t bytes_read = read(out_fd, buf, sizeof(buf) - 1);
+        if (bytes_read > 0) {
+            buf[bytes_read] = '\0'; full_out += buf;
+            size_t pos = full_out.find("URL:");
+            if (pos != std::string::npos) {
+                url = full_out.substr(pos + 4); url.erase(url.find_last_not_of(" \n\r\t") + 1); break;
+            }
+        } else break;
+    }
+    if (url.empty()) {
+        kill(pid, SIGKILL); waitpid(pid, nullptr, 0); g_spawn_close_pid(pid); return;
+    }
+    std::string qr_png = "/tmp/zenith_qr_recv_" + std::to_string(pid) + ".png";
+    std::string qr_cmd = "qrencode -s 6 -o '" + qr_png + "' '" + url + "'";
+    if(system(qr_cmd.c_str())){};
+    GtkWidget* dialog = gtk_dialog_new_with_buttons("Zenith Receive (Wi-Fi)", parent, static_cast<GtkDialogFlags>(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT), "Close Server", GTK_RESPONSE_CLOSE, nullptr);
+    gtk_widget_add_css_class(dialog, "zenith-files-dialog");
+    GtkWidget* content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    gtk_box_set_spacing(GTK_BOX(content), 16); gtk_container_set_border_width(GTK_CONTAINER(content), 24);
+    GtkWidget* img = gtk_image_new_from_file(qr_png.c_str()); gtk_box_pack_start(GTK_BOX(content), img, TRUE, TRUE, 0);
+    GtkWidget* lbl = gtk_label_new(("Scan with your phone to upload files to:\n" + fs::path(target_dir).filename().string()).c_str());
+    gtk_label_set_justify(GTK_LABEL(lbl), GTK_JUSTIFY_CENTER); gtk_widget_add_css_class(lbl, "files-prop-title"); gtk_box_pack_start(GTK_BOX(content), lbl, FALSE, FALSE, 0);
+    GtkWidget* url_lbl = gtk_label_new(url.c_str()); gtk_label_set_selectable(GTK_LABEL(url_lbl), TRUE); gtk_widget_add_css_class(url_lbl, "files-prop-val"); gtk_box_pack_start(GTK_BOX(content), url_lbl, FALSE, FALSE, 0);
+    gtk_widget_show_all(dialog); gtk_dialog_run(GTK_DIALOG(dialog));
+    kill(pid, SIGKILL); waitpid(pid, nullptr, 0); g_spawn_close_pid(pid); unlink(qr_png.c_str()); gtk_widget_destroy(dialog);
+}

@@ -1,17 +1,18 @@
-#include "file_manager_window.hpp"
-#include "path_bar_widget.hpp"
-#include "places_sidebar.hpp"
-#include "file_view_widget.hpp"
-#include "file_item.hpp"
-#include "file_operations.hpp"
-#include "command_palette.hpp"
-#include "inspector_panel.hpp"
-#include "file_shortcuts.hpp"
-#include "custom_actions.hpp"
-#include "file_preferences_dialog.hpp"
-#include "quick_preview.hpp"
-#include "theme/theme_engine.hpp"
-#include "../../gtk3_compat.hpp"
+#include "shell/files/file_manager_state.hpp"
+#include "shell/files/file_manager_window.hpp"
+#include "shell/files/path_bar_widget.hpp"
+#include "shell/files/places_sidebar.hpp"
+#include "shell/files/file_view_widget.hpp"
+#include "shell/files/file_item.hpp"
+#include "shell/files/file_operations.hpp"
+#include "shell/files/command_palette.hpp"
+#include "shell/files/inspector_panel.hpp"
+#include "shell/files/file_shortcuts.hpp"
+#include "shell/files/custom_actions.hpp"
+#include "shell/files/file_preferences_dialog.hpp"
+#include "shell/files/quick_preview.hpp"
+
+#include "gtk3_compat.hpp"
 
 #include <sys/statvfs.h>
 #include <gdk/gdkkeysyms.h>
@@ -23,78 +24,8 @@
 
 namespace zenith {
 
-struct PaneState {
-    GtkWidget* file_view{nullptr};
-    std::string current_path;
-    std::vector<std::string> back_history;
-    std::vector<std::string> forward_history;
-    int last_total_items{0};
-    int last_selected_items{0};
-    uint64_t last_selected_bytes{0};
-};
 
-struct TabState {
-    GtkWidget* paned{nullptr};
-    PaneState left_pane;
-    PaneState right_pane;
-    PaneState* active_pane{&left_pane};
-    bool is_dual{false};
-    GtkWidget* tab_box{nullptr};
-    GtkWidget* tab_label{nullptr};
-};
 
-struct FileManagerState {
-    GtkWidget* window{nullptr};
-
-    // Navigation buttons (always visible)
-    GtkWidget* btn_back{nullptr};
-    GtkWidget* btn_forward{nullptr};
-    GtkWidget* btn_up{nullptr};
-    GtkWidget* btn_home{nullptr};
-    GtkWidget* path_bar{nullptr};
-
-    // Toolbar action buttons (reduced set)
-    GtkWidget* btn_search{nullptr};
-    GtkWidget* btn_new{nullptr};
-    GtkWidget* btn_more{nullptr};
-    GtkWidget* btn_view{nullptr};
-    GtkWidget* btn_inspector{nullptr};
-    GtkWidget* btn_settings{nullptr};
-
-    // Popovers
-    GtkWidget* new_popover{nullptr};
-    GtkWidget* more_popover{nullptr};
-    GtkWidget* view_popover{nullptr};
-
-    // View popover widgets
-    GtkWidget* view_grid_btn{nullptr};
-    GtkWidget* view_list_btn{nullptr};
-    GtkWidget* view_size_scale{nullptr};
-    GtkWidget* view_size_label{nullptr};
-    GtkWidget* view_sort_combo{nullptr};
-    GtkWidget* view_hidden_check{nullptr};
-
-    // Search
-    GtkWidget* search_revealer{nullptr};
-    GtkWidget* search_entry{nullptr};
-
-    // Hidden files state
-    bool show_hidden{false};
-
-    // Layout
-    GtkWidget* main_paned{nullptr};
-    GtkWidget* sidebar{nullptr};
-    GtkWidget* center_paned{nullptr};
-    GtkWidget* inspector_panel{nullptr};
-    bool inspector_visible{false};
-
-    GtkWidget* notebook{nullptr};
-    std::vector<std::unique_ptr<TabState>> tabs;
-    TabState* active_tab{nullptr};
-
-    GtkWidget* status_label{nullptr};
-    GtkWidget* disk_label{nullptr};
-};
 
 // Forward declarations
 static void navigate_to(FileManagerState* state, const std::string& path, bool record_history);
@@ -457,7 +388,7 @@ static void execute_action(FileManagerState* state, const std::string& action_id
     else if (action_id == "set_wallpaper") {
         if (state->active_tab) {
             auto sel = FileViewWidget::get_selected_paths(state->active_tab->active_pane->file_view);
-            if (!sel.empty()) ThemeEngine::set_wallpaper(sel[0]);
+            // if (!sel.empty()) ThemeEngine::set_wallpaper(sel[0]);
         }
     }
 }

@@ -54,6 +54,20 @@ link_directories(
 set(SOURCES
     src/main.cpp
     src/app/app.cpp
+    src/shell/files/file_item.cpp 
+    src/shell/files/file_operations.cpp 
+    src/shell/files/file_shortcuts.cpp 
+    src/shell/files/custom_actions.cpp 
+    src/shell/files/command_palette.cpp 
+    src/shell/files/bulk_rename_dialog.cpp 
+    src/shell/files/inspector_panel.cpp 
+    src/shell/files/quick_preview.cpp 
+    src/shell/files/file_preferences_dialog.cpp 
+    src/shell/files/path_bar_widget.cpp 
+    src/shell/files/places_sidebar.cpp 
+    src/shell/files/file_view_widget.cpp 
+    src/shell/files/file_manager_window.cpp 
+    src/shell/files/tree_sidebar.cpp
     src/config/config.cpp
     src/compositors/hyprland_ipc.cpp
     src/dbus/dbus_service.cpp
@@ -85,18 +99,6 @@ set(SOURCES
     src/shell/osd/osd_window.cpp
     src/cli/zenithctl.cpp
     src/system/backlight_manager.cpp
-    src/shell/files/file_item.cpp
-    src/shell/files/file_operations.cpp
-    src/shell/files/file_shortcuts.cpp
-    src/shell/files/custom_actions.cpp
-    src/shell/files/command_palette.cpp
-    src/shell/files/inspector_panel.cpp
-    src/shell/files/quick_preview.cpp
-    src/shell/files/file_preferences_dialog.cpp
-    src/shell/files/path_bar_widget.cpp
-    src/shell/files/places_sidebar.cpp
-    src/shell/files/file_view_widget.cpp
-    src/shell/files/file_manager_window.cpp
 )
 
 add_executable(zenithshell ${SOURCES})

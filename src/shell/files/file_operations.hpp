@@ -33,6 +33,8 @@ public:
 
     // Open With dialog
     static void open_with_dialog(const std::string& path, GtkWindow* parent = nullptr);
+    static void share_via_qr(const std::string& path, GtkWindow* parent = nullptr);
+    static void receive_via_qr(const std::string& target_dir, GtkWindow* parent = nullptr);
 };
 
 } // namespace zenith
