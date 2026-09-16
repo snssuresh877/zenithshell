@@ -1,16 +1,51 @@
 #!/usr/bin/env python3
 import sys, os, subprocess, json, urllib.request, mimetypes
+import gi
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk, Gdk, Pango
 
 def show_error(msg):
     subprocess.run(["notify-send", "-u", "critical", "Zenith AI Error", msg])
     sys.exit(1)
 
 def show_result(title, content):
-    process = subprocess.Popen(
-        ["zenity", "--text-info", f"--title={title}", "--width=700", "--height=600"],
-        stdin=subprocess.PIPE
-    )
-    process.communicate(input=content.encode('utf-8', errors='ignore'))
+    win = Gtk.Window(title=title)
+    win.set_default_size(700, 600)
+    win.set_position(Gtk.WindowPosition.CENTER)
+    
+    # Enable dark mode
+    settings = Gtk.Settings.get_default()
+    settings.set_property("gtk-application-prefer-dark-theme", True)
+    
+    scrolled = Gtk.ScrolledWindow()
+    scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
+    
+    textview = Gtk.TextView()
+    textview.set_editable(False)
+    textview.set_cursor_visible(False)
+    textview.set_wrap_mode(Gtk.WrapMode.WORD)
+    textview.set_pixels_above_lines(4)
+    textview.set_pixels_below_lines(4)
+    textview.set_pixels_inside_wrap(2)
+    textview.set_left_margin(16)
+    textview.set_right_margin(16)
+    textview.set_top_margin(16)
+    textview.set_bottom_margin(16)
+    
+    # Modern font
+    context = textview.get_pango_context()
+    font_desc = Pango.FontDescription.from_string("sans-serif 11")
+    textview.modify_font(font_desc)
+    
+    buffer = textview.get_buffer()
+    buffer.set_text(content)
+    
+    scrolled.add(textview)
+    win.add(scrolled)
+    
+    win.connect("destroy", Gtk.main_quit)
+    win.show_all()
+    Gtk.main()
 
 def extract_text(filepath):
     mime, _ = mimetypes.guess_type(filepath)
