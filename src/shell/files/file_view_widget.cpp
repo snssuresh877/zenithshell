@@ -3,6 +3,7 @@
 #include "shell/files/file_operations.hpp"
 #include "shell/files/bulk_rename_dialog.hpp"
 #include "shell/files/checksum_dialog.hpp"
+#include "shell/files/duplicate_finder_dialog.hpp"
 #include "shell/files/quick_preview.hpp"
 #include "shell/files/places_sidebar.hpp"
 
@@ -755,6 +756,23 @@ static void show_context_menu(FileViewData* data, GdkEventButton* event) {
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
 
 
+
+        GtkWidget* item_dup = gtk_menu_item_new_with_label("Find Duplicates...");
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_dup);
+        g_signal_connect(item_dup, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer) {
+            auto* p = static_cast<std::string*>(g_object_get_data(G_OBJECT(mi), "wp_path"));
+            GtkWidget* win = gtk_widget_get_toplevel(GTK_WIDGET(mi));
+            if (p && GTK_IS_WINDOW(win)) zenith::DuplicateFinderDialog::show(GTK_WINDOW(win), *p);
+        }), nullptr);
+        
+        // Hide if multiple paths or if it's NOT a directory
+        struct stat st_dup;
+        if (selected.size() != 1 || stat(selected[0].c_str(), &st_dup) != 0 || !S_ISDIR(st_dup.st_mode)) {
+            gtk_widget_hide(item_dup);
+        } else {
+            g_object_set_data_full(G_OBJECT(item_dup), "wp_path", new std::string(selected[0]), [](gpointer data) { delete static_cast<std::string*>(data); });
+        }
+
         GtkWidget* item_checksum = gtk_menu_item_new_with_label("Verify Checksum...");
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_checksum);
         g_signal_connect(item_checksum, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer) {
@@ -774,6 +792,16 @@ static void show_context_menu(FileViewData* data, GdkEventButton* event) {
         GtkWidget* item_prop = gtk_menu_item_new_with_label("Properties");
         g_signal_connect_swapped(item_prop, "activate", G_CALLBACK(FileViewWidget::action_properties), data->root_box);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_prop);
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
+        
+        GtkWidget* item_dup_empty = gtk_menu_item_new_with_label("Find Duplicates Here...");
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_dup_empty);
+        g_signal_connect(item_dup_empty, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer udata) {
+            auto* d = static_cast<FileViewData*>(udata);
+            GtkWidget* win = gtk_widget_get_toplevel(d->root_box);
+            if (GTK_IS_WINDOW(win)) zenith::DuplicateFinderDialog::show(GTK_WINDOW(win), d->current_path);
+        }), data);
+
     } else {
         // Empty space menu
         GtkWidget* item_folder = gtk_menu_item_new_with_label("New Folder (Ctrl+Shift+N)");
