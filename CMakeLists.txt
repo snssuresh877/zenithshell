@@ -59,7 +59,8 @@ set(SOURCES
     src/shell/files/transfer_history_dialog.cpp
     src/shell/files/file_operations.cpp
     src/shell/files/checksum_dialog.cpp
-    src/shell/files/duplicate_finder_dialog.cpp 
+    src/shell/files/duplicate_finder_dialog.cpp
+    src/shell/files/disk_analyzer_dialog.cpp 
     src/shell/files/file_shortcuts.cpp 
     src/shell/files/custom_actions.cpp 
     src/shell/files/command_palette.cpp 

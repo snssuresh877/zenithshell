@@ -4,6 +4,7 @@
 #include "shell/files/bulk_rename_dialog.hpp"
 #include "shell/files/checksum_dialog.hpp"
 #include "shell/files/duplicate_finder_dialog.hpp"
+#include "shell/files/disk_analyzer_dialog.hpp"
 #include "shell/files/quick_preview.hpp"
 #include "shell/files/places_sidebar.hpp"
 
@@ -773,6 +774,23 @@ static void show_context_menu(FileViewData* data, GdkEventButton* event) {
             g_object_set_data_full(G_OBJECT(item_dup), "wp_path", new std::string(selected[0]), [](gpointer data) { delete static_cast<std::string*>(data); });
         }
 
+
+        GtkWidget* item_analyzer = gtk_menu_item_new_with_label("Analyze Disk Usage...");
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_analyzer);
+        g_signal_connect(item_analyzer, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer) {
+            auto* p = static_cast<std::string*>(g_object_get_data(G_OBJECT(mi), "wp_path"));
+            GtkWidget* win = gtk_widget_get_toplevel(GTK_WIDGET(mi));
+            if (p && GTK_IS_WINDOW(win)) zenith::DiskAnalyzerDialog::show(GTK_WINDOW(win), *p);
+        }), nullptr);
+        
+        // Hide if multiple paths or if it's NOT a directory
+        struct stat st_analyzer;
+        if (selected.size() != 1 || stat(selected[0].c_str(), &st_analyzer) != 0 || !S_ISDIR(st_analyzer.st_mode)) {
+            gtk_widget_hide(item_analyzer);
+        } else {
+            g_object_set_data_full(G_OBJECT(item_analyzer), "wp_path", new std::string(selected[0]), [](gpointer data) { delete static_cast<std::string*>(data); });
+        }
+
         GtkWidget* item_checksum = gtk_menu_item_new_with_label("Verify Checksum...");
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_checksum);
         g_signal_connect(item_checksum, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer) {
@@ -794,6 +812,15 @@ static void show_context_menu(FileViewData* data, GdkEventButton* event) {
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_prop);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), gtk_separator_menu_item_new());
         
+
+        GtkWidget* item_analyzer_empty = gtk_menu_item_new_with_label("Analyze Disk Usage Here...");
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_analyzer_empty);
+        g_signal_connect(item_analyzer_empty, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer udata) {
+            auto* d = static_cast<FileViewData*>(udata);
+            GtkWidget* win = gtk_widget_get_toplevel(d->root_box);
+            if (GTK_IS_WINDOW(win)) zenith::DiskAnalyzerDialog::show(GTK_WINDOW(win), d->current_path);
+        }), data);
+
         GtkWidget* item_dup_empty = gtk_menu_item_new_with_label("Find Duplicates Here...");
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_dup_empty);
         g_signal_connect(item_dup_empty, "activate", G_CALLBACK(+[](GtkMenuItem* mi, gpointer udata) {
