@@ -56,6 +56,42 @@ GtkWidget* WorkspaceWidget::create(int count) {
 
 void WorkspaceWidget::update_active(int active_id) {
     current_active = active_id;
+    
+    // Dynamically expand workspaces if needed
+    if (!buttons.empty() && active_id > static_cast<int>(buttons.size())) {
+        GtkWidget* box = gtk_widget_get_parent(buttons[0]);
+        if (box) {
+            while (active_id > static_cast<int>(buttons.size())) {
+                int i = buttons.size() + 1;
+                
+                GtkWidget* btn = gtk_button_new();
+                gtk_widget_add_css_class(btn, "workspace-btn");
+
+                GtkWidget* lbl = gtk_label_new(std::to_string(i).c_str());
+                gtk_container_add(GTK_CONTAINER(btn), lbl);
+                gtk_widget_add_css_class(btn, "inactive-dot");
+
+                g_signal_connect(btn, "clicked", G_CALLBACK(on_workspace_clicked), GINT_TO_POINTER(i));
+
+                gtk_widget_add_events(btn, GDK_SCROLL_MASK);
+                g_signal_connect(btn, "scroll-event", G_CALLBACK(+[](GtkWidget*, GdkEventScroll* event, gpointer) -> gboolean {
+                    if (event->direction == GDK_SCROLL_UP || event->delta_y < 0) {
+                        HyprlandIPC::switch_workspace_relative(-1);
+                        return TRUE;
+                    } else if (event->direction == GDK_SCROLL_DOWN || event->delta_y > 0) {
+                        HyprlandIPC::switch_workspace_relative(1);
+                        return TRUE;
+                    }
+                    return FALSE;
+                }), nullptr);
+
+                gtk_box_pack_start(GTK_BOX(box), btn, FALSE, FALSE, 0);
+                gtk_widget_show_all(btn);
+                buttons.push_back(btn);
+            }
+        }
+    }
+
     for (size_t i = 0; i < buttons.size(); ++i) {
         int id = static_cast<int>(i + 1);
         GtkWidget* child = gtk_bin_get_child(GTK_BIN(buttons[i]));
