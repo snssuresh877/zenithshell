@@ -18,6 +18,8 @@ public:
     static bool rename_item(const std::string& path, const std::string& new_name, std::string* out_new_path = nullptr);
     static bool move_to_trash(const std::vector<std::string>& paths);
     static bool delete_permanently(const std::vector<std::string>& paths);
+    static bool restore_from_trash(const std::vector<std::string>& paths);
+    static bool empty_trash();
 
     // Standard Desktop Clipboard Integration
     static void copy_to_clipboard(const std::vector<std::string>& paths, bool is_cut);

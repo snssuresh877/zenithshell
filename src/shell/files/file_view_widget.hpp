@@ -59,6 +59,8 @@ public:
     static void action_paste(GtkWidget* widget);
     static void action_rename_selected(GtkWidget* widget);
     static void action_trash_selected(GtkWidget* widget);
+    static void action_restore_selected(GtkWidget* widget);
+    static void action_empty_trash(GtkWidget* widget);
     static void action_delete_selected(GtkWidget* widget);
     static void action_new_folder(GtkWidget* widget);
     static void action_new_file(GtkWidget* widget);

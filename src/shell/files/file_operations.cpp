@@ -536,7 +536,7 @@ void FileOperations::open_with_dialog(const std::string& path, GtkWindow* parent
     g_object_unref(gf);
 }
 
-} // namespace zenith
+
 
 void zenith::FileOperations::share_via_qr(const std::string& path, GtkWindow* parent) {
     if (path.empty()) return;
@@ -607,3 +607,18 @@ void zenith::FileOperations::receive_via_qr(const std::string& target_dir, GtkWi
     gtk_widget_show_all(dialog); gtk_dialog_run(GTK_DIALOG(dialog));
     kill(pid, SIGKILL); waitpid(pid, nullptr, 0); g_spawn_close_pid(pid); unlink(qr_png.c_str()); gtk_widget_destroy(dialog);
 }
+
+
+bool FileOperations::restore_from_trash(const std::vector<std::string>& paths) {
+    for (const auto& path : paths) {
+        std::string cmd = "gio trash --restore \"" + path + "\" >/dev/null 2>&1";
+        system(cmd.c_str());
+    }
+    return true;
+}
+
+bool FileOperations::empty_trash() {
+    std::string cmd = "gio trash --empty >/dev/null 2>&1";
+    return system(cmd.c_str()) == 0;
+}
+} // namespace zenith

@@ -750,6 +750,11 @@ static void show_context_menu(FileViewData* data, GdkEventButton* event) {
         g_signal_connect_swapped(item_trash, "activate", G_CALLBACK(FileViewWidget::action_trash_selected), data->root_box);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_trash);
 
+        if (data->current_path == "trash:///") {
+            GtkWidget* item_restore = gtk_menu_item_new_with_label("Restore from Trash");
+            g_signal_connect_swapped(item_restore, "activate", G_CALLBACK(FileViewWidget::action_restore_selected), data->root_box);
+            gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_restore);
+        }
         GtkWidget* item_delete = gtk_menu_item_new_with_label("Delete Permanently (Shift+Del)");
         g_signal_connect_swapped(item_delete, "activate", G_CALLBACK(FileViewWidget::action_delete_selected), data->root_box);
         gtk_menu_shell_append(GTK_MENU_SHELL(menu), item_delete);
@@ -2180,4 +2185,30 @@ void FileViewWidget::action_properties(GtkWidget* widget) {
     gtk_widget_destroy(dialog);
 }
 
+
+
+void FileViewWidget::action_restore_selected(GtkWidget* widget) {
+    auto paths = get_selected_paths(widget);
+    if (!paths.empty()) {
+        FileOperations::restore_from_trash(paths);
+        refresh(widget);
+    }
+}
+
+void FileViewWidget::action_empty_trash(GtkWidget* widget) {
+    GtkWidget* toplevel = gtk_widget_get_toplevel(widget);
+    GtkWidget* dialog = gtk_message_dialog_new(
+        GTK_IS_WINDOW(toplevel) ? GTK_WINDOW(toplevel) : nullptr,
+        static_cast<GtkDialogFlags>(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
+        GTK_MESSAGE_WARNING,
+        GTK_BUTTONS_OK_CANCEL,
+        "Are you sure you want to empty the trash? All items will be permanently deleted."
+    );
+    gtk_widget_add_css_class(dialog, "zenith-files-dialog");
+    if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_OK) {
+        FileOperations::empty_trash();
+        refresh(widget);
+    }
+    gtk_widget_destroy(dialog);
+}
 } // namespace zenith
