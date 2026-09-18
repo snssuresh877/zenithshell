@@ -45,8 +45,8 @@ headerbar {
 
 /* ─── Frosted Glass Pill Widgets ─── */
 .pill-widget {
-    background-color: rgba(22, 23, 34, 0.75);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: transparent;
+    border: 1px solid transparent;
     border-radius: 14px;
     padding: 2px 8px;
     margin: 0px 3px;
@@ -56,8 +56,8 @@ headerbar {
 }
 
 .pill-widget:hover {
-    background-color: rgba(35, 37, 52, 0.85);
-    border-color: @zenith_border_hover;
+    background-color: rgba(255, 255, 255, 0.06);
+    border: 1px solid transparent;
     color: #ffffff;
 }
 
@@ -157,16 +157,16 @@ headerbar {
 
 .workspace-btn.active {
     min-width: 18px;
-    background-color: @zenith_accent;
-    border: 1px solid @zenith_accent;
-    color: @zenith_bg;
-    font-size: 10px;
+    background-color: transparent;
+    border: 1px solid transparent;
+    color: @zenith_accent;
+    font-size: 11px;
     font-weight: 800;
     box-shadow: none;
 }
 
 .workspace-btn.active label {
-    color: @zenith_bg;
+    color: @zenith_accent;
     font-weight: 800;
 }
 
@@ -187,9 +187,9 @@ headerbar {
 }
 
 .clock-time {
-    color: #F2F2F5;
-    font-size: 10.5px;
-    font-weight: 700;
+    color: @zenith_accent;
+    font-size: 11px;
+    font-weight: 800;
 }
 
 .clock-widget:hover {
