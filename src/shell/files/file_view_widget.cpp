@@ -1203,7 +1203,7 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
         GtkCellRenderer* txt_rend = gtk_cell_renderer_text_new();
         g_object_set(txt_rend, "ellipsize", PANGO_ELLIPSIZE_END, nullptr);
         gtk_tree_view_column_pack_start(col, txt_rend, TRUE);
-        gtk_tree_view_column_add_attribute(col, txt_rend, "text", COL_NAME);
+        gtk_tree_view_column_add_attribute(col, txt_rend, "markup", COL_MARKUP);
 
         gtk_tree_view_append_column(GTK_TREE_VIEW(data->tree_view), col);
     }
