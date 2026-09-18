@@ -19,6 +19,7 @@
 #include <mutex>
 #include <thread>
 #include <filesystem>
+#include <map>
 
 namespace fs = std::filesystem;
 
@@ -36,6 +37,7 @@ enum {
     COL_RAW_SIZE,
     COL_RAW_TIME,
     COL_ITEM_PTR,
+    COL_MARKUP,
     NUM_VIEW_COLS
 };
 
@@ -227,7 +229,8 @@ static void repopulate_store(FileViewData* data) {
             COL_IS_DIR, item->is_directory,
             COL_RAW_SIZE, static_cast<guint64>(item->size),
             COL_RAW_TIME, static_cast<gint64>(item->mtime),
-            COL_ITEM_PTR, item.get(),
+            COL_ITEM_PTR,
+    COL_MARKUP, item.get(),
             -1
         );
     }
@@ -1118,7 +1121,8 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
         G_TYPE_BOOLEAN,     // COL_IS_DIR
         G_TYPE_UINT64,      // COL_RAW_SIZE
         G_TYPE_INT64,       // COL_RAW_TIME
-        G_TYPE_POINTER      // COL_ITEM_PTR
+        G_TYPE_POINTER,     // COL_ITEM_PTR
+        G_TYPE_STRING       // COL_MARKUP
     );
 
     // 1. Grid View (GtkIconView)
@@ -1128,7 +1132,7 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
 
     data->icon_view = gtk_icon_view_new_with_model(GTK_TREE_MODEL(data->store));
     gtk_icon_view_set_pixbuf_column(GTK_ICON_VIEW(data->icon_view), COL_PIXBUF_LARGE);
-    gtk_icon_view_set_text_column(GTK_ICON_VIEW(data->icon_view), COL_NAME);
+    gtk_icon_view_set_markup_column(GTK_ICON_VIEW(data->icon_view), COL_MARKUP);
     gtk_icon_view_set_selection_mode(GTK_ICON_VIEW(data->icon_view), GTK_SELECTION_MULTIPLE);
     gtk_icon_view_set_item_width(GTK_ICON_VIEW(data->icon_view), 96);
     gtk_icon_view_set_row_spacing(GTK_ICON_VIEW(data->icon_view), 12);
@@ -1364,6 +1368,31 @@ void FileViewWidget::load_directory(GtkWidget* widget, const std::string& path) 
     auto* task = new DirLoadTask{widget, path, my_generation, {}};
 
     std::thread([task]() {
+        std::map<std::string, std::string> git_statuses;
+        std::string check_git_cmd = "cd \"" + task->path + "\" && git rev-parse --is-inside-work-tree >/dev/null 2>&1";
+        if (system(check_git_cmd.c_str()) == 0) {
+            std::array<char, 256> buffer;
+            std::string status_cmd = "cd \"" + task->path + "\" && git status --short . 2>/dev/null";
+            std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(status_cmd.c_str(), "r"), pclose);
+            if (pipe) {
+                while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr) {
+                    std::string line = buffer.data();
+                    if (line.size() >= 4) {
+                        std::string status = line.substr(0, 2);
+                        std::string file_path = line.substr(3);
+                        if (!file_path.empty() && file_path.back() == '\n') file_path.pop_back();
+                        if (!file_path.empty() && file_path.back() == '/') file_path.pop_back();
+                        size_t slash_pos = file_path.find('/');
+                        if (slash_pos != std::string::npos) file_path = file_path.substr(0, slash_pos);
+                        
+                        if (git_statuses.find(file_path) == git_statuses.end() || status != "??") {
+                            git_statuses[file_path] = status;
+                        }
+                    }
+                }
+            }
+        }
+
         GFile* dir = g_file_parse_name(task->path.c_str());
         GError* error = nullptr;
         GFileEnumerator* enumerator = g_file_enumerate_children(
@@ -1385,7 +1414,24 @@ void FileViewWidget::load_directory(GtkWidget* widget, const std::string& path) 
                 const char* name = g_file_info_get_name(info);
                 GFile* child_file = g_file_get_child(dir, name);
                 auto item = FileItem::from_file_info(child_file, info, 48, 20);
-                if (item) task->items.push_back(item);
+                if (item) {
+                    if (git_statuses.count(item->name)) item->git_status = git_statuses[item->name];
+                    if (item->is_directory) {
+                        std::string dotgit = item->path + "/.git/HEAD";
+                        FILE* f = fopen(dotgit.c_str(), "r");
+                        if (f) {
+                            char buf[128];
+                            if (fgets(buf, sizeof(buf), f)) {
+                                std::string line = buf;
+                                if (!line.empty() && line.back() == '\n') line.pop_back();
+                                if (line.find("ref: refs/heads/") == 0) item->git_branch = line.substr(16);
+                                else item->git_branch = line.substr(0, 7);
+                            }
+                            fclose(f);
+                        }
+                    }
+                    task->items.push_back(item);
+                }
                 g_object_unref(child_file);
                 g_object_unref(info);
             }

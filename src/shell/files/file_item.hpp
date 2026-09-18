@@ -23,6 +23,9 @@ struct FileItem {
     bool is_symlink{false};
     std::string symlink_target;
 
+    std::string git_status;
+    std::string git_branch;
+
     GIcon* gicon{nullptr};
     GdkPixbuf* pixbuf_small{nullptr};
     GdkPixbuf* pixbuf_large{nullptr};
