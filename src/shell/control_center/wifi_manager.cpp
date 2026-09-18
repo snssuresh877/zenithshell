@@ -223,7 +223,7 @@ void WifiManager::init(GtkApplication* app) {
         return FALSE;
     }), nullptr);
 
-    GtkWidget* scan_btn = gtk_button_new_with_label("");
+    GtkWidget* scan_btn = gtk_button_new_with_label("↻");
     gtk_widget_add_css_class(scan_btn, "btn-icon-action");
     gtk_widget_set_tooltip_text(scan_btn, "Rescan Wi-Fi Networks");
     g_signal_connect(scan_btn, "clicked", G_CALLBACK(+[](GtkButton*, gpointer) {
@@ -235,7 +235,7 @@ void WifiManager::init(GtkApplication* app) {
         WifiManager::scan_networks(true);
     }), nullptr);
 
-    GtkWidget* close_btn = gtk_button_new_with_label("");
+    GtkWidget* close_btn = gtk_button_new_with_label("✕");
     gtk_widget_add_css_class(close_btn, "btn-close-action");
     g_signal_connect(close_btn, "clicked", G_CALLBACK(+[](GtkButton*, gpointer) {
         WifiManager::hide_panel();
