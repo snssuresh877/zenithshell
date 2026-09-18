@@ -3498,7 +3498,6 @@ window.zenith-files-window {
 .files-palette-category {
     font-size: 10px;
     font-weight: 700;
-    text-transform: uppercase;
     color: @zenith_text_muted;
     letter-spacing: 0.5px;
 }
@@ -3551,7 +3550,6 @@ window.zenith-files-window {
     font-size: 10.5px;
     font-weight: 700;
     color: @zenith_text_muted;
-    text-transform: uppercase;
     letter-spacing: 0.4px;
 }
 
@@ -3614,7 +3612,6 @@ window.zenith-files-window {
     font-weight: 800;
     color: @zenith_text_muted;
     letter-spacing: 1px;
-    text-transform: uppercase;
     padding: 10px 10px 4px 10px;
 }
 
@@ -3658,7 +3655,6 @@ window.zenith-files-window {
     font-weight: 800;
     color: @zenith_text_muted;
     letter-spacing: 1px;
-    text-transform: uppercase;
     margin-bottom: 4px;
 }
 
