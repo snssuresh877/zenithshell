@@ -1,43 +1,60 @@
 #include "shell/files/inspector_panel.hpp"
 #include "shell/files/file_item.hpp"
-#include "gtk3_compat.hpp"
-#include <gio/gio.h>
-#include <filesystem>
-#include <functional>
 #include <sys/stat.h>
 #include <pwd.h>
 #include <grp.h>
+#include <filesystem>
 #include <thread>
-#include <iostream>
+#include <atomic>
+#include <glib.h>
 
 namespace fs = std::filesystem;
 
 namespace zenith {
 
 struct InspectorData {
-    GtkWidget* root_box{nullptr};
-    GtkWidget* icon_preview{nullptr};
-    GtkWidget* title_label{nullptr};
-    GtkWidget* type_label{nullptr};
+    GtkWidget* root_box;
+    std::function<void()> on_close;
 
-    GtkWidget* grid{nullptr};
-    GtkWidget* size_val{nullptr};
-    GtkWidget* dim_row{nullptr};
-    GtkWidget* dim_val{nullptr};
-    GtkWidget* mod_val{nullptr};
-    GtkWidget* loc_val{nullptr};
-    GtkWidget* perm_val{nullptr};
-    GtkWidget* owner_val{nullptr};
+    GtkWidget* icon_preview;
+    GtkWidget* title_label;
+    GtkWidget* type_label;
 
-    GtkWidget* checksum_box{nullptr};
-    GtkWidget* checksum_btn{nullptr};
-    GtkWidget* sha256_val{nullptr};
-    GtkWidget* md5_val{nullptr};
+    // Info
+    GtkWidget* size_val;
+    GtkWidget* items_val;
+    GtkWidget* mod_val;
+    GtkWidget* dim_val;
+    GtkWidget* dim_row; 
+    GtkWidget* items_row;
+
+    // Location
+    GtkWidget* loc_val;
+
+    // Permissions
+    GtkWidget* perm_val;
+    GtkWidget* owner_val;
+
+    // Checksums
+    GtkWidget* checksum_box;
+    GtkWidget* sha256_val;
+    GtkWidget* md5_val;
+    
+    // Actions
+    GtkWidget* btn_open;
+    GtkWidget* btn_term;
+    GtkWidget* btn_copy_path;
 
     std::string current_path;
-    uint64_t calculation_gen{0};
+    std::vector<std::string> selection;
+    std::atomic<uint64_t> calculation_gen{0};
+};
 
-    InspectorPanel::CloseCallback on_close;
+struct DirCalcResultCtx {
+    InspectorData* data;
+    uint64_t bytes;
+    int count;
+    uint64_t gen;
 };
 
 struct ChecksumResultCtx {
@@ -48,180 +65,182 @@ struct ChecksumResultCtx {
     GtkButton* btn;
 };
 
-struct DirCalcResultCtx {
-    InspectorData* data;
-    uint64_t bytes;
-    int count;
-    uint64_t gen;
-};
+static std::string calculate_file_checksum(const std::string& path, GChecksumType type) {
+    GChecksum* checksum = g_checksum_new(type);
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) {
+        g_checksum_free(checksum);
+        return "Error reading file";
+    }
+
+    char buffer[65536];
+    size_t bytes_read;
+    while ((bytes_read = fread(buffer, 1, sizeof(buffer), f)) > 0) {
+        g_checksum_update(checksum, (const guchar*)buffer, bytes_read);
+    }
+    fclose(f);
+
+    std::string result = g_checksum_get_string(checksum);
+    g_checksum_free(checksum);
+    return result;
+}
 
 static std::string format_perm_string(mode_t mode) {
-    std::string p = (S_ISDIR(mode)) ? "d" : "-";
-    p += (mode & S_IRUSR) ? "r" : "-";
-    p += (mode & S_IWUSR) ? "w" : "-";
-    p += (mode & S_IXUSR) ? "x" : "-";
-    p += (mode & S_IRGRP) ? "r" : "-";
-    p += (mode & S_IWGRP) ? "w" : "-";
-    p += (mode & S_IXGRP) ? "x" : "-";
-    p += (mode & S_IROTH) ? "r" : "-";
-    p += (mode & S_IWOTH) ? "w" : "-";
-    p += (mode & S_IXOTH) ? "x" : "-";
-    return p;
+    char buf[11];
+    buf[0] = S_ISDIR(mode) ? 'd' : (S_ISLNK(mode) ? 'l' : '-');
+    buf[1] = (mode & S_IRUSR) ? 'r' : '-';
+    buf[2] = (mode & S_IWUSR) ? 'w' : '-';
+    buf[3] = (mode & S_IXUSR) ? 'x' : '-';
+    buf[4] = (mode & S_IRGRP) ? 'r' : '-';
+    buf[5] = (mode & S_IWGRP) ? 'w' : '-';
+    buf[6] = (mode & S_IXGRP) ? 'x' : '-';
+    buf[7] = (mode & S_IROTH) ? 'r' : '-';
+    buf[8] = (mode & S_IWOTH) ? 'w' : '-';
+    buf[9] = (mode & S_IXOTH) ? 'x' : '-';
+    buf[10] = '\0';
+    return std::string(buf);
 }
 
-static std::string calculate_file_checksum(const std::string& path, GChecksumType type) {
-    GChecksum* cs = g_checksum_new(type);
-    if (!cs) return "";
-
-    FILE* fp = fopen(path.c_str(), "rb");
-    if (!fp) {
-        g_checksum_free(cs);
-        return "";
+static GtkWidget* create_row(const char* label_text, GtkWidget*& val_lbl_out, const char* icon_name = nullptr) {
+    GtkWidget* hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    if (icon_name) {
+        GtkWidget* img = gtk_image_new_from_icon_name(icon_name, GTK_ICON_SIZE_MENU);
+        gtk_box_pack_start(GTK_BOX(hbox), img, FALSE, FALSE, 0);
     }
+    
+    GtkWidget* lbl = gtk_label_new(label_text);
+    gtk_label_set_xalign(GTK_LABEL(lbl), 0.0);
+    gtk_style_context_add_class(gtk_widget_get_style_context(lbl), "files-prop-lbl");
+    gtk_box_pack_start(GTK_BOX(hbox), lbl, FALSE, FALSE, 0);
 
-    guchar buffer[8192];
-    size_t n = 0;
-    while ((n = fread(buffer, 1, sizeof(buffer), fp)) > 0) {
-        g_checksum_update(cs, buffer, n);
-    }
-    fclose(fp);
-
-    const char* str = g_checksum_get_string(cs);
-    std::string res = str ? str : "";
-    g_checksum_free(cs);
-    return res;
+    val_lbl_out = gtk_label_new("");
+    gtk_label_set_xalign(GTK_LABEL(val_lbl_out), 1.0);
+    gtk_label_set_ellipsize(GTK_LABEL(val_lbl_out), PANGO_ELLIPSIZE_START);
+    gtk_style_context_add_class(gtk_widget_get_style_context(val_lbl_out), "files-prop-val");
+    gtk_box_pack_end(GTK_BOX(hbox), val_lbl_out, TRUE, TRUE, 0);
+    return hbox;
 }
 
-static GtkWidget* create_meta_row(GtkWidget* grid, int row, const char* label, GtkWidget** out_val) {
-    GtkWidget* key = gtk_label_new(label);
-    gtk_label_set_xalign(GTK_LABEL(key), 0.0f);
-    gtk_widget_add_css_class(key, "files-prop-key");
-    gtk_grid_attach(GTK_GRID(grid), key, 0, row, 1, 1);
+static GtkWidget* create_section(const char* title, std::vector<GtkWidget*> rows) {
+    GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
+    gtk_container_set_border_width(GTK_CONTAINER(vbox), 8);
+    
+    GtkWidget* hdr = gtk_label_new(title);
+    gtk_label_set_xalign(GTK_LABEL(hdr), 0.0);
+    gtk_style_context_add_class(gtk_widget_get_style_context(hdr), "files-prop-title"); 
+    gtk_box_pack_start(GTK_BOX(vbox), hdr, FALSE, FALSE, 4);
+    
+    GtkWidget* sep = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+    gtk_box_pack_start(GTK_BOX(vbox), sep, FALSE, FALSE, 2);
 
-    GtkWidget* val = gtk_label_new("—");
-    gtk_label_set_xalign(GTK_LABEL(val), 0.0f);
-    gtk_label_set_line_wrap(GTK_LABEL(val), TRUE);
-    gtk_label_set_ellipsize(GTK_LABEL(val), PANGO_ELLIPSIZE_MIDDLE);
-    gtk_widget_add_css_class(val, "files-prop-val");
-    gtk_grid_attach(GTK_GRID(grid), val, 1, row, 1, 1);
-
-    if (out_val) *out_val = val;
-    return key;
+    for (auto* r : rows) {
+        gtk_box_pack_start(GTK_BOX(vbox), r, FALSE, FALSE, 0);
+    }
+    return vbox;
 }
 
 GtkWidget* InspectorPanel::create(CloseCallback on_close) {
     auto* data = new InspectorData();
-    data->on_close = std::move(on_close);
+    data->on_close = on_close;
 
     GtkWidget* root = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    gtk_widget_set_size_request(root, 320, -1);
+    gtk_style_context_add_class(gtk_widget_get_style_context(root), "files-inspector-panel");
     data->root_box = root;
-    gtk_widget_add_css_class(root, "files-inspector-panel");
-    gtk_widget_set_size_request(root, 240, -1);
 
     // Header
-    GtkWidget* header_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-    gtk_container_set_border_width(GTK_CONTAINER(header_box), 12);
-    gtk_widget_add_css_class(header_box, "files-inspector-header");
+    GtkWidget* header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    gtk_container_set_border_width(GTK_CONTAINER(header), 12);
+    gtk_box_pack_start(GTK_BOX(root), header, FALSE, FALSE, 0);
 
-    GtkWidget* hdr_lbl = gtk_label_new("INSPECTOR");
-    gtk_label_set_xalign(GTK_LABEL(hdr_lbl), 0.0f);
-    gtk_widget_add_css_class(hdr_lbl, "files-prop-title");
-    gtk_box_pack_start(GTK_BOX(header_box), hdr_lbl, TRUE, TRUE, 0);
+    GtkWidget* title = gtk_label_new("INSPECTOR");
+    gtk_style_context_add_class(gtk_widget_get_style_context(title), "files-inspector-title");
+    gtk_box_pack_start(GTK_BOX(header), title, TRUE, TRUE, 0);
 
-    // Close button (×)
-    GtkWidget* close_btn = gtk_button_new_from_icon_name("window-close-symbolic", GTK_ICON_SIZE_MENU);
-    gtk_widget_add_css_class(close_btn, "files-inspector-close");
-    gtk_widget_set_tooltip_text(close_btn, "Close Inspector");
-    gtk_box_pack_end(GTK_BOX(header_box), close_btn, FALSE, FALSE, 0);
-
-    g_signal_connect(close_btn, "clicked", G_CALLBACK(+[](GtkButton*, gpointer ud) {
-        auto* d = static_cast<InspectorData*>(ud);
+    GtkWidget* close_btn = gtk_button_new_from_icon_name("window-close-symbolic", GTK_ICON_SIZE_BUTTON);
+    gtk_button_set_relief(GTK_BUTTON(close_btn), GTK_RELIEF_NONE);
+    g_signal_connect(close_btn, "clicked", G_CALLBACK(+[](GtkButton*, gpointer user_data) {
+        auto* d = static_cast<InspectorData*>(user_data);
         if (d->on_close) d->on_close();
     }), data);
+    gtk_box_pack_end(GTK_BOX(header), close_btn, FALSE, FALSE, 0);
 
-    gtk_box_pack_start(GTK_BOX(root), header_box, FALSE, FALSE, 0);
-
-    // Scrolled Content
     GtkWidget* scroll = gtk_scrolled_window_new(nullptr, nullptr);
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-    gtk_widget_set_vexpand(scroll, TRUE);
 
-    GtkWidget* content_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 14);
-    gtk_container_set_border_width(GTK_CONTAINER(content_vbox), 14);
+    GtkWidget* content_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 16);
+    gtk_container_set_border_width(GTK_CONTAINER(content_vbox), 16);
+    
+    // 1. Large Preview
+    GtkWidget* preview_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+    gtk_box_pack_start(GTK_BOX(content_vbox), preview_box, FALSE, FALSE, 0);
+    
+    data->icon_preview = gtk_image_new_from_icon_name("folder", GTK_ICON_SIZE_DIALOG);
+    gtk_image_set_pixel_size(GTK_IMAGE(data->icon_preview), 128);
+    gtk_box_pack_start(GTK_BOX(preview_box), data->icon_preview, FALSE, FALSE, 16);
+    
+    data->title_label = gtk_label_new("Select an item");
+    gtk_label_set_ellipsize(GTK_LABEL(data->title_label), PANGO_ELLIPSIZE_MIDDLE);
+    gtk_label_set_xalign(GTK_LABEL(data->title_label), 0.5);
+    gtk_label_set_markup(GTK_LABEL(data->title_label), "<b>Select an item</b>");
+    gtk_box_pack_start(GTK_BOX(preview_box), data->title_label, FALSE, FALSE, 0);
+    
+    data->type_label = gtk_label_new("");
+    gtk_label_set_xalign(GTK_LABEL(data->type_label), 0.5);
+    gtk_style_context_add_class(gtk_widget_get_style_context(data->type_label), "files-prop-val");
+    gtk_box_pack_start(GTK_BOX(preview_box), data->type_label, FALSE, FALSE, 0);
 
-    // Preview
-    data->icon_preview = gtk_image_new_from_icon_name("folder-symbolic", GTK_ICON_SIZE_DIALOG);
-    gtk_widget_set_size_request(data->icon_preview, 96, 96);
-    gtk_widget_add_css_class(data->icon_preview, "files-inspector-preview");
-    gtk_box_pack_start(GTK_BOX(content_vbox), data->icon_preview, FALSE, FALSE, 0);
-
-    // Title & Type
-    data->title_label = gtk_label_new("No Selection");
-    gtk_label_set_xalign(GTK_LABEL(data->title_label), 0.5f);
-    gtk_label_set_line_wrap(GTK_LABEL(data->title_label), TRUE);
-    gtk_widget_add_css_class(data->title_label, "files-inspector-title");
-    gtk_box_pack_start(GTK_BOX(content_vbox), data->title_label, FALSE, FALSE, 0);
-
-    data->type_label = gtk_label_new("Folder");
-    gtk_label_set_xalign(GTK_LABEL(data->type_label), 0.5f);
-    gtk_widget_add_css_class(data->type_label, "files-prop-subtitle");
-    gtk_box_pack_start(GTK_BOX(content_vbox), data->type_label, FALSE, FALSE, 0);
-
-    gtk_box_pack_start(GTK_BOX(content_vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 4);
-
-    // Metadata Grid
-    data->grid = gtk_grid_new();
-    gtk_grid_set_row_spacing(GTK_GRID(data->grid), 8);
-    gtk_grid_set_column_spacing(GTK_GRID(data->grid), 12);
-
-    int r = 0;
-    create_meta_row(data->grid, r++, "Size", &data->size_val);
-    data->dim_row = create_meta_row(data->grid, r++, "Dimensions", &data->dim_val);
-    create_meta_row(data->grid, r++, "Modified", &data->mod_val);
-    create_meta_row(data->grid, r++, "Location", &data->loc_val);
-    create_meta_row(data->grid, r++, "Permissions", &data->perm_val);
-    create_meta_row(data->grid, r++, "Owner", &data->owner_val);
-
-    gtk_box_pack_start(GTK_BOX(content_vbox), data->grid, FALSE, FALSE, 0);
-
-    gtk_box_pack_start(GTK_BOX(content_vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 4);
-
-    // Checksum Section
+    // 2. Information Section
+    GtkWidget* size_r = create_row("Size", data->size_val, "drive-harddisk-symbolic");
+    data->items_row = create_row("Items", data->items_val, "folder-symbolic");
+    data->dim_row = create_row("Dimensions", data->dim_val, "image-x-generic-symbolic");
+    GtkWidget* mod_r = create_row("Modified", data->mod_val, "document-open-recent-symbolic");
+    
+    GtkWidget* info_sec = create_section("INFORMATION", {size_r, data->items_row, data->dim_row, mod_r});
+    gtk_box_pack_start(GTK_BOX(content_vbox), info_sec, FALSE, FALSE, 0);
+    
+    // 3. Location Section
+    GtkWidget* loc_r = create_row("Path", data->loc_val);
+    GtkWidget* loc_sec = create_section("LOCATION", {loc_r});
+    gtk_box_pack_start(GTK_BOX(content_vbox), loc_sec, FALSE, FALSE, 0);
+    
+    // 4. Permissions Section
+    GtkWidget* perm_r = create_row("Access", data->perm_val);
+    GtkWidget* own_r = create_row("Owner", data->owner_val);
+    GtkWidget* perm_sec = create_section("PERMISSIONS", {own_r, perm_r});
+    gtk_box_pack_start(GTK_BOX(content_vbox), perm_sec, FALSE, FALSE, 0);
+    
+    // Checksums
     data->checksum_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
-    GtkWidget* cs_hdr = gtk_label_new("<b>Checksums</b>");
-    gtk_label_set_use_markup(GTK_LABEL(cs_hdr), TRUE);
-    gtk_label_set_xalign(GTK_LABEL(cs_hdr), 0.0f);
-    gtk_widget_add_css_class(cs_hdr, "files-prop-key");
-    gtk_box_pack_start(GTK_BOX(data->checksum_box), cs_hdr, FALSE, FALSE, 0);
-
-    data->checksum_btn = gtk_button_new_with_label("Calculate Hashes");
-    gtk_widget_add_css_class(data->checksum_btn, "files-btn-tool");
-    gtk_box_pack_start(GTK_BOX(data->checksum_box), data->checksum_btn, FALSE, FALSE, 0);
-
-    GtkWidget* cs_grid = gtk_grid_new();
-    gtk_grid_set_row_spacing(GTK_GRID(cs_grid), 4);
-    gtk_grid_set_column_spacing(GTK_GRID(cs_grid), 8);
-
-    create_meta_row(cs_grid, 0, "SHA-256", &data->sha256_val);
-    create_meta_row(cs_grid, 1, "MD5", &data->md5_val);
-    gtk_box_pack_start(GTK_BOX(data->checksum_box), cs_grid, FALSE, FALSE, 0);
-
-    g_signal_connect(data->checksum_btn, "clicked", G_CALLBACK(+[](GtkButton* b, gpointer ud) {
-        auto* d = static_cast<InspectorData*>(ud);
+    gtk_container_set_border_width(GTK_CONTAINER(data->checksum_box), 8);
+    GtkWidget* chk_hdr = gtk_label_new("CHECKSUMS");
+    gtk_label_set_xalign(GTK_LABEL(chk_hdr), 0.0);
+    gtk_style_context_add_class(gtk_widget_get_style_context(chk_hdr), "files-prop-title");
+    gtk_box_pack_start(GTK_BOX(data->checksum_box), chk_hdr, FALSE, FALSE, 4);
+    gtk_box_pack_start(GTK_BOX(data->checksum_box), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 2);
+    
+    GtkWidget* sha_r = create_row("SHA-256", data->sha256_val);
+    GtkWidget* md5_r = create_row("MD5", data->md5_val);
+    gtk_label_set_ellipsize(GTK_LABEL(data->sha256_val), PANGO_ELLIPSIZE_START);
+    gtk_label_set_ellipsize(GTK_LABEL(data->md5_val), PANGO_ELLIPSIZE_START);
+    gtk_box_pack_start(GTK_BOX(data->checksum_box), sha_r, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(data->checksum_box), md5_r, FALSE, FALSE, 0);
+    
+    GtkWidget* calc_btn = gtk_button_new_with_label("Calculate Hashes");
+    gtk_style_context_add_class(gtk_widget_get_style_context(calc_btn), "files-btn-tool");
+    g_signal_connect(calc_btn, "clicked", G_CALLBACK(+[](GtkButton* b, gpointer user_data) {
+        auto* d = static_cast<InspectorData*>(user_data);
         if (d->current_path.empty()) return;
-
-        gtk_button_set_label(b, "Computing…");
+        std::string p = d->current_path;
+        uint64_t my_gen = d->calculation_gen;
+        gtk_button_set_label(b, "Calculating...");
         gtk_widget_set_sensitive(GTK_WIDGET(b), FALSE);
 
-        std::string target = d->current_path;
-        uint64_t my_gen = d->calculation_gen;
-
-        std::thread([d, target, my_gen, b]() {
-            std::string sha = calculate_file_checksum(target, G_CHECKSUM_SHA256);
-            std::string md5 = calculate_file_checksum(target, G_CHECKSUM_MD5);
-
-            g_idle_add(+[](gpointer p) -> gboolean {
-                auto* ctx = static_cast<ChecksumResultCtx*>(p);
+        std::thread([d, p, my_gen, b]() {
+            std::string sha = calculate_file_checksum(p, G_CHECKSUM_SHA256);
+            std::string md5 = calculate_file_checksum(p, G_CHECKSUM_MD5);
+            g_idle_add(+[](gpointer ptr) -> gboolean {
+                auto* ctx = static_cast<ChecksumResultCtx*>(ptr);
                 if (ctx->data->calculation_gen == ctx->gen) {
                     gtk_label_set_text(GTK_LABEL(ctx->data->sha256_val), ctx->sha.c_str());
                     gtk_label_set_text(GTK_LABEL(ctx->data->md5_val), ctx->md5.c_str());
@@ -233,8 +252,59 @@ GtkWidget* InspectorPanel::create(CloseCallback on_close) {
             }, new ChecksumResultCtx{d, sha, md5, my_gen, b});
         }).detach();
     }), data);
-
+    gtk_box_pack_start(GTK_BOX(data->checksum_box), calc_btn, FALSE, FALSE, 4);
     gtk_box_pack_start(GTK_BOX(content_vbox), data->checksum_box, FALSE, FALSE, 0);
+
+    // Actions Section
+    GtkWidget* actions_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
+    gtk_container_set_border_width(GTK_CONTAINER(actions_box), 8);
+    gtk_box_pack_start(GTK_BOX(content_vbox), actions_box, FALSE, FALSE, 8);
+    
+    auto create_action_btn = [](const char* label, const char* icon) {
+        GtkWidget* btn = gtk_button_new();
+        GtkWidget* box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+        gtk_container_set_border_width(GTK_CONTAINER(box), 4);
+        gtk_box_pack_start(GTK_BOX(box), gtk_image_new_from_icon_name(icon, GTK_ICON_SIZE_BUTTON), FALSE, FALSE, 0);
+        GtkWidget* l = gtk_label_new(label);
+        gtk_label_set_xalign(GTK_LABEL(l), 0.0);
+        gtk_box_pack_start(GTK_BOX(box), l, TRUE, TRUE, 0);
+        gtk_container_add(GTK_CONTAINER(btn), box);
+        return btn;
+    };
+    
+    data->btn_open = create_action_btn("Open", "document-open-symbolic");
+    data->btn_term = create_action_btn("Open in Terminal", "utilities-terminal-symbolic");
+    data->btn_copy_path = create_action_btn("Copy Path", "edit-copy-symbolic");
+    
+    gtk_box_pack_start(GTK_BOX(actions_box), data->btn_open, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(actions_box), data->btn_term, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(actions_box), data->btn_copy_path, FALSE, FALSE, 0);
+    
+    g_signal_connect(data->btn_open, "clicked", G_CALLBACK(+[](GtkButton*, gpointer user_data) {
+        auto* d = static_cast<InspectorData*>(user_data);
+        for (const auto& p : d->selection) {
+            std::string cmd = "xdg-open \"" + p + "\" &";
+            system(cmd.c_str());
+        }
+    }), data);
+    
+    g_signal_connect(data->btn_term, "clicked", G_CALLBACK(+[](GtkButton*, gpointer user_data) {
+        auto* d = static_cast<InspectorData*>(user_data);
+        if (!d->selection.empty()) {
+            std::string p = d->selection[0];
+            if (!fs::is_directory(p)) p = fs::path(p).parent_path().string();
+            std::string cmd = "foot --working-directory=\"" + p + "\" &";
+            system(cmd.c_str());
+        }
+    }), data);
+    
+    g_signal_connect(data->btn_copy_path, "clicked", G_CALLBACK(+[](GtkButton*, gpointer user_data) {
+        auto* d = static_cast<InspectorData*>(user_data);
+        if (!d->selection.empty()) {
+            GtkClipboard* clip = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+            gtk_clipboard_set_text(clip, d->selection[0].c_str(), -1);
+        }
+    }), data);
 
     gtk_container_add(GTK_CONTAINER(scroll), content_vbox);
     gtk_box_pack_start(GTK_BOX(root), scroll, TRUE, TRUE, 0);
@@ -253,20 +323,24 @@ void InspectorPanel::set_current_directory(GtkWidget* panel, const std::string& 
     if (!data) return;
 
     data->current_path = directory_path;
+    data->selection = {directory_path};
     data->calculation_gen++;
 
     gtk_image_set_from_icon_name(GTK_IMAGE(data->icon_preview), "folder", GTK_ICON_SIZE_DIALOG);
+    gtk_image_set_pixel_size(GTK_IMAGE(data->icon_preview), 128);
     
     std::string base = directory_path;
     size_t s = directory_path.find_last_of('/');
     if (s != std::string::npos && s + 1 < directory_path.length()) base = directory_path.substr(s + 1);
     if (base.empty()) base = "/";
 
-    gtk_label_set_text(GTK_LABEL(data->title_label), base.c_str());
+    gtk_label_set_markup(GTK_LABEL(data->title_label), ("<span size='large'><b>" + base + "</b></span>").c_str());
     gtk_label_set_text(GTK_LABEL(data->type_label), "Folder");
     gtk_label_set_text(GTK_LABEL(data->loc_val), directory_path.c_str());
     gtk_widget_set_visible(data->dim_row, FALSE);
     gtk_widget_set_visible(data->checksum_box, FALSE);
+    gtk_widget_set_visible(data->items_row, TRUE);
+    gtk_widget_set_visible(data->btn_term, TRUE);
 
     struct stat st;
     if (stat(directory_path.c_str(), &st) == 0) {
@@ -278,8 +352,36 @@ void InspectorPanel::set_current_directory(GtkWidget* panel, const std::string& 
 
         char timebuf[64];
         struct tm* tm_info = localtime(&st.st_mtime);
-        strftime(timebuf, sizeof(timebuf), "%b %d, %Y %H:%M", tm_info);
+        strftime(timebuf, sizeof(timebuf), "%b %d, %Y", tm_info);
         gtk_label_set_text(GTK_LABEL(data->mod_val), timebuf);
+        
+        gtk_label_set_text(GTK_LABEL(data->size_val), "Calculating…");
+        gtk_label_set_text(GTK_LABEL(data->items_val), "Calculating…");
+
+        // Calculate folder size in background
+        uint64_t my_gen = data->calculation_gen;
+        std::string folder_target = directory_path;
+        std::thread([data, folder_target, my_gen]() {
+            uint64_t total = 0;
+            int count = 0;
+            std::error_code ec;
+            for (auto it = fs::recursive_directory_iterator(folder_target, fs::directory_options::skip_permission_denied, ec);
+                 it != fs::recursive_directory_iterator(); ++it) {
+                if (data->calculation_gen != my_gen) return;
+                if (it->is_regular_file(ec)) total += it->file_size(ec);
+                count++;
+            }
+
+            g_idle_add(+[](gpointer p) -> gboolean {
+                auto* r = static_cast<DirCalcResultCtx*>(p);
+                if (r->data->calculation_gen == r->gen) {
+                    gtk_label_set_text(GTK_LABEL(r->data->size_val), FileItem::format_size(r->bytes).c_str());
+                    gtk_label_set_text(GTK_LABEL(r->data->items_val), std::to_string(r->count).c_str());
+                }
+                delete r;
+                return G_SOURCE_REMOVE;
+            }, new DirCalcResultCtx{data, total, count, my_gen});
+        }).detach();
     }
 }
 
@@ -289,16 +391,20 @@ void InspectorPanel::update_selection(GtkWidget* panel, const std::vector<std::s
     if (!data) return;
 
     data->calculation_gen++;
+    data->selection = selected_paths;
 
     if (selected_paths.empty()) {
-        set_current_directory(panel, data->current_path);
+        set_current_directory(panel, data->current_path); // fall back to dir
         return;
     }
 
     if (selected_paths.size() > 1) {
         gtk_image_set_from_icon_name(GTK_IMAGE(data->icon_preview), "emblem-documents", GTK_ICON_SIZE_DIALOG);
-        gtk_label_set_text(GTK_LABEL(data->title_label), (std::to_string(selected_paths.size()) + " items selected").c_str());
+        gtk_image_set_pixel_size(GTK_IMAGE(data->icon_preview), 128);
+        gtk_label_set_markup(GTK_LABEL(data->title_label), ("<span size='large'><b>" + std::to_string(selected_paths.size()) + " items selected</b></span>").c_str());
         gtk_label_set_text(GTK_LABEL(data->type_label), "Multiple Selection");
+        gtk_label_set_text(GTK_LABEL(data->items_val), std::to_string(selected_paths.size()).c_str());
+        gtk_widget_set_visible(data->items_row, TRUE);
 
         uint64_t total_size = 0;
         std::error_code ec;
@@ -308,6 +414,7 @@ void InspectorPanel::update_selection(GtkWidget* panel, const std::vector<std::s
         gtk_label_set_text(GTK_LABEL(data->size_val), FileItem::format_size(total_size).c_str());
         gtk_widget_set_visible(data->dim_row, FALSE);
         gtk_widget_set_visible(data->checksum_box, FALSE);
+        gtk_widget_set_visible(data->btn_term, FALSE);
         return;
     }
 
@@ -318,7 +425,7 @@ void InspectorPanel::update_selection(GtkWidget* panel, const std::vector<std::s
     std::string filename = fs::path(p).filename().string();
     if (filename.empty()) filename = p;
 
-    gtk_label_set_text(GTK_LABEL(data->title_label), filename.c_str());
+    gtk_label_set_markup(GTK_LABEL(data->title_label), ("<span size='large'><b>" + filename + "</b></span>").c_str());
     gtk_label_set_text(GTK_LABEL(data->loc_val), fs::path(p).parent_path().string().c_str());
 
     GFile* gf = g_file_parse_name(p.c_str());
@@ -335,14 +442,16 @@ void InspectorPanel::update_selection(GtkWidget* panel, const std::vector<std::s
     if (gf) g_object_unref(gf);
 
     gtk_label_set_text(GTK_LABEL(data->type_label), mime.c_str());
+    gtk_widget_set_visible(data->btn_term, is_dir);
 
     // Icon / Thumbnail preview
-    GdkPixbuf* thumb = FileItem::load_thumbnail(p, "file://" + p, mime, 96);
+    GdkPixbuf* thumb = FileItem::load_thumbnail(p, "file://" + p, mime, 256); // larger thumb for inspector
     if (thumb) {
         gtk_image_set_from_pixbuf(GTK_IMAGE(data->icon_preview), thumb);
         g_object_unref(thumb);
     } else {
         gtk_image_set_from_icon_name(GTK_IMAGE(data->icon_preview), is_dir ? "folder" : "text-x-generic", GTK_ICON_SIZE_DIALOG);
+        gtk_image_set_pixel_size(GTK_IMAGE(data->icon_preview), 128);
     }
 
     struct stat st;
@@ -350,11 +459,14 @@ void InspectorPanel::update_selection(GtkWidget* panel, const std::vector<std::s
         if (!is_dir) {
             gtk_label_set_text(GTK_LABEL(data->size_val), FileItem::format_size(st.st_size).c_str());
             gtk_widget_set_visible(data->checksum_box, TRUE);
+            gtk_widget_set_visible(data->items_row, FALSE);
             gtk_label_set_text(GTK_LABEL(data->sha256_val), "—");
             gtk_label_set_text(GTK_LABEL(data->md5_val), "—");
         } else {
             gtk_label_set_text(GTK_LABEL(data->size_val), "Calculating…");
+            gtk_label_set_text(GTK_LABEL(data->items_val), "Calculating…");
             gtk_widget_set_visible(data->checksum_box, FALSE);
+            gtk_widget_set_visible(data->items_row, TRUE);
 
             // Calculate folder size in background
             uint64_t my_gen = data->calculation_gen;
@@ -370,11 +482,11 @@ void InspectorPanel::update_selection(GtkWidget* panel, const std::vector<std::s
                     count++;
                 }
 
-                g_idle_add(+[](gpointer p) -> gboolean {
-                    auto* r = static_cast<DirCalcResultCtx*>(p);
+                g_idle_add(+[](gpointer ptr) -> gboolean {
+                    auto* r = static_cast<DirCalcResultCtx*>(ptr);
                     if (r->data->calculation_gen == r->gen) {
-                        std::string s = FileItem::format_size(r->bytes) + " (" + std::to_string(r->count) + " items)";
-                        gtk_label_set_text(GTK_LABEL(r->data->size_val), s.c_str());
+                        gtk_label_set_text(GTK_LABEL(r->data->size_val), FileItem::format_size(r->bytes).c_str());
+                        gtk_label_set_text(GTK_LABEL(r->data->items_val), std::to_string(r->count).c_str());
                     }
                     delete r;
                     return G_SOURCE_REMOVE;
@@ -384,7 +496,7 @@ void InspectorPanel::update_selection(GtkWidget* panel, const std::vector<std::s
 
         char timebuf[64];
         struct tm* tm_info = localtime(&st.st_mtime);
-        strftime(timebuf, sizeof(timebuf), "%b %d, %Y %H:%M", tm_info);
+        strftime(timebuf, sizeof(timebuf), "%b %d, %Y", tm_info);
         gtk_label_set_text(GTK_LABEL(data->mod_val), timebuf);
 
         gtk_label_set_text(GTK_LABEL(data->perm_val), format_perm_string(st.st_mode).c_str());
