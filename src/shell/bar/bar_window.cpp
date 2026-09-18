@@ -211,11 +211,8 @@ GtkWidget* BarWindow::create(GtkApplication* app, const Config& config) {
     gtk_widget_set_size_request(vol_btn, -1, 24);
 
     GtkWidget* vol_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    GtkWidget* vol_icon = gtk_label_new("");
-    gtk_widget_add_css_class(vol_icon, "volume-icon");
     GtkWidget* vol_text = gtk_label_new("0%");
     gtk_widget_add_css_class(vol_text, "volume-text");
-    gtk_box_pack_start(GTK_BOX(vol_box), vol_icon, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(vol_box), vol_text, FALSE, FALSE, 0);
     gtk_container_add(GTK_CONTAINER(vol_btn), vol_box);
 
