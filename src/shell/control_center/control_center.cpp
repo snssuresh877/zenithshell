@@ -43,6 +43,7 @@ GtkWidget* ControlCenter::theme_card_sub_lbl = nullptr;
 
 GtkWidget* ControlCenter::brightness_slider = nullptr;
 GtkWidget* ControlCenter::brightness_val_lbl = nullptr;
+GtkWidget* ControlCenter::volume_icon_btn = nullptr;
 GtkWidget* ControlCenter::volume_slider = nullptr;
 GtkWidget* ControlCenter::volume_val_lbl = nullptr;
 
@@ -498,14 +499,20 @@ GtkWidget* ControlCenter::create_main_page() {
     // Volume Slider Row
     GtkWidget* vol_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
     GtkWidget* vol_header = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
-    GtkWidget* vol_icon = gtk_label_new("");
-    gtk_widget_add_css_class(vol_icon, "cc-slider-icon");
+    volume_icon_btn = gtk_button_new();
+    gtk_widget_add_css_class(volume_icon_btn, "cc-slider-icon-btn");
+    GtkWidget* vol_icon_lbl = gtk_label_new(AudioManager::is_muted() ? "󰖁" : "");
+    gtk_container_add(GTK_CONTAINER(volume_icon_btn), vol_icon_lbl);
+    g_signal_connect(volume_icon_btn, "clicked", G_CALLBACK(+[](GtkButton*, gpointer) {
+        AudioManager::toggle_mute();
+        ControlCenter::refresh_data();
+    }), nullptr);
     GtkWidget* vol_lbl = gtk_label_new("Volume");
     gtk_widget_add_css_class(vol_lbl, "cc-slider-lbl");
     volume_val_lbl = gtk_label_new((std::to_string(cur_vol) + "%").c_str());
     gtk_widget_add_css_class(volume_val_lbl, "cc-slider-val");
 
-    gtk_box_pack_start(GTK_BOX(vol_header), vol_icon, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(vol_header), volume_icon_btn, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(vol_header), vol_lbl, FALSE, FALSE, 0);
     gtk_box_pack_end(GTK_BOX(vol_header), volume_val_lbl, FALSE, FALSE, 0);
 
@@ -1221,6 +1228,10 @@ void ControlCenter::refresh_data() {
     }
     if (audio_sub_lbl) {
         gtk_label_set_text(GTK_LABEL(audio_sub_lbl), AudioManager::get_default_sink_name().c_str());
+    }
+    if (volume_icon_btn) {
+        GtkWidget* lbl = gtk_bin_get_child(GTK_BIN(volume_icon_btn));
+        if (lbl) gtk_label_set_text(GTK_LABEL(lbl), AudioManager::is_muted() ? "󰖁" : "");
     }
     s_syncing_ui = true;
     int v = AudioManager::get_volume();

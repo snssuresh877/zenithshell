@@ -46,6 +46,7 @@ private:
     // Main Overview Sliders
     static GtkWidget* brightness_slider;
     static GtkWidget* brightness_val_lbl;
+    static GtkWidget* volume_icon_btn;
     static GtkWidget* volume_slider;
     static GtkWidget* volume_val_lbl;
 

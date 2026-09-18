@@ -3910,3 +3910,16 @@ window.zenith-files-window {
 .files-inspector-panel button.suggested-action:hover {
     background-color: #3b86f5;
 }
+
+.cc-slider-icon-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: @zenith_text_primary;
+    font-size: 14px;
+    padding: 2px 6px;
+    margin-right: 2px;
+    border-radius: 6px;
+}
+.cc-slider-icon-btn:hover {
+    background-color: rgba(255,255,255,0.08);
+}
