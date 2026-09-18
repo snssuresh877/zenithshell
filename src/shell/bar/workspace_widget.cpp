@@ -20,7 +20,7 @@ GtkWidget* WorkspaceWidget::create(int count) {
         GtkWidget* btn = gtk_button_new();
         gtk_widget_add_css_class(btn, "workspace-btn");
 
-        GtkWidget* lbl = gtk_label_new(i == 1 ? "󰮯" : "󰧞");
+        GtkWidget* lbl = gtk_label_new(std::to_string(i).c_str());
         gtk_container_add(GTK_CONTAINER(btn), lbl);
 
         if (i == 1) {
@@ -62,11 +62,9 @@ void WorkspaceWidget::update_active(int active_id) {
         if (!child) continue;
 
         if (id == active_id) {
-            gtk_label_set_text(GTK_LABEL(child), "󰮯");
             gtk_widget_remove_css_class(buttons[i], "inactive-dot");
             gtk_widget_add_css_class(buttons[i], "active");
         } else {
-            gtk_label_set_text(GTK_LABEL(child), "󰧞");
             gtk_widget_remove_css_class(buttons[i], "active");
             gtk_widget_add_css_class(buttons[i], "inactive-dot");
         }
