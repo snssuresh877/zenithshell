@@ -204,34 +204,7 @@ GtkWidget* BarWindow::create(GtkApplication* app, const Config& config) {
     // 4. Control Center Trigger Button (32x32px, radius 20, icon 󰍜)
     GtkWidget* control_center = ControlCenter::create_button();
 
-    // 5. Volume Widget (with scroll wheel support and mute toggle)
-    GtkWidget* vol_btn = gtk_button_new();
-    gtk_widget_add_css_class(vol_btn, "pill-widget");
-    gtk_widget_add_css_class(vol_btn, "volume-pill");
-    gtk_widget_set_size_request(vol_btn, -1, 24);
-
-    GtkWidget* vol_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
-    GtkWidget* vol_text = gtk_label_new("0%");
-    gtk_widget_add_css_class(vol_text, "volume-text");
-    gtk_box_pack_start(GTK_BOX(vol_box), vol_text, FALSE, FALSE, 0);
-    gtk_container_add(GTK_CONTAINER(vol_btn), vol_box);
-
-    g_signal_connect(vol_btn, "clicked", G_CALLBACK(+[](GtkButton*, gpointer) {
-        AudioManager::toggle_mute();
-    }), nullptr);
-
-    gtk_widget_add_events(vol_btn, GDK_SCROLL_MASK);
-    g_signal_connect(vol_btn, "scroll-event", G_CALLBACK(+[](GtkWidget*, GdkEventScroll* event, gpointer) -> gboolean {
-        int cur = AudioManager::get_volume();
-        if (event->direction == GDK_SCROLL_UP || event->delta_y < 0) {
-            AudioManager::set_volume(std::min(100, cur + 5));
-            return TRUE;
-        } else if (event->direction == GDK_SCROLL_DOWN || event->delta_y > 0) {
-            AudioManager::set_volume(std::max(0, cur - 5));
-            return TRUE;
-        }
-        return FALSE;
-    }), nullptr);
+    // 5. Volume Widget removed by user request
 
     // 6. Battery Widget
     GtkWidget* bat_box_widget = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
@@ -253,11 +226,10 @@ GtkWidget* BarWindow::create(GtkApplication* app, const Config& config) {
         GtkWidget* net_vpn_lbl;
         GtkWidget* net_speed_lbl;
         // GtkWidget* vol_icon;
-        GtkWidget* vol_text;
-        GtkWidget* bat_icon;
+                GtkWidget* bat_icon;
         GtkWidget* bat_text;
     };
-    auto* pd = new PeriodicData{ net_btn, net_icon, net_vpn_lbl, net_speed_lbl, vol_text, bat_icon, bat_text };
+    auto* pd = new PeriodicData{ net_btn, net_icon, net_vpn_lbl, net_speed_lbl, bat_icon, bat_text };
 
     auto update_func = [](gpointer user_data) -> gboolean {
         auto* data = static_cast<PeriodicData*>(user_data);
@@ -290,20 +262,6 @@ GtkWidget* BarWindow::create(GtkApplication* app, const Config& config) {
             gtk_widget_set_visible(data->net_vpn_lbl, FALSE);
             gtk_label_set_text(GTK_LABEL(data->net_speed_lbl), stats.net_speed_str.c_str());
             gtk_widget_remove_css_class(data->net_btn, "vpn-active");
-        }
-
-        // Volume
-        int vol = AudioManager::get_volume();
-        bool muted = AudioManager::is_muted();
-        // vol_icon removed
-        if (muted) {
-            gtk_label_set_text(GTK_LABEL(data->vol_text), "Muted");
-            gtk_widget_add_css_class(data->vol_text, "text-muted");
-        } else {
-            char vbuf[32];
-            snprintf(vbuf, sizeof(vbuf), "%d%%", vol);
-            gtk_label_set_text(GTK_LABEL(data->vol_text), vbuf);
-            gtk_widget_remove_css_class(data->vol_text, "text-muted");
         }
 
         // Battery
@@ -348,7 +306,6 @@ GtkWidget* BarWindow::create(GtkApplication* app, const Config& config) {
     gtk_box_pack_start(GTK_BOX(right_box), net_btn, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(right_box), notif_btn, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(right_box), control_center, FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(right_box), vol_btn, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(right_box), bat_box_widget, FALSE, FALSE, 0);
 
     // Assemble Layout into Main Box (True Geometric Screen Center)
