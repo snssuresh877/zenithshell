@@ -3430,11 +3430,7 @@ window.zenith-files-window {
     font-weight: 600;
 }
 
-.files-prop-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: @zenith_text_primary;
-}
+
 
 .files-prop-subtitle {
     font-size: 11px;
@@ -3447,10 +3443,7 @@ window.zenith-files-window {
     color: @zenith_text_secondary;
 }
 
-.files-prop-val {
-    font-size: 11px;
-    color: @zenith_text_primary;
-}
+
 
 .files-prop-key tt {
     background-color: @zenith_surface_highlight;
@@ -3841,3 +3834,79 @@ window.zenith-files-window {
 }
 
 
+
+
+/* === ZENITH FILES VISUAL POLISH === */
+
+.files-view-container {
+    background-color: #090B0D;
+}
+
+.files-inspector-panel {
+    background-color: #101214;
+    border-left: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+}
+
+.files-view-container iconview:selected,
+.files-view-container treeview:selected {
+    background-color: rgba(60, 140, 255, 0.15);
+    border: 1px solid rgba(60, 140, 255, 0.4);
+    border-radius: 8px;
+}
+
+.files-badge {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #A0A5AA;
+    letter-spacing: 0.5px;
+}
+
+.files-inspector-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: white;
+}
+
+.files-prop-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: #7A8085;
+    letter-spacing: 0.5px;
+}
+
+.files-prop-lbl {
+    font-size: 11px;
+    color: #8A9095;
+}
+
+.files-prop-val {
+    font-size: 12px;
+    font-weight: 500;
+    color: #D0D5DA;
+}
+
+.files-inspector-panel button {
+    border-radius: 6px;
+    padding: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    background-color: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.02);
+    transition: all 150ms ease-in-out;
+}
+.files-inspector-panel button:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+.files-inspector-panel button.suggested-action {
+    background-color: #2D7AEE;
+    color: white;
+    border: 1px solid #1c5bba;
+}
+.files-inspector-panel button.suggested-action:hover {
+    background-color: #3b86f5;
+}

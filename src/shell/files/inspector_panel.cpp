@@ -126,8 +126,7 @@ static GtkWidget* create_section(const char* title) {
         gtk_style_context_add_class(gtk_widget_get_style_context(hdr), "files-prop-title"); 
         gtk_box_pack_start(GTK_BOX(vbox), hdr, FALSE, FALSE, 4);
         
-        GtkWidget* sep = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
-        gtk_box_pack_start(GTK_BOX(vbox), sep, FALSE, FALSE, 2);
+        // Separator removed for cleaner modern look
     }
     return vbox;
 }
@@ -158,7 +157,9 @@ GtkWidget* InspectorPanel::create(CloseCallback on_close) {
     gtk_container_set_border_width(GTK_CONTAINER(header), 8);
     gtk_box_pack_start(GTK_BOX(root), header, FALSE, FALSE, 0);
 
-    GtkWidget* title = gtk_label_new("INSPECTOR");
+    GtkWidget* info_icon = gtk_image_new_from_icon_name("dialog-information-symbolic", GTK_ICON_SIZE_MENU);
+    gtk_box_pack_start(GTK_BOX(header), info_icon, FALSE, FALSE, 0);
+    GtkWidget* title = gtk_label_new("Inspector");
     gtk_style_context_add_class(gtk_widget_get_style_context(title), "files-inspector-title");
     gtk_box_pack_start(GTK_BOX(header), title, TRUE, TRUE, 0);
 
@@ -209,15 +210,12 @@ GtkWidget* InspectorPanel::create(CloseCallback on_close) {
     data->actions_box = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
     gtk_container_set_border_width(GTK_CONTAINER(data->actions_box), 12);
     
-    GtkWidget* act_lbl = gtk_label_new("ACTIONS");
-    gtk_label_set_xalign(GTK_LABEL(act_lbl), 0.0);
-    gtk_style_context_add_class(gtk_widget_get_style_context(act_lbl), "files-prop-title");
-    gtk_box_pack_start(GTK_BOX(data->actions_box), act_lbl, FALSE, FALSE, 4);
-    gtk_box_pack_start(GTK_BOX(data->actions_box), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 2);
+    // Removed ACTIONS header
 
     gtk_box_pack_end(GTK_BOX(root), data->actions_box, FALSE, FALSE, 0);
 
     data->btn_open = create_action_btn("Open", "document-open-symbolic");
+    gtk_style_context_add_class(gtk_widget_get_style_context(data->btn_open), "suggested-action");
     data->btn_term = create_action_btn("Open in Terminal", "utilities-terminal-symbolic");
     data->btn_copy_path = create_action_btn("Copy Path", "edit-copy-symbolic");
     data->btn_more = create_action_btn("More", "view-more-symbolic");
@@ -418,8 +416,30 @@ void InspectorPanel::update_selection(GtkWidget* panel, const std::vector<std::s
     if (stat(p.c_str(), &st) != 0) return;
     
     char timebuf[64];
+    
     struct tm* tm_info = localtime(&st.st_mtime);
     strftime(timebuf, sizeof(timebuf), "%b %d, %Y", tm_info);
+    
+    // --- INJECT BADGES ---
+    GtkWidget* badge_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    gtk_widget_set_halign(badge_box, GTK_ALIGN_CENTER);
+    
+    auto create_badge = [](const std::string& text) {
+        GtkWidget* l = gtk_label_new(text.c_str());
+        gtk_style_context_add_class(gtk_widget_get_style_context(l), "files-badge");
+        return l;
+    };
+    
+    std::string type_badge = is_dir ? "FOLDER" : (mime == "application/pdf" ? "PDF" : (mime.starts_with("image/") ? "IMAGE" : "FILE"));
+    gtk_box_pack_start(GTK_BOX(badge_box), create_badge(type_badge), FALSE, FALSE, 0);
+    
+    GtkWidget* size_badge = create_badge(is_dir ? "CALCULATING..." : FileItem::format_size(st.st_size));
+    gtk_box_pack_start(GTK_BOX(badge_box), size_badge, FALSE, FALSE, 0);
+    
+    // Add it to the preview_box. But wait, we don't have access to preview_box here.
+    // We will add it to dynamic_box first.
+    gtk_box_pack_start(GTK_BOX(data->dynamic_box), badge_box, FALSE, FALSE, 8);
+
     
     // BUILD DYNAMIC UI STRUCTURE
     GtkWidget* sec_info = create_section(is_dir ? "CONTENTS" : "INFORMATION");
@@ -449,14 +469,14 @@ void InspectorPanel::update_selection(GtkWidget* panel, const std::vector<std::s
         gtk_style_context_add_class(gtk_widget_get_style_context(lbl_size), "files-prop-val");
         gtk_box_pack_start(GTK_BOX(sec_info), create_row_widget("Total Size", lbl_size), FALSE, FALSE, 0);
     } else {
-        gtk_box_pack_start(GTK_BOX(sec_info), create_row("Size", FileItem::format_size(st.st_size).c_str()), FALSE, FALSE, 0);
+        gtk_box_pack_start(GTK_BOX(sec_info), create_row("Size", FileItem::format_size(st.st_size).c_str(), "drive-harddisk-symbolic"), FALSE, FALSE, 0);
     }
     
     if (mime.starts_with("image/")) {
         gint w = 0, h = 0;
         if (gdk_pixbuf_get_file_info(p.c_str(), &w, &h)) {
             std::string dim = std::to_string(w) + " × " + std::to_string(h);
-            gtk_box_pack_start(GTK_BOX(sec_info), create_row("Dimensions", dim.c_str()), FALSE, FALSE, 0);
+            gtk_box_pack_start(GTK_BOX(sec_info), create_row("Dimensions", dim.c_str(), "image-x-generic-symbolic"), FALSE, FALSE, 0);
         }
     } else if (mime == "application/pdf") {
         lbl_pages = gtk_label_new("Reading…");
@@ -475,7 +495,7 @@ void InspectorPanel::update_selection(GtkWidget* panel, const std::vector<std::s
         gtk_box_pack_start(GTK_BOX(sec_info), create_row_widget("Duration", lbl_vid_dur), FALSE, FALSE, 0);
     }
     
-    gtk_box_pack_start(GTK_BOX(sec_info), create_row("Modified", timebuf), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(sec_info), create_row("Modified", timebuf, "document-open-recent-symbolic"), FALSE, FALSE, 0);
     
     // Location
     GtkWidget* loc_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
@@ -499,8 +519,8 @@ void InspectorPanel::update_selection(GtkWidget* panel, const std::vector<std::s
     struct group* gr = getgrgid(st.st_gid);
     std::string own = pw ? pw->pw_name : std::to_string(st.st_uid);
     std::string group = gr ? gr->gr_name : std::to_string(st.st_gid);
-    gtk_box_pack_start(GTK_BOX(sec_perm), create_row("Owner", own.c_str()), FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(sec_perm), create_row("Group", group.c_str()), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(sec_perm), create_row("Owner", own.c_str(), "avatar-default-symbolic"), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(sec_perm), create_row("Group", group.c_str(), "system-users-symbolic"), FALSE, FALSE, 0);
     
     GtkWidget* perm_expander = gtk_expander_new("Details");
     GtkWidget* p_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 4);
