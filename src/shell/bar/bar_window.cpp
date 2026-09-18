@@ -255,12 +255,12 @@ GtkWidget* BarWindow::create(GtkApplication* app, const Config& config) {
         GtkWidget* net_icon;
         GtkWidget* net_vpn_lbl;
         GtkWidget* net_speed_lbl;
-        GtkWidget* vol_icon;
+        // GtkWidget* vol_icon;
         GtkWidget* vol_text;
         GtkWidget* bat_icon;
         GtkWidget* bat_text;
     };
-    auto* pd = new PeriodicData{ net_btn, net_icon, net_vpn_lbl, net_speed_lbl, vol_icon, vol_text, bat_icon, bat_text };
+    auto* pd = new PeriodicData{ net_btn, net_icon, net_vpn_lbl, net_speed_lbl, vol_text, bat_icon, bat_text };
 
     auto update_func = [](gpointer user_data) -> gboolean {
         auto* data = static_cast<PeriodicData*>(user_data);
@@ -298,13 +298,7 @@ GtkWidget* BarWindow::create(GtkApplication* app, const Config& config) {
         // Volume
         int vol = AudioManager::get_volume();
         bool muted = AudioManager::is_muted();
-        const char* vicon = "";
-        if (muted || vol == 0) vicon = "󰖁";
-        else if (vol < 30) vicon = "";
-        else if (vol < 70) vicon = "";
-        else vicon = "";
-
-        gtk_label_set_text(GTK_LABEL(data->vol_icon), vicon);
+        // vol_icon removed
         if (muted) {
             gtk_label_set_text(GTK_LABEL(data->vol_text), "Muted");
             gtk_widget_add_css_class(data->vol_text, "text-muted");
