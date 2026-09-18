@@ -113,13 +113,9 @@ GtkWidget* ClockWidget::create(const std::string&) {
 
     GtkWidget* box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
 
-    date_label = gtk_label_new("󰃰 ...");
-    gtk_widget_add_css_class(date_label, "clock-date");
-
     time_label = gtk_label_new(" 00:00");
     gtk_widget_add_css_class(time_label, "clock-time");
 
-    gtk_box_pack_start(GTK_BOX(box), date_label, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(box), time_label, FALSE, FALSE, 0);
 
     gtk_container_add(GTK_CONTAINER(btn), box);
@@ -178,12 +174,6 @@ void ClockWidget::hide_calendar() {
 gboolean ClockWidget::update_time(gpointer) {
     auto t = std::time(nullptr);
     auto* tm = std::localtime(&t);
-
-    char date_buf[64];
-    std::strftime(date_buf, sizeof(date_buf), "󰃰 %a %d %b", tm);
-    if (date_label) {
-        gtk_label_set_text(GTK_LABEL(date_label), date_buf);
-    }
 
     char time_buf[64];
     std::strftime(time_buf, sizeof(time_buf), " %H:%M", tm);
