@@ -3,6 +3,7 @@
 #include "shell/files/file_manager_window.hpp"
 #include "theme/theme_engine.hpp"
 #include "theme/css_manager.hpp"
+#include "shell/files/theme_settings.hpp"
 #include <gtk/gtk.h>
 #include <string>
 
@@ -35,6 +36,7 @@ int main(int argc, char** argv) {
         }
 
         zenith::CssManager::init("");
+        zenith::ThemeSettings::init();
         zenith::ThemeEngine::init();
 
         GtkWidget* win = zenith::FileManagerWindow::create(target_path);

@@ -1,5 +1,6 @@
 #include "shell/files/file_manager_state.hpp"
 #include "shell/files/file_preferences_dialog.hpp"
+#include "shell/files/theme_settings.hpp"
 #include "shell/files/file_shortcuts.hpp"
 #include "shell/files/file_view_widget.hpp"
 #include "gtk3_compat.hpp"
@@ -226,7 +227,68 @@ void FilePreferencesDialog::show(FileManagerState* state) {
         }), state);
         gtk_box_pack_start(GTK_BOX(vbox), chk_hidden, FALSE, FALSE, 0);
 
+
+        gtk_box_pack_start(GTK_BOX(vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 8);
+        
+        GtkWidget* theme_hdr = gtk_label_new("<b>Visual Polish & Theme</b>");
+        gtk_label_set_use_markup(GTK_LABEL(theme_hdr), TRUE);
+        gtk_label_set_xalign(GTK_LABEL(theme_hdr), 0.0f);
+        gtk_widget_add_css_class(theme_hdr, "files-prop-title");
+        gtk_box_pack_start(GTK_BOX(vbox), theme_hdr, FALSE, FALSE, 0);
+        
+        GtkWidget* chk_trans = gtk_check_button_new_with_label("Enable Window Blur / Transparency");
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_trans), ThemeSettings::config.transparent);
+        g_signal_connect(chk_trans, "toggled", G_CALLBACK(+[](GtkToggleButton* btn, gpointer) {
+            ThemeSettings::config.transparent = gtk_toggle_button_get_active(btn);
+            ThemeSettings::save();
+        }), nullptr);
+        gtk_box_pack_start(GTK_BOX(vbox), chk_trans, FALSE, FALSE, 0);
+        
+        GtkWidget* color_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+        gtk_box_pack_start(GTK_BOX(vbox), color_box, FALSE, FALSE, 0);
+        GtkWidget* color_lbl = gtk_label_new("Accent Color:");
+        gtk_box_pack_start(GTK_BOX(color_box), color_lbl, FALSE, FALSE, 0);
+        
+        GtkWidget* combo_color = gtk_combo_box_text_new();
+        const char* colors[] = {"Blue", "Purple", "Green", "Red", "Orange", "Mango"};
+        const char* hexs[] = {"#5294e2", "#b671d4", "#6db664", "#e25252", "#e29452", "#ffb347"};
+        int active_idx = 0;
+        for (int i=0; i<6; i++) {
+            gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo_color), colors[i]);
+            if (ThemeSettings::config.accent_color == hexs[i]) active_idx = i;
+        }
+        gtk_combo_box_set_active(GTK_COMBO_BOX(combo_color), active_idx);
+
+        auto on_color_changed = +[](GtkComboBox* cb, gpointer) {
+            int idx = gtk_combo_box_get_active(cb);
+            if (idx == 0) ThemeSettings::config.accent_color = "#5294e2";
+            else if (idx == 1) ThemeSettings::config.accent_color = "#b671d4";
+            else if (idx == 2) ThemeSettings::config.accent_color = "#6db664";
+            else if (idx == 3) ThemeSettings::config.accent_color = "#e25252";
+            else if (idx == 4) ThemeSettings::config.accent_color = "#e29452";
+            else if (idx == 5) ThemeSettings::config.accent_color = "#ffb347";
+            if (idx >= 0 && idx < 6) ThemeSettings::save();
+        };
+        g_signal_connect(combo_color, "changed", G_CALLBACK(on_color_changed), nullptr);
+
+        gtk_box_pack_start(GTK_BOX(color_box), combo_color, FALSE, FALSE, 0);
+        
+        GtkWidget* width_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+        gtk_box_pack_start(GTK_BOX(vbox), width_box, FALSE, FALSE, 0);
+        GtkWidget* width_lbl = gtk_label_new("Sidebar Width (px):");
+        gtk_box_pack_start(GTK_BOX(width_box), width_lbl, FALSE, FALSE, 0);
+        
+        GtkWidget* scale_width = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 150, 450, 10);
+        gtk_range_set_value(GTK_RANGE(scale_width), ThemeSettings::config.sidebar_width);
+        gtk_widget_set_size_request(scale_width, 150, -1);
+        g_signal_connect(scale_width, "value-changed", G_CALLBACK(+[](GtkRange* r, gpointer) {
+            ThemeSettings::config.sidebar_width = (int)gtk_range_get_value(r);
+            ThemeSettings::save();
+        }), nullptr);
+        gtk_box_pack_start(GTK_BOX(width_box), scale_width, FALSE, FALSE, 0);
+
         gtk_notebook_append_page(GTK_NOTEBOOK(notebook), vbox, gtk_label_new("Appearance"));
+
     }
 
     // ── 3. Performance Tab ────────────────────────────────────────────────────

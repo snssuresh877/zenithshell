@@ -67,7 +67,8 @@ set(SOURCES
     src/shell/files/bulk_rename_dialog.cpp 
     src/shell/files/inspector_panel.cpp 
     src/shell/files/quick_preview.cpp 
-    src/shell/files/file_preferences_dialog.cpp 
+    src/shell/files/file_preferences_dialog.cpp
+    src/shell/files/theme_settings.cpp 
     src/shell/files/path_bar_widget.cpp 
     src/shell/files/places_sidebar.cpp 
     src/shell/files/file_view_widget.cpp 
