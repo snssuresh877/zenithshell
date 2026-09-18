@@ -217,11 +217,28 @@ static void repopulate_store(FileViewData* data) {
     // Populate GtkListStore
     GtkTreeIter iter;
     for (const auto& item : data->filtered_items) {
+        std::string markup = g_markup_escape_text(item->display_name.c_str(), -1);
+        std::cout << "Markup: " << markup << "\n";
+        
+        if (!item->git_branch.empty()) {
+            markup += " <span foreground='gray' size='small'>[" + item->git_branch + "]</span>";
+        }
+        
+        if (!item->git_status.empty()) {
+            std::string color = "gray";
+            if (item->git_status == "M " || item->git_status == " M") color = "#E5A50A";
+            else if (item->git_status == "A " || item->git_status == "??") color = "#2ea043";
+            else if (item->git_status == "D " || item->git_status == " D") color = "#da3633";
+            
+            markup = "<span foreground='" + color + "'>" + markup + "</span>";
+        }
+
         gtk_list_store_append(data->store, &iter);
         gtk_list_store_set(data->store, &iter,
             COL_PIXBUF_LARGE, item->pixbuf_large,
             COL_PIXBUF_SMALL, item->pixbuf_small,
             COL_NAME, item->display_name.c_str(),
+            COL_MARKUP, markup.c_str(),
             COL_SIZE_STR, item->formatted_size.c_str(),
             COL_TYPE_STR, item->mime_type.c_str(),
             COL_DATE_STR, item->formatted_date.c_str(),
@@ -229,8 +246,7 @@ static void repopulate_store(FileViewData* data) {
             COL_IS_DIR, item->is_directory,
             COL_RAW_SIZE, static_cast<guint64>(item->size),
             COL_RAW_TIME, static_cast<gint64>(item->mtime),
-            COL_ITEM_PTR,
-    COL_MARKUP, item.get(),
+            COL_ITEM_PTR, item.get(),
             -1
         );
     }
@@ -1131,10 +1147,20 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
                                    GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 
     data->icon_view = gtk_icon_view_new_with_model(GTK_TREE_MODEL(data->store));
-    gtk_icon_view_set_pixbuf_column(GTK_ICON_VIEW(data->icon_view), COL_PIXBUF_LARGE);
-    gtk_icon_view_set_markup_column(GTK_ICON_VIEW(data->icon_view), COL_MARKUP);
     gtk_icon_view_set_selection_mode(GTK_ICON_VIEW(data->icon_view), GTK_SELECTION_MULTIPLE);
     gtk_icon_view_set_item_width(GTK_ICON_VIEW(data->icon_view), 96);
+    
+    gtk_cell_layout_clear(GTK_CELL_LAYOUT(data->icon_view));
+    
+    GtkCellRenderer* pix_ren = gtk_cell_renderer_pixbuf_new();
+    gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(data->icon_view), pix_ren, FALSE);
+    gtk_cell_layout_add_attribute(GTK_CELL_LAYOUT(data->icon_view), pix_ren, "pixbuf", COL_PIXBUF_LARGE);
+    g_object_set(pix_ren, "xalign", 0.5, "yalign", 1.0, nullptr);
+
+    GtkCellRenderer* txt_ren = gtk_cell_renderer_text_new();
+    gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(data->icon_view), txt_ren, TRUE);
+    gtk_cell_layout_add_attribute(GTK_CELL_LAYOUT(data->icon_view), txt_ren, "markup", COL_MARKUP);
+    g_object_set(txt_ren, "alignment", PANGO_ALIGN_CENTER, "wrap-mode", PANGO_WRAP_WORD_CHAR, "wrap-width", 90, "xalign", 0.5, "yalign", 0.0, nullptr);
     gtk_icon_view_set_row_spacing(GTK_ICON_VIEW(data->icon_view), 12);
     gtk_icon_view_set_column_spacing(GTK_ICON_VIEW(data->icon_view), 12);
     gtk_icon_view_set_margin(GTK_ICON_VIEW(data->icon_view), 16);
