@@ -29,12 +29,9 @@ FileItem::FileItem(FileItem&& other) noexcept
     : path(std::move(other.path)),
       name(std::move(other.name)),
       display_name(std::move(other.display_name)),
-      uri(std::move(other.uri)),
       mime_type(std::move(other.mime_type)),
       size(other.size),
-      formatted_size(std::move(other.formatted_size)),
       mtime(other.mtime),
-      formatted_date(std::move(other.formatted_date)),
       is_directory(other.is_directory),
       is_hidden(other.is_hidden),
       is_symlink(other.is_symlink),
@@ -56,12 +53,9 @@ FileItem& FileItem::operator=(FileItem&& other) noexcept {
         path = std::move(other.path);
         name = std::move(other.name);
         display_name = std::move(other.display_name);
-        uri = std::move(other.uri);
         mime_type = std::move(other.mime_type);
         size = other.size;
-        formatted_size = std::move(other.formatted_size);
         mtime = other.mtime;
-        formatted_date = std::move(other.formatted_date);
         is_directory = other.is_directory;
         is_hidden = other.is_hidden;
         is_symlink = other.is_symlink;
@@ -112,11 +106,6 @@ std::shared_ptr<FileItem> FileItem::from_file_info(GFile* file, GFileInfo* info,
         item->path = p;
         g_free(p);
     }
-    char* u = g_file_get_uri(file);
-    if (u) {
-        item->uri = u;
-        g_free(u);
-    }
 
     const char* n = g_file_info_get_name(info);
     item->name = n ? n : "";
@@ -139,10 +128,8 @@ std::shared_ptr<FileItem> FileItem::from_file_info(GFile* file, GFileInfo* info,
 
     if (item->is_directory) {
         item->size = 0;
-        item->formatted_size = "Folder";
     } else {
         item->size = g_file_info_get_size(info);
-        item->formatted_size = format_size(item->size);
     }
 
     GDateTime* dt = g_file_info_get_modification_date_time(info);
@@ -152,7 +139,6 @@ std::shared_ptr<FileItem> FileItem::from_file_info(GFile* file, GFileInfo* info,
     } else {
         item->mtime = 0;
     }
-    item->formatted_date = format_timestamp(item->mtime);
 
     // Resolve icons
     GIcon* icon = g_file_info_get_icon(info);
@@ -201,11 +187,17 @@ std::shared_ptr<FileItem> FileItem::from_file_info(GFile* file, GFileInfo* info,
 // ── Async thumbnail loading ───────────────────────────────────────────────────
 // Called from a GThreadPool worker thread (NOT the GTK main thread).
 // Returns a pixbuf or nullptr — caller g_idle_adds the result to main thread.
-GdkPixbuf* FileItem::load_thumbnail(const std::string& path, const std::string& uri,
+GdkPixbuf* FileItem::load_thumbnail(const std::string& path,
                                      const std::string& mime_type, int size) {
     // Step 1: Check Freedesktop thumbnail cache (md5 of the file:// URI)
     const char* home_dir = g_get_home_dir();
-    if (home_dir && !uri.empty()) {
+    gchar* u = g_filename_to_uri(path.c_str(), nullptr, nullptr);
+    std::string uri = u ? u : "";
+    if (u) g_free(u);
+    gchar* u_alloc = g_filename_to_uri(path.c_str(), nullptr, nullptr);
+    std::string uri_str = u_alloc ? u_alloc : "";
+    if (u_alloc) g_free(u_alloc);
+    if (home_dir && !uri_str.empty()) {
         gchar* md5 = g_compute_checksum_for_string(G_CHECKSUM_MD5, uri.c_str(), -1);
         if (md5) {
             for (const char* sz : {"large", "normal"}) {

@@ -26,18 +26,7 @@ namespace fs = std::filesystem;
 namespace zenith {
 
 enum {
-    COL_PIXBUF_LARGE = 0,
-    COL_PIXBUF_SMALL,
-    COL_NAME,
-    COL_SIZE_STR,
-    COL_TYPE_STR,
-    COL_DATE_STR,
-    COL_PATH,
-    COL_IS_DIR,
-    COL_RAW_SIZE,
-    COL_RAW_TIME,
-    COL_ITEM_PTR,
-    COL_MARKUP,
+    COL_ITEM_PTR = 0,
     NUM_VIEW_COLS
 };
 
@@ -234,21 +223,7 @@ static void repopulate_store(FileViewData* data) {
         }
 
         gtk_list_store_append(data->store, &iter);
-        gtk_list_store_set(data->store, &iter,
-            COL_PIXBUF_LARGE, item->pixbuf_large,
-            COL_PIXBUF_SMALL, item->pixbuf_small,
-            COL_NAME, item->display_name.c_str(),
-            COL_MARKUP, markup.c_str(),
-            COL_SIZE_STR, item->formatted_size.c_str(),
-            COL_TYPE_STR, item->mime_type.c_str(),
-            COL_DATE_STR, item->formatted_date.c_str(),
-            COL_PATH, item->path.c_str(),
-            COL_IS_DIR, item->is_directory,
-            COL_RAW_SIZE, static_cast<guint64>(item->size),
-            COL_RAW_TIME, static_cast<gint64>(item->mtime),
-            COL_ITEM_PTR, item.get(),
-            -1
-        );
+        gtk_list_store_set(data->store, &iter, COL_ITEM_PTR, item.get(), -1);
     }
 
     update_status_bar(data);
@@ -256,14 +231,12 @@ static void repopulate_store(FileViewData* data) {
 
 // ── Async thumbnail loading ───────────────────────────────────────────────
 struct ThumbJob {
-    FileViewData* view_data;
-    GtkListStore* store;        // ref held during job lifetime
-    std::string   path;
-    std::string   uri;
-    std::string   mime_type;
-    std::string   item_path;    // used to find the row in the store
-    int           size;
-    uint64_t      generation;
+    FileViewData* data;
+    GtkListStore* store;
+    FileItem* item;
+    std::string item_path;
+    int size;
+    uint64_t generation;
 };
 
 static void dispatch_thumbnails(FileViewData* data, uint64_t my_generation) {
@@ -275,7 +248,7 @@ static void dispatch_thumbnails(FileViewData* data, uint64_t my_generation) {
             +[](gpointer job_data, gpointer) {
                 auto* job = static_cast<ThumbJob*>(job_data);
                 GdkPixbuf* thumb = FileItem::load_thumbnail(
-                    job->path, job->uri, job->mime_type, job->size);
+                    job->item->path, job->item->mime_type, job->size);
 
                 if (!thumb) { delete job; return; }
 
@@ -283,14 +256,13 @@ static void dispatch_thumbnails(FileViewData* data, uint64_t my_generation) {
                 struct IdleCtx {
                     FileViewData* view_data;
                     GtkListStore* store;
-                    GdkPixbuf*    thumb;
-                    std::string   item_path;
-                    int           size;
-                    uint64_t      generation;
+                    GdkPixbuf* thumb;
+                    FileItem* item;
+                    std::string item_path;
+                    int size;
+                    uint64_t generation;
                 };
-                auto* ctx = new IdleCtx{job->view_data, job->store,
-                                        thumb, job->item_path,
-                                        job->size, job->generation};
+                auto* ctx = new IdleCtx{job->data, job->store, thumb, job->item, job->item_path, job->size, job->generation};
                 g_object_ref(job->store);
 
                 g_idle_add(+[](gpointer p) -> gboolean {
@@ -311,7 +283,8 @@ static void dispatch_thumbnails(FileViewData* data, uint64_t my_generation) {
                     if (gtk_tree_model_get_iter_first(model, &iter)) {
                         do {
                             gchar* row_path = nullptr;
-                            gtk_tree_model_get(model, &iter, COL_PATH, &row_path, -1);
+                            FileItem* item = nullptr; gtk_tree_model_get(model, &iter, COL_ITEM_PTR, &item, -1);
+                            if (item) row_path = g_strdup(item->path.c_str());
                             if (row_path && c->item_path == row_path) {
                                 int pw = gdk_pixbuf_get_width(c->thumb);
                                 int ph = gdk_pixbuf_get_height(c->thumb);
@@ -321,10 +294,15 @@ static void dispatch_thumbnails(FileViewData* data, uint64_t my_generation) {
                                 GdkPixbuf* sm = gdk_pixbuf_scale_simple(
                                     c->thumb, sw, sh, GDK_INTERP_BILINEAR);
 
-                                gtk_list_store_set(c->store, &iter,
-                                    COL_PIXBUF_LARGE, c->thumb,
-                                    COL_PIXBUF_SMALL, sm ? sm : c->thumb,
-                                    -1);
+                                if (c->item->pixbuf_small) g_object_unref(c->item->pixbuf_small);
+                                c->item->pixbuf_small = sm ? sm : c->thumb;
+                                if (sm) g_object_ref(c->item->pixbuf_small);
+                                else g_object_ref(c->thumb);
+                                GtkTreePath* pth = gtk_tree_model_get_path(model, &iter);
+                                if (pth) {
+                                    gtk_tree_model_row_changed(model, pth, &iter);
+                                    gtk_tree_path_free(pth);
+                                }
                                 if (sm) g_object_unref(sm);
                                 g_free(row_path);
                                 break;
@@ -358,9 +336,7 @@ static void dispatch_thumbnails(FileViewData* data, uint64_t my_generation) {
         auto* job = new ThumbJob{
             data,
             data->store,
-            item->path,
-            item->uri,
-            item->mime_type,
+            item.get(),
             item->path,
             48,
             my_generation
@@ -497,10 +473,9 @@ static void on_icon_activated(GtkIconView*, GtkTreePath* path, gpointer user_dat
     if (gtk_tree_model_get_iter(GTK_TREE_MODEL(data->store), &iter, path)) {
         gchar* item_path = nullptr;
         gboolean is_dir = FALSE;
-        gtk_tree_model_get(GTK_TREE_MODEL(data->store), &iter,
-                           COL_PATH, &item_path,
-                           COL_IS_DIR, &is_dir,
-                           -1);
+        FileItem* item = nullptr;
+        gtk_tree_model_get(GTK_TREE_MODEL(data->store), &iter, COL_ITEM_PTR, &item, -1);
+        if (item) { item_path = g_strdup(item->path.c_str()); is_dir = item->is_directory; }
 
         if (item_path) {
             std::string p(item_path);
@@ -523,10 +498,9 @@ static void on_row_activated(GtkTreeView*, GtkTreePath* path, GtkTreeViewColumn*
     if (gtk_tree_model_get_iter(GTK_TREE_MODEL(data->store), &iter, path)) {
         gchar* item_path = nullptr;
         gboolean is_dir = FALSE;
-        gtk_tree_model_get(GTK_TREE_MODEL(data->store), &iter,
-                           COL_PATH, &item_path,
-                           COL_IS_DIR, &is_dir,
-                           -1);
+        FileItem* item = nullptr;
+        gtk_tree_model_get(GTK_TREE_MODEL(data->store), &iter, COL_ITEM_PTR, &item, -1);
+        if (item) { item_path = g_strdup(item->path.c_str()); is_dir = item->is_directory; }
 
         if (item_path) {
             std::string p(item_path);
@@ -1125,21 +1099,7 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
     gtk_box_pack_start(GTK_BOX(data->root_box), data->stack, TRUE, TRUE, 0);
 
     // ListStore definition
-    data->store = gtk_list_store_new(
-        NUM_VIEW_COLS,
-        GDK_TYPE_PIXBUF,    // COL_PIXBUF_LARGE
-        GDK_TYPE_PIXBUF,    // COL_PIXBUF_SMALL
-        G_TYPE_STRING,      // COL_NAME
-        G_TYPE_STRING,      // COL_SIZE_STR
-        G_TYPE_STRING,      // COL_TYPE_STR
-        G_TYPE_STRING,      // COL_DATE_STR
-        G_TYPE_STRING,      // COL_PATH
-        G_TYPE_BOOLEAN,     // COL_IS_DIR
-        G_TYPE_UINT64,      // COL_RAW_SIZE
-        G_TYPE_INT64,       // COL_RAW_TIME
-        G_TYPE_POINTER,     // COL_ITEM_PTR
-        G_TYPE_STRING       // COL_MARKUP
-    );
+    data->store = gtk_list_store_new(NUM_VIEW_COLS, G_TYPE_POINTER);
 
     // 1. Grid View (GtkIconView)
     data->grid_scrolled = gtk_scrolled_window_new(nullptr, nullptr);
@@ -1154,12 +1114,33 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
     
     GtkCellRenderer* pix_ren = gtk_cell_renderer_pixbuf_new();
     gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(data->icon_view), pix_ren, FALSE);
-    gtk_cell_layout_add_attribute(GTK_CELL_LAYOUT(data->icon_view), pix_ren, "pixbuf", COL_PIXBUF_LARGE);
+    gtk_cell_layout_set_cell_data_func(GTK_CELL_LAYOUT(data->icon_view), pix_ren, 
+        +[](GtkCellLayout*, GtkCellRenderer* cell, GtkTreeModel* model, GtkTreeIter* iter, gpointer) {
+            FileItem* item = nullptr;
+            gtk_tree_model_get(model, iter, COL_ITEM_PTR, &item, -1);
+            if (item) g_object_set(cell, "pixbuf", item->pixbuf_large ? item->pixbuf_large : (item->pixbuf_small ? item->pixbuf_small : nullptr), nullptr);
+        }, nullptr, nullptr);
     g_object_set(pix_ren, "xalign", 0.5, "yalign", 1.0, nullptr);
 
     GtkCellRenderer* txt_ren = gtk_cell_renderer_text_new();
     gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(data->icon_view), txt_ren, TRUE);
-    gtk_cell_layout_add_attribute(GTK_CELL_LAYOUT(data->icon_view), txt_ren, "markup", COL_MARKUP);
+    gtk_cell_layout_set_cell_data_func(GTK_CELL_LAYOUT(data->icon_view), txt_ren, 
+        +[](GtkCellLayout*, GtkCellRenderer* cell, GtkTreeModel* model, GtkTreeIter* iter, gpointer) {
+            FileItem* item = nullptr;
+            gtk_tree_model_get(model, iter, COL_ITEM_PTR, &item, -1);
+            if (item) {
+                std::string m = g_markup_escape_text(item->display_name.c_str(), -1);
+                if (!item->git_branch.empty()) m += " <span foreground='gray' size='small'>[" + item->git_branch + "]</span>";
+                if (!item->git_status.empty()) {
+                    std::string c = "gray";
+                    if (item->git_status == "M " || item->git_status == " M") c = "#E5A50A";
+                    else if (item->git_status == "A " || item->git_status == "??") c = "#2ea043";
+                    else if (item->git_status == "D " || item->git_status == " D") c = "#da3633";
+                    m = "<span foreground='" + c + "'>" + m + "</span>";
+                }
+                g_object_set(cell, "markup", m.c_str(), nullptr);
+            }
+        }, nullptr, nullptr);
     g_object_set(txt_ren, "alignment", PANGO_ALIGN_CENTER, "wrap-mode", PANGO_WRAP_WORD_CHAR, "wrap-width", 90, "xalign", 0.5, "yalign", 0.0, nullptr);
     gtk_icon_view_set_row_spacing(GTK_ICON_VIEW(data->icon_view), 12);
     gtk_icon_view_set_column_spacing(GTK_ICON_VIEW(data->icon_view), 12);
@@ -1224,12 +1205,33 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
 
         GtkCellRenderer* pix_rend = gtk_cell_renderer_pixbuf_new();
         gtk_tree_view_column_pack_start(col, pix_rend, FALSE);
-        gtk_tree_view_column_add_attribute(col, pix_rend, "pixbuf", COL_PIXBUF_SMALL);
+        gtk_tree_view_column_set_cell_data_func(col, pix_rend,
+            +[](GtkTreeViewColumn*, GtkCellRenderer* cell, GtkTreeModel* model, GtkTreeIter* iter, gpointer) {
+                FileItem* item = nullptr;
+                gtk_tree_model_get(model, iter, COL_ITEM_PTR, &item, -1);
+                if (item) g_object_set(cell, "pixbuf", item->pixbuf_small ? item->pixbuf_small : (item->pixbuf_large ? item->pixbuf_large : nullptr), nullptr);
+            }, nullptr, nullptr);
 
         GtkCellRenderer* txt_rend = gtk_cell_renderer_text_new();
         g_object_set(txt_rend, "ellipsize", PANGO_ELLIPSIZE_END, nullptr);
         gtk_tree_view_column_pack_start(col, txt_rend, TRUE);
-        gtk_tree_view_column_add_attribute(col, txt_rend, "markup", COL_MARKUP);
+        gtk_tree_view_column_set_cell_data_func(col, txt_rend,
+            +[](GtkTreeViewColumn*, GtkCellRenderer* cell, GtkTreeModel* model, GtkTreeIter* iter, gpointer) {
+                FileItem* item = nullptr;
+                gtk_tree_model_get(model, iter, COL_ITEM_PTR, &item, -1);
+                if (item) {
+                    std::string m = g_markup_escape_text(item->display_name.c_str(), -1);
+                    if (!item->git_branch.empty()) m += " <span foreground='gray' size='small'>[" + item->git_branch + "]</span>";
+                    if (!item->git_status.empty()) {
+                        std::string c = "gray";
+                        if (item->git_status == "M " || item->git_status == " M") c = "#E5A50A";
+                        else if (item->git_status == "A " || item->git_status == "??") c = "#2ea043";
+                        else if (item->git_status == "D " || item->git_status == " D") c = "#da3633";
+                        m = "<span foreground='" + c + "'>" + m + "</span>";
+                    }
+                    g_object_set(cell, "markup", m.c_str(), nullptr);
+                }
+            }, nullptr, nullptr);
 
         gtk_tree_view_append_column(GTK_TREE_VIEW(data->tree_view), col);
     }
@@ -1247,7 +1249,12 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
         GtkCellRenderer* txt_rend = gtk_cell_renderer_text_new();
         g_object_set(txt_rend, "xalign", 1.0f, nullptr);
         gtk_tree_view_column_pack_start(col, txt_rend, TRUE);
-        gtk_tree_view_column_add_attribute(col, txt_rend, "text", COL_SIZE_STR);
+        gtk_tree_view_column_set_cell_data_func(col, txt_rend,
+            +[](GtkTreeViewColumn*, GtkCellRenderer* cell, GtkTreeModel* model, GtkTreeIter* iter, gpointer) {
+                FileItem* item = nullptr;
+                gtk_tree_model_get(model, iter, COL_ITEM_PTR, &item, -1);
+                if (item) g_object_set(cell, "text", item->is_directory ? "Folder" : FileItem::format_size(item->size).c_str(), nullptr);
+            }, nullptr, nullptr);
 
         gtk_tree_view_append_column(GTK_TREE_VIEW(data->tree_view), col);
     }
@@ -1264,7 +1271,12 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
 
         GtkCellRenderer* txt_rend = gtk_cell_renderer_text_new();
         gtk_tree_view_column_pack_start(col, txt_rend, TRUE);
-        gtk_tree_view_column_add_attribute(col, txt_rend, "text", COL_TYPE_STR);
+        gtk_tree_view_column_set_cell_data_func(col, txt_rend,
+            +[](GtkTreeViewColumn*, GtkCellRenderer* cell, GtkTreeModel* model, GtkTreeIter* iter, gpointer) {
+                FileItem* item = nullptr;
+                gtk_tree_model_get(model, iter, COL_ITEM_PTR, &item, -1);
+                if (item) g_object_set(cell, "text", item->mime_type.c_str(), nullptr);
+            }, nullptr, nullptr);
 
         gtk_tree_view_append_column(GTK_TREE_VIEW(data->tree_view), col);
     }
@@ -1281,7 +1293,12 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
 
         GtkCellRenderer* txt_rend = gtk_cell_renderer_text_new();
         gtk_tree_view_column_pack_start(col, txt_rend, TRUE);
-        gtk_tree_view_column_add_attribute(col, txt_rend, "text", COL_DATE_STR);
+        gtk_tree_view_column_set_cell_data_func(col, txt_rend,
+            +[](GtkTreeViewColumn*, GtkCellRenderer* cell, GtkTreeModel* model, GtkTreeIter* iter, gpointer) {
+                FileItem* item = nullptr;
+                gtk_tree_model_get(model, iter, COL_ITEM_PTR, &item, -1);
+                if (item) g_object_set(cell, "text", FileItem::format_timestamp(item->mtime).c_str(), nullptr);
+            }, nullptr, nullptr);
 
         gtk_tree_view_append_column(GTK_TREE_VIEW(data->tree_view), col);
     }
@@ -1328,12 +1345,10 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
         GtkTreeIter iter;
         gboolean valid = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(d->store), &iter);
         while (valid) {
-            gchar* name = nullptr;
-            gtk_tree_model_get(GTK_TREE_MODEL(d->store), &iter, COL_NAME, &name, -1);
-            if (name) {
-                std::string lower_name = g_utf8_strdown(name, -1);
-                g_free(name);
-                if (lower_name.find(lower_query) == 0) {
+            FileItem* item = nullptr; gtk_tree_model_get(GTK_TREE_MODEL(d->store), &iter, COL_ITEM_PTR, &item, -1);
+            if (item) {
+                std::string s = item->display_name;
+                if (s.find(lower_query) == 0) {
                     GtkTreePath* path = gtk_tree_model_get_path(GTK_TREE_MODEL(d->store), &iter);
                     
                     if (d->view_mode == ViewMode::GRID) {
@@ -1717,11 +1732,9 @@ std::vector<std::string> FileViewWidget::get_selected_paths(GtkWidget* widget) {
             auto* path = static_cast<GtkTreePath*>(l->data);
             GtkTreeIter iter;
             if (gtk_tree_model_get_iter(GTK_TREE_MODEL(data->store), &iter, path)) {
-                gchar* p = nullptr;
-                gtk_tree_model_get(GTK_TREE_MODEL(data->store), &iter, COL_PATH, &p, -1);
-                if (p) {
-                    results.emplace_back(p);
-                    g_free(p);
+                FileItem* item = nullptr; gtk_tree_model_get(GTK_TREE_MODEL(data->store), &iter, COL_ITEM_PTR, &item, -1);
+                if (item) {
+                    results.push_back(item->path);
                 }
             }
         }
@@ -1733,11 +1746,9 @@ std::vector<std::string> FileViewWidget::get_selected_paths(GtkWidget* widget) {
             auto* path = static_cast<GtkTreePath*>(l->data);
             GtkTreeIter iter;
             if (gtk_tree_model_get_iter(GTK_TREE_MODEL(data->store), &iter, path)) {
-                gchar* p = nullptr;
-                gtk_tree_model_get(GTK_TREE_MODEL(data->store), &iter, COL_PATH, &p, -1);
-                if (p) {
-                    results.emplace_back(p);
-                    g_free(p);
+                FileItem* item = nullptr; gtk_tree_model_get(GTK_TREE_MODEL(data->store), &iter, COL_ITEM_PTR, &item, -1);
+                if (item) {
+                    results.push_back(item->path);
                 }
             }
         }
@@ -2145,8 +2156,8 @@ void FileViewWidget::action_properties(GtkWidget* widget) {
 
     int row = 0;
     add_row(row++, "Location:", item->path);
-    add_row(row++, "Size:", item->formatted_size + " (" + std::to_string(item->size) + " bytes)");
-    add_row(row++, "Modified:", item->formatted_date);
+    add_row(row++, "Size:", FileItem::format_size(item->size) + " (" + std::to_string(item->size) + " bytes)");
+    add_row(row++, "Modified:", FileItem::format_timestamp(item->mtime));
 
     // Checksum Row
     GtkWidget* chk_lbl = gtk_label_new("SHA256:");

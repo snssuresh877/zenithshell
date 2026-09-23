@@ -421,14 +421,14 @@ void WifiManager::init(GtkApplication* app) {
     GtkWidget* footer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     gtk_widget_add_css_class(footer, "network-footer");
 
-    GtkWidget* nm_btn = gtk_button_new_with_label(" Settings");
+    GtkWidget* nm_btn = gtk_button_new_with_label("󰒓 Settings");
     gtk_widget_add_css_class(nm_btn, "network-footer-btn");
     gtk_widget_set_tooltip_text(nm_btn, "Open Advanced Network Connections (nm-connection-editor)");
     g_signal_connect(nm_btn, "clicked", G_CALLBACK(+[](GtkButton*, gpointer) {
         system("nm-connection-editor &");
     }), nullptr);
 
-    GtkWidget* ping_btn = gtk_button_new_with_label(" Ping Test");
+    GtkWidget* ping_btn = gtk_button_new_with_label("󰄕 Ping Test");
     gtk_widget_add_css_class(ping_btn, "network-footer-btn");
     gtk_widget_set_tooltip_text(ping_btn, "Test Live Internet Latency (Cloudflare DNS)");
     g_signal_connect(ping_btn, "clicked", G_CALLBACK(+[](GtkButton*, gpointer) {

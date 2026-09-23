@@ -403,7 +403,7 @@ void InspectorPanel::update_selection(GtkWidget* panel, const std::vector<std::s
     gtk_widget_set_visible(data->btn_term, is_dir);
 
     // Thumbnail Preview Block
-    GdkPixbuf* thumb = FileItem::load_thumbnail(p, "file://" + p, mime, 256); 
+    GdkPixbuf* thumb = FileItem::load_thumbnail(p, mime, 256); 
     if (thumb) {
         gtk_image_set_from_pixbuf(GTK_IMAGE(data->icon_preview), thumb);
         g_object_unref(thumb);

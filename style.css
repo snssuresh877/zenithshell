@@ -2822,30 +2822,35 @@ window.powermenu-window {
 }
 
 .powermenu-backdrop {
-    background-color: rgba(5, 6, 10, 0.85);
+    background-color: alpha(@zenith_bg, 0.70);
 }
 
 .powermenu-card {
-    background-color: rgba(13, 14, 22, 0.96);
-    border: 1px solid rgba(255, 255, 255, 0.10);
+    background-color: alpha(#0d0f15, 0.96);
+    border: 1px solid alpha(#ffffff, 0.05);
     border-radius: 28px;
-    padding: 26px 30px;
-    box-shadow: none;
+    padding: 24px 32px 20px 32px;
+    box-shadow: 0 14px 40px rgba(0,0,0,0.6);
+}
+
+.powermenu-separator {
+    min-height: 1px;
+    background-color: alpha(@zenith_border, 0.15);
 }
 
 .powermenu-header {
-    margin-bottom: 8px;
+    margin-bottom: 4px;
 }
 
 .powermenu-avatar-box {
-    background-color: @zenith_accent_soft;
-    border: 1px solid @zenith_accent_soft;
+    background-color: alpha(#ffffff, 0.05);
+    border: 1px solid alpha(#ffffff, 0.03);
     border-radius: 14px;
     padding: 8px 10px;
 }
 
 .powermenu-avatar-icon {
-    color: @zenith_accent;
+    color: #8be9fd;
     font-size: 20px;
 }
 
@@ -2862,66 +2867,57 @@ window.powermenu-window {
     font-weight: 600;
 }
 
+/* Flatter battery pill */
 .powermenu-status-capsule {
-    background-color: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
-    color: #a6adc8;
+    background-color: transparent;
+    border: none;
+    color: #f8f8f2;
     font-size: 12px;
     font-weight: 700;
-    padding: 6px 14px;
+    padding: 6px 10px;
 }
 
 .powermenu-close-btn {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: alpha(#ffffff, 0.05);
+    border: 1px solid alpha(#ffffff, 0.03);
     color: #6272a4;
     font-size: 14px;
-    padding: 6px 12px;
+    padding: 6px 10px;
     border-radius: 12px;
     transition: all 140ms ease-in-out;
 }
 
 .powermenu-close-btn:hover {
-    background-color: rgba(255, 85, 85, 0.25);
+    background-color: alpha(#ff5555, 0.25);
     border-color: #ff5555;
     color: #ff5555;
 }
 
+/* Invisible card borders */
 .powermenu-tile {
-    background-color: rgba(20, 21, 31, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background-color: transparent;
+    border: 1px solid transparent;
     border-radius: 22px;
     padding: 14px 10px;
     transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
     box-shadow: none;
 }
 
-.powermenu-tile:focus {
+.powermenu-tile:focus, .powermenu-tile:hover {
     outline: none;
-}
-
-.powermenu-keycap {
-    background-color: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 7px;
-    color: #a6adc8;
-    font-size: 10px;
-    font-weight: 800;
-    padding: 2px 7px;
-    box-shadow: none;
-    transition: all 150ms ease-in-out;
+    background-color: alpha(#ffffff, 0.03);
 }
 
 .powermenu-icon-orb {
-    border-radius: 18px;
-    min-width: 52px;
-    min-height: 52px;
+    border-radius: 20px;
+    min-width: 58px;
+    min-height: 58px;
     transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .powermenu-orb-icon {
-    font-size: 24px;
+    font-family: 'Symbols Nerd Font', 'JetBrainsMono Nerd Font', sans-serif;
+    font-size: 26px;
 }
 
 .powermenu-tile-title {
@@ -2938,148 +2934,76 @@ window.powermenu-window {
     letter-spacing: 0.2px;
 }
 
-/* Specific Aesthetic Tile Variants */
-.powermenu-tile.tile-lock .powermenu-icon-orb {
-    background-color: @zenith_accent_soft;
-    border: 1px solid @zenith_accent_soft;
-}
-.powermenu-tile.tile-lock .powermenu-orb-icon { color: @zenith_accent; }
-.powermenu-tile.tile-lock:hover, .powermenu-tile.tile-lock:focus {
-    background-color: @zenith_accent_soft;
-    border-color: rgba(189, 147, 249, 0.70);
-    box-shadow: none;
-}
+/* Aesthetic Colors Matching the Screenshot */
+
+/* Lock (Blue) */
+.powermenu-tile.tile-lock .powermenu-icon-orb { background-color: alpha(#38bdf8, 0.12); border: 1px solid alpha(#38bdf8, 0.05); }
+.powermenu-tile.tile-lock .powermenu-orb-icon { color: #38bdf8; }
 .powermenu-tile.tile-lock:hover .powermenu-icon-orb, .powermenu-tile.tile-lock:focus .powermenu-icon-orb {
-    background-color: @zenith_accent;
-    border-color: @zenith_accent;
+    background-color: #38bdf8;
 }
-.powermenu-tile.tile-lock:hover .powermenu-orb-icon, .powermenu-tile.tile-lock:focus .powermenu-orb-icon {
-    color: #0d0e15;
-}
-.powermenu-tile.tile-lock:hover .powermenu-keycap, .powermenu-tile.tile-lock:focus .powermenu-keycap {
-    background-color: @zenith_accent;
-    color: #0d0e15;
-    border-color: @zenith_accent;
-}
+.powermenu-tile.tile-lock:hover .powermenu-orb-icon, .powermenu-tile.tile-lock:focus .powermenu-orb-icon { color: #0d0f15; }
 
-.powermenu-tile.tile-suspend .powermenu-icon-orb {
-    background-color: rgba(56, 189, 248, 0.12);
-    border: 1px solid rgba(56, 189, 248, 0.25);
-}
-.powermenu-tile.tile-suspend .powermenu-orb-icon { color: #38bdf8; }
-.powermenu-tile.tile-suspend:hover, .powermenu-tile.tile-suspend:focus {
-    background-color: rgba(56, 189, 248, 0.16);
-    border-color: rgba(56, 189, 248, 0.70);
-    box-shadow: none;
-}
+/* Sleep (Light Blue/Cyan) */
+.powermenu-tile.tile-suspend .powermenu-icon-orb { background-color: alpha(#7dd3fc, 0.12); border: 1px solid alpha(#7dd3fc, 0.05); }
+.powermenu-tile.tile-suspend .powermenu-orb-icon { color: #7dd3fc; }
 .powermenu-tile.tile-suspend:hover .powermenu-icon-orb, .powermenu-tile.tile-suspend:focus .powermenu-icon-orb {
-    background-color: #38bdf8;
-    border-color: #38bdf8;
+    background-color: #7dd3fc;
 }
-.powermenu-tile.tile-suspend:hover .powermenu-orb-icon, .powermenu-tile.tile-suspend:focus .powermenu-orb-icon {
-    color: #0d0e15;
-}
-.powermenu-tile.tile-suspend:hover .powermenu-keycap, .powermenu-tile.tile-suspend:focus .powermenu-keycap {
-    background-color: #38bdf8;
-    color: #0d0e15;
-    border-color: #38bdf8;
-}
+.powermenu-tile.tile-suspend:hover .powermenu-orb-icon, .powermenu-tile.tile-suspend:focus .powermenu-orb-icon { color: #0d0f15; }
 
-.powermenu-tile.tile-logout .powermenu-icon-orb {
-    background-color: rgba(251, 146, 60, 0.12);
-    border: 1px solid rgba(251, 146, 60, 0.25);
-}
+/* Logout (Orange) */
+.powermenu-tile.tile-logout .powermenu-icon-orb { background-color: alpha(#fb923c, 0.12); border: 1px solid alpha(#fb923c, 0.05); }
 .powermenu-tile.tile-logout .powermenu-orb-icon { color: #fb923c; }
-.powermenu-tile.tile-logout:hover, .powermenu-tile.tile-logout:focus {
-    background-color: rgba(251, 146, 60, 0.16);
-    border-color: rgba(251, 146, 60, 0.70);
-    box-shadow: none;
-}
 .powermenu-tile.tile-logout:hover .powermenu-icon-orb, .powermenu-tile.tile-logout:focus .powermenu-icon-orb {
     background-color: #fb923c;
-    border-color: #fb923c;
 }
-.powermenu-tile.tile-logout:hover .powermenu-orb-icon, .powermenu-tile.tile-logout:focus .powermenu-orb-icon {
-    color: #0d0e15;
-}
-.powermenu-tile.tile-logout:hover .powermenu-keycap, .powermenu-tile.tile-logout:focus .powermenu-keycap {
-    background-color: #fb923c;
-    color: #0d0e15;
-    border-color: #fb923c;
-}
+.powermenu-tile.tile-logout:hover .powermenu-orb-icon, .powermenu-tile.tile-logout:focus .powermenu-orb-icon { color: #0d0f15; }
 
-.powermenu-tile.tile-reboot .powermenu-icon-orb {
-    background-color: rgba(244, 114, 182, 0.12);
-    border: 1px solid rgba(244, 114, 182, 0.25);
-}
-.powermenu-tile.tile-reboot .powermenu-orb-icon { color: #f472b6; }
-.powermenu-tile.tile-reboot:hover, .powermenu-tile.tile-reboot:focus {
-    background-color: rgba(244, 114, 182, 0.16);
-    border-color: rgba(244, 114, 182, 0.70);
-    box-shadow: none;
-}
+/* Restart (Purple) */
+.powermenu-tile.tile-reboot .powermenu-icon-orb { background-color: alpha(#c084fc, 0.12); border: 1px solid alpha(#c084fc, 0.05); }
+.powermenu-tile.tile-reboot .powermenu-orb-icon { color: #c084fc; }
 .powermenu-tile.tile-reboot:hover .powermenu-icon-orb, .powermenu-tile.tile-reboot:focus .powermenu-icon-orb {
-    background-color: #f472b6;
-    border-color: #f472b6;
+    background-color: #c084fc;
 }
-.powermenu-tile.tile-reboot:hover .powermenu-orb-icon, .powermenu-tile.tile-reboot:focus .powermenu-orb-icon {
-    color: #0d0e15;
-}
-.powermenu-tile.tile-reboot:hover .powermenu-keycap, .powermenu-tile.tile-reboot:focus .powermenu-keycap {
-    background-color: #f472b6;
-    color: #0d0e15;
-    border-color: #f472b6;
-}
+.powermenu-tile.tile-reboot:hover .powermenu-orb-icon, .powermenu-tile.tile-reboot:focus .powermenu-orb-icon { color: #0d0f15; }
 
-.powermenu-tile.tile-power .powermenu-icon-orb {
-    background-color: rgba(248, 113, 113, 0.12);
-    border: 1px solid rgba(248, 113, 113, 0.25);
-}
+/* Shutdown (Red) */
+.powermenu-tile.tile-power .powermenu-icon-orb { background-color: alpha(#f87171, 0.12); border: 1px solid alpha(#f87171, 0.05); }
 .powermenu-tile.tile-power .powermenu-orb-icon { color: #f87171; }
-.powermenu-tile.tile-power {
-    background-color: rgba(248, 113, 113, 0.05);
-    border-color: rgba(248, 113, 113, 0.20);
-}
-.powermenu-tile.tile-power:hover, .powermenu-tile.tile-power:focus {
-    background-color: rgba(248, 113, 113, 0.20);
-    border-color: rgba(248, 113, 113, 0.75);
-    box-shadow: none;
-}
 .powermenu-tile.tile-power:hover .powermenu-icon-orb, .powermenu-tile.tile-power:focus .powermenu-icon-orb {
     background-color: #f87171;
-    border-color: #f87171;
 }
-.powermenu-tile.tile-power:hover .powermenu-orb-icon, .powermenu-tile.tile-power:focus .powermenu-orb-icon {
-    color: #0d0e15;
-}
-.powermenu-tile.tile-power:hover .powermenu-keycap, .powermenu-tile.tile-power:focus .powermenu-keycap {
-    background-color: #f87171;
-    color: #0d0e15;
-    border-color: #f87171;
-}
+.powermenu-tile.tile-power:hover .powermenu-orb-icon, .powermenu-tile.tile-power:focus .powermenu-orb-icon { color: #0d0f15; }
 
+
+/* Footer Styling */
 .powermenu-footer-box {
-    background-color: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 14px;
-    padding: 8px 18px;
-    margin-top: 2px;
+    background-color: transparent;
+    border: none;
+    margin-top: 4px;
 }
 
-.powermenu-footer-kbd {
+.powermenu-footer-keycap {
+    background-color: alpha(#ffffff, 0.06);
+    border: 1px solid alpha(#ffffff, 0.04);
+    border-radius: 6px;
+    color: #f8f8f2;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 3px 8px;
+    font-family: 'JetBrainsMono Nerd Font', monospace;
+}
+
+.powermenu-footer-text {
     color: #a6adc8;
     font-size: 11px;
     font-weight: 600;
 }
 
-.powermenu-footer-esc {
-    background-color: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    border-radius: 6px;
-    color: #6272a4;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 2px 8px;
+.powermenu-footer-dot {
+    color: #44475a;
+    font-size: 14px;
 }
 
 /* ─── Zenith On-Screen Display (OSD HUD) ─── */
@@ -3835,55 +3759,55 @@ window.zenith-files-window {
 /* === ZENITH FILES VISUAL POLISH === */
 
 .files-view-container {
-    background-color: #090B0D;
+    background-color: @zenith_bg;
 }
 
 .files-inspector-panel {
-    background-color: #101214;
-    border-left: 1px solid rgba(255, 255, 255, 0.05);
+    background-color: @zenith_surface;
+    border-left: 1px solid @zenith_border;
     box-shadow: -2px 0 10px rgba(0,0,0,0.2);
 }
 
 .files-view-container iconview:selected,
 .files-view-container treeview:selected {
-    background-color: rgba(60, 140, 255, 0.15);
-    border: 1px solid rgba(60, 140, 255, 0.4);
+    background-color: alpha(@zenith_accent, 0.15);
+    border: 1px solid alpha(@zenith_accent, 0.4);
     border-radius: 8px;
 }
 
 .files-badge {
-    background-color: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: @zenith_surface_highlight;
+    border: 1px solid @zenith_border;
     border-radius: 12px;
     padding: 2px 8px;
     font-size: 10px;
     font-weight: 600;
-    color: #A0A5AA;
+    color: @zenith_text_muted;
     letter-spacing: 0.5px;
 }
 
 .files-inspector-title {
     font-size: 14px;
     font-weight: 600;
-    color: white;
+    color: @zenith_text_primary;
 }
 
 .files-prop-title {
     font-size: 11px;
     font-weight: 600;
-    color: #7A8085;
+    color: @zenith_text_muted;
     letter-spacing: 0.5px;
 }
 
 .files-prop-lbl {
     font-size: 11px;
-    color: #8A9095;
+    color: @zenith_text_secondary;
 }
 
 .files-prop-val {
     font-size: 12px;
     font-weight: 500;
-    color: #D0D5DA;
+    color: @zenith_text_primary;
 }
 
 .files-inspector-panel button {
@@ -3891,20 +3815,20 @@ window.zenith-files-window {
     padding: 6px;
     font-size: 12px;
     font-weight: 500;
-    background-color: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.02);
+    background-color: @zenith_surface_highlight;
+    border: 1px solid @zenith_border;
     transition: all 150ms ease-in-out;
 }
 .files-inspector-panel button:hover {
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: @zenith_surface_variant;
 }
 .files-inspector-panel button.suggested-action {
-    background-color: #2D7AEE;
-    color: white;
-    border: 1px solid #1c5bba;
+    background-color: @zenith_accent;
+    color: @zenith_bg;
+    border: 1px solid @zenith_border_focus;
 }
 .files-inspector-panel button.suggested-action:hover {
-    background-color: #3b86f5;
+    background-color: @zenith_accent_sec;
 }
 
 .cc-slider-icon-btn {
@@ -3917,5 +3841,5 @@ window.zenith-files-window {
     border-radius: 6px;
 }
 .cc-slider-icon-btn:hover {
-    background-color: rgba(255,255,255,0.08);
+    background-color: @zenith_surface_highlight;
 }

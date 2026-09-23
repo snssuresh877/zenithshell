@@ -25,11 +25,11 @@ void PowerMenu::init(GtkApplication* app) {
 
 void PowerMenu::setup_actions() {
     actions = {
-        {"lock", "", "Lock", "Secure Session", "L", "tile-lock", "loginctl lock-session 2>/dev/null || hyprlock 2>/dev/null &"},
+        {"lock", "󰌾", "Lock", "Secure Session", "L", "tile-lock", "loginctl lock-session 2>/dev/null || hyprlock 2>/dev/null &"},
         {"suspend", "󰤄", "Sleep", "Suspend to RAM", "S", "tile-suspend", "loginctl lock-session; systemctl suspend 2>/dev/null &"},
         {"logout", "󰍃", "Logout", "Exit Hyprland", "E", "tile-logout", "hyprctl dispatch exit 2>/dev/null &"},
         {"reboot", "󰜉", "Restart", "Reboot System", "R", "tile-reboot", "systemctl reboot 2>/dev/null &"},
-        {"poweroff", "", "Shut Down", "Power Off PC", "P", "tile-power", "systemctl poweroff 2>/dev/null &"}
+        {"poweroff", "󰐥", "Shut Down", "Power Off PC", "P", "tile-power", "systemctl poweroff 2>/dev/null &"}
     };
 }
 
@@ -142,7 +142,7 @@ void PowerMenu::create_window(GtkApplication* app) {
     gtk_widget_add_css_class(user_title, "powermenu-user-title");
     gtk_widget_set_halign(user_title, GTK_ALIGN_START);
 
-    GtkWidget* session_sub = gtk_label_new("Hyprland Desktop Session");
+    GtkWidget* session_sub = gtk_label_new("Hyprland");
     gtk_widget_add_css_class(session_sub, "powermenu-session-sub");
     gtk_widget_set_halign(session_sub, GTK_ALIGN_START);
 
@@ -171,6 +171,10 @@ void PowerMenu::create_window(GtkApplication* app) {
     gtk_box_pack_end(GTK_BOX(header_box), right_header, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(card), header_box, FALSE, FALSE, 0);
 
+    GtkWidget* sep1 = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+    gtk_widget_add_css_class(sep1, "powermenu-separator");
+    gtk_box_pack_start(GTK_BOX(card), sep1, FALSE, FALSE, 12);
+
     // ─── Action Tiles Row (5 High-End Cards) ───
     GtkWidget* tiles_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 14);
     gtk_widget_set_halign(tiles_row, GTK_ALIGN_CENTER);
@@ -183,17 +187,13 @@ void PowerMenu::create_window(GtkApplication* app) {
         GtkWidget* btn = gtk_button_new();
         gtk_widget_add_css_class(btn, "powermenu-tile");
         gtk_widget_add_css_class(btn, act.css_class.c_str());
-        gtk_widget_set_size_request(btn, 122, 160);
+        gtk_widget_set_size_request(btn, 105, 130);
 
         GtkWidget* tile_content = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
         gtk_widget_set_valign(tile_content, GTK_ALIGN_FILL);
         gtk_widget_set_halign(tile_content, GTK_ALIGN_FILL);
 
-        // Top Row inside Tile: Hotkey Keycap Badge
-        GtkWidget* top_tile_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-        GtkWidget* badge_lbl = gtk_label_new(act.hotkey.c_str());
-        gtk_widget_add_css_class(badge_lbl, "powermenu-keycap");
-        gtk_box_pack_end(GTK_BOX(top_tile_row), badge_lbl, FALSE, FALSE, 0);
+
 
         // Middle: Floating Icon Orb
         GtkWidget* orb_container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
@@ -209,11 +209,12 @@ void PowerMenu::create_window(GtkApplication* app) {
         gtk_widget_add_css_class(icon_lbl, "powermenu-orb-icon");
         gtk_widget_set_halign(icon_lbl, GTK_ALIGN_CENTER);
         gtk_widget_set_valign(icon_lbl, GTK_ALIGN_CENTER);
-        gtk_container_add(GTK_CONTAINER(icon_orb), icon_lbl);
+        gtk_box_pack_start(GTK_BOX(icon_orb), icon_lbl, TRUE, TRUE, 0);
         gtk_box_pack_start(GTK_BOX(orb_container), icon_orb, FALSE, FALSE, 0);
 
         // Bottom: Typography Labels
-        GtkWidget* bottom_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 2);
+        GtkWidget* bottom_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 3);
+        gtk_widget_set_margin_top(bottom_vbox, 10);
         gtk_widget_set_halign(bottom_vbox, GTK_ALIGN_CENTER);
 
         GtkWidget* t_lbl = gtk_label_new(act.title.c_str());
@@ -225,7 +226,7 @@ void PowerMenu::create_window(GtkApplication* app) {
         gtk_box_pack_start(GTK_BOX(bottom_vbox), t_lbl, FALSE, FALSE, 0);
         gtk_box_pack_start(GTK_BOX(bottom_vbox), sub_lbl, FALSE, FALSE, 0);
 
-        gtk_box_pack_start(GTK_BOX(tile_content), top_tile_row, FALSE, FALSE, 0);
+        
         gtk_box_pack_start(GTK_BOX(tile_content), orb_container, TRUE, TRUE, 0);
         gtk_box_pack_end(GTK_BOX(tile_content), bottom_vbox, FALSE, FALSE, 2);
 
@@ -246,17 +247,47 @@ void PowerMenu::create_window(GtkApplication* app) {
     // ─── Footer Controls Bar ───
     GtkWidget* footer_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
     gtk_widget_add_css_class(footer_box, "powermenu-footer-box");
-    gtk_widget_set_halign(footer_box, GTK_ALIGN_CENTER);
+    gtk_widget_set_halign(footer_box, GTK_ALIGN_FILL);
 
-    GtkWidget* hint_kbd = gtk_label_new("󰌌 Press  [ L ] Lock   •   [ S ] Sleep   •   [ E ] Exit   •   [ R ] Restart   •   [ P ] Power Off");
-    gtk_widget_add_css_class(hint_kbd, "powermenu-footer-kbd");
+    // Helper to create footer hotkey widgets
+    auto create_hotkey = [](const char* key, const char* label_text, bool show_dot) -> GtkWidget* {
+        GtkWidget* box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+        gtk_widget_set_valign(box, GTK_ALIGN_CENTER);
+        
+        GtkWidget* key_lbl = gtk_label_new(key);
+        gtk_widget_add_css_class(key_lbl, "powermenu-footer-keycap");
+        
+        GtkWidget* txt_lbl = gtk_label_new(label_text);
+        gtk_widget_add_css_class(txt_lbl, "powermenu-footer-text");
+        
+        gtk_box_pack_start(GTK_BOX(box), key_lbl, FALSE, FALSE, 0);
+        gtk_box_pack_start(GTK_BOX(box), txt_lbl, FALSE, FALSE, 0);
+        
+        if (show_dot) {
+            GtkWidget* dot = gtk_label_new("·");
+            gtk_widget_add_css_class(dot, "powermenu-footer-dot");
+            gtk_widget_set_margin_start(dot, 4);
+            gtk_widget_set_margin_end(dot, 4);
+            gtk_box_pack_start(GTK_BOX(box), dot, FALSE, FALSE, 0);
+        }
+        return box;
+    };
 
-    GtkWidget* hint_esc = gtk_label_new("[ Esc ] Cancel");
-    gtk_widget_add_css_class(hint_esc, "powermenu-footer-esc");
+    GtkWidget* shortcuts_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+    gtk_box_pack_start(GTK_BOX(shortcuts_box), create_hotkey("L", "Lock", true), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(shortcuts_box), create_hotkey("S", "Sleep", true), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(shortcuts_box), create_hotkey("E", "Logout", true), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(shortcuts_box), create_hotkey("R", "Restart", true), FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(shortcuts_box), create_hotkey("P", "Shutdown", false), FALSE, FALSE, 0);
 
-    gtk_box_pack_start(GTK_BOX(footer_box), hint_kbd, FALSE, FALSE, 0);
-    gtk_box_pack_start(GTK_BOX(footer_box), hint_esc, FALSE, FALSE, 8);
+    GtkWidget* esc_box = create_hotkey("Esc", "Cancel", false);
 
+    gtk_box_pack_start(GTK_BOX(footer_box), shortcuts_box, FALSE, FALSE, 0);
+    gtk_box_pack_end(GTK_BOX(footer_box), esc_box, FALSE, FALSE, 0);
+
+    GtkWidget* sep2 = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
+    gtk_widget_add_css_class(sep2, "powermenu-separator");
+    gtk_box_pack_start(GTK_BOX(card), sep2, FALSE, FALSE, 6);
     gtk_box_pack_start(GTK_BOX(card), footer_box, FALSE, FALSE, 0);
 
     gtk_box_pack_start(GTK_BOX(center_box), card, FALSE, FALSE, 0);
@@ -319,7 +350,7 @@ void PowerMenu::toggle() {
 void PowerMenu::show() {
     if (!window) return;
     if (uptime_lbl) {
-        std::string up = "󰔚  " + get_uptime_string();
+        std::string up = get_uptime_string();
         // Check battery if available
         std::ifstream bat("/sys/class/power_supply/BAT0/capacity");
         if (!bat.is_open()) bat.open("/sys/class/power_supply/BAT1/capacity");
@@ -327,7 +358,7 @@ void PowerMenu::show() {
             std::string cap;
             bat >> cap;
             if (!cap.empty()) {
-                up = "󰂂 " + cap + "%  •  " + up;
+                up = "󰂂 " + cap + "% · " + up;
             }
         }
         gtk_label_set_text(GTK_LABEL(uptime_lbl), up.c_str());

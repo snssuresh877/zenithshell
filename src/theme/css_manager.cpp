@@ -36,7 +36,19 @@ void CssManager::init(const std::string& css_path) {
         GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
     );
 
+
     reload();
+
+    // Start watching the CSS file for hot-reloading
+    GFile* css_file = g_file_new_for_path(current_css_path.c_str());
+    if (css_file) {
+        GFileMonitor* monitor = g_file_monitor_file(css_file, G_FILE_MONITOR_NONE, nullptr, nullptr);
+        if (monitor) {
+            g_signal_connect(monitor, "changed", G_CALLBACK(on_file_changed), nullptr);
+        }
+        g_object_unref(css_file);
+    }
+
 }
 
 void CssManager::reload() {
@@ -53,7 +65,19 @@ void CssManager::reload() {
 }
 
 void CssManager::on_file_changed(GFileMonitor*, GFile*, GFile*, GFileMonitorEvent, gpointer) {
+
     reload();
+
+    // Start watching the CSS file for hot-reloading
+    GFile* css_file = g_file_new_for_path(current_css_path.c_str());
+    if (css_file) {
+        GFileMonitor* monitor = g_file_monitor_file(css_file, G_FILE_MONITOR_NONE, nullptr, nullptr);
+        if (monitor) {
+            g_signal_connect(monitor, "changed", G_CALLBACK(on_file_changed), nullptr);
+        }
+        g_object_unref(css_file);
+    }
+
 }
 
 } // namespace zenith

@@ -12,12 +12,9 @@ struct FileItem {
     std::string path;
     std::string name;
     std::string display_name;
-    std::string uri;
     std::string mime_type;
     uint64_t size{0};
-    std::string formatted_size;
     time_t mtime{0};
-    std::string formatted_date;
     bool is_directory{false};
     bool is_hidden{false};
     bool is_symlink{false};
@@ -47,7 +44,7 @@ struct FileItem {
 
     // Async thumbnail loader — safe to call from a non-GTK worker thread.
     // Returns a new GdkPixbuf* (caller owns it) or nullptr if not an image.
-    static GdkPixbuf* load_thumbnail(const std::string& path, const std::string& uri,
+    static GdkPixbuf* load_thumbnail(const std::string& path, 
                                       const std::string& mime_type, int size);
 };
 
