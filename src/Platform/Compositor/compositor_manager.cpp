@@ -7,7 +7,12 @@
 
 namespace zenith {
 
-CompositorManager::CompositorManager() {
+CompositorManager::CompositorManager() : event_bus_(std::make_shared<EventBus>()) {
+    detect_and_setup_backend();
+}
+
+CompositorManager::CompositorManager(std::shared_ptr<EventBus> bus) : event_bus_(std::move(bus)) {
+    if (!event_bus_) event_bus_ = std::make_shared<EventBus>();
     detect_and_setup_backend();
 }
 
@@ -68,13 +73,17 @@ void CompositorManager::init() {
 }
 
 void CompositorManager::add_workspace_callback(WorkspaceCallback cb) {
-    std::lock_guard<std::mutex> lock(cb_mutex);
-    workspace_cbs.push_back(cb);
+    if (!cb || !event_bus_) return;
+    event_bus_->subscribe<WorkspaceChangedEvent>([cb = std::move(cb)](const WorkspaceChangedEvent& ev) {
+        cb(ev.workspace_id);
+    });
 }
 
 void CompositorManager::add_window_title_callback(WindowTitleCallback cb) {
-    std::lock_guard<std::mutex> lock(cb_mutex);
-    window_title_cbs.push_back(cb);
+    if (!cb || !event_bus_) return;
+    event_bus_->subscribe<WindowTitleChangedEvent>([cb = std::move(cb)](const WindowTitleChangedEvent& ev) {
+        cb(ev.title);
+    });
 }
 
 void CompositorManager::add_window_event_callback(WindowEventCallback cb) {
@@ -111,24 +120,14 @@ std::string CompositorManager::get_clients_json() {
 }
 
 void CompositorManager::notify_workspace(int active_id) {
-    std::vector<WorkspaceCallback> cbs;
-    {
-        std::lock_guard<std::mutex> lock(cb_mutex);
-        cbs = workspace_cbs;
-    }
-    for (const auto& cb : cbs) {
-        if (cb) cb(active_id);
+    if (event_bus_) {
+        event_bus_->publish(WorkspaceChangedEvent{active_id});
     }
 }
 
 void CompositorManager::notify_window_title(const std::string& title) {
-    std::vector<WindowTitleCallback> cbs;
-    {
-        std::lock_guard<std::mutex> lock(cb_mutex);
-        cbs = window_title_cbs;
-    }
-    for (const auto& cb : cbs) {
-        if (cb) cb(title);
+    if (event_bus_) {
+        event_bus_->publish(WindowTitleChangedEvent{title});
     }
 }
 

@@ -1,4 +1,6 @@
 #include "Core/EventBus/event_bus.hpp"
+#include "Core/Events/compositor_events.hpp"
+#include "Platform/Compositor/compositor_manager.hpp"
 #include <cassert>
 #include <iostream>
 #include <string>
@@ -145,6 +147,66 @@ void run_tests() {
         assert(log[1] == "B:nested");
         assert(log[2] == "A_end:7");
         std::cout << "  ✔ Test 7 passed: reentrant dispatch\n";
+    }
+
+    // Test 8: CompositorManager -> WorkspaceChangedEvent -> EventBus subscriber receives event
+    {
+        auto bus = std::make_shared<zenith::EventBus>();
+        zenith::CompositorManager::instance().set_event_bus(bus);
+
+        int received_ws = -1;
+        bus->subscribe<zenith::WorkspaceChangedEvent>([&](const zenith::WorkspaceChangedEvent& ev) {
+            received_ws = ev.workspace_id;
+        });
+
+        zenith::CompositorManager::instance().notify_workspace(4);
+        assert(received_ws == 4);
+        std::cout << "  ✔ Test 8 passed: CompositorManager -> WorkspaceChangedEvent\n";
+    }
+
+    // Test 9: CompositorManager -> WindowTitleChangedEvent -> EventBus subscriber receives event
+    {
+        auto bus = std::make_shared<zenith::EventBus>();
+        zenith::CompositorManager::instance().set_event_bus(bus);
+
+        std::string received_title;
+        bus->subscribe<zenith::WindowTitleChangedEvent>([&](const zenith::WindowTitleChangedEvent& ev) {
+            received_title = ev.title;
+        });
+
+        zenith::CompositorManager::instance().notify_window_title("Zenith Development");
+        assert(received_title == "Zenith Development");
+        std::cout << "  ✔ Test 9 passed: CompositorManager -> WindowTitleChangedEvent\n";
+    }
+
+    // Test 10: Backward-compatible add_workspace_callback routes through EventBus
+    {
+        auto bus = std::make_shared<zenith::EventBus>();
+        zenith::CompositorManager::instance().set_event_bus(bus);
+
+        int legacy_ws = -1;
+        zenith::CompositorManager::instance().add_workspace_callback([&](int ws) {
+            legacy_ws = ws;
+        });
+
+        zenith::CompositorManager::instance().notify_workspace(7);
+        assert(legacy_ws == 7);
+        std::cout << "  ✔ Test 10 passed: backward-compatible add_workspace_callback\n";
+    }
+
+    // Test 11: Backward-compatible add_window_title_callback routes through EventBus
+    {
+        auto bus = std::make_shared<zenith::EventBus>();
+        zenith::CompositorManager::instance().set_event_bus(bus);
+
+        std::string legacy_title;
+        zenith::CompositorManager::instance().add_window_title_callback([&](const std::string& title) {
+            legacy_title = title;
+        });
+
+        zenith::CompositorManager::instance().notify_window_title("Terminal - zsh");
+        assert(legacy_title == "Terminal - zsh");
+        std::cout << "  ✔ Test 11 passed: backward-compatible add_window_title_callback\n";
     }
 
     std::cout << "[TestEventBus] ALL TESTS PASSED SUCCESSFULLY! ✔\n";

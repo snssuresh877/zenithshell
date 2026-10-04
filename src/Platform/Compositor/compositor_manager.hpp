@@ -5,6 +5,8 @@
 #include <vector>
 #include <memory>
 #include <mutex>
+#include "Core/EventBus/event_bus.hpp"
+#include "Core/Events/compositor_events.hpp"
 
 namespace zenith {
 
@@ -50,6 +52,10 @@ public:
     void set_window_title_callback(WindowTitleCallback cb) { add_window_title_callback(cb); }
     void set_window_event_callback(WindowEventCallback cb) { add_window_event_callback(cb); }
 
+    // EventBus integration
+    std::shared_ptr<EventBus> get_event_bus() const { return event_bus_; }
+    void set_event_bus(std::shared_ptr<EventBus> bus) { event_bus_ = std::move(bus); }
+
     // Unified actions
     void switch_workspace(int id);
     void switch_workspace_relative(int delta);
@@ -67,14 +73,14 @@ public:
 
 private:
     CompositorManager();
+    explicit CompositorManager(std::shared_ptr<EventBus> bus);
     ~CompositorManager();
 
     CompositorType current_type = CompositorType::Generic;
     std::unique_ptr<ICompositorBackend> backend;
+    std::shared_ptr<EventBus> event_bus_;
     std::mutex cb_mutex;
 
-    std::vector<WorkspaceCallback> workspace_cbs;
-    std::vector<WindowTitleCallback> window_title_cbs;
     std::vector<WindowEventCallback> window_event_cbs;
 
     void detect_and_setup_backend();
