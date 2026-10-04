@@ -75,6 +75,7 @@ set(SOURCES
     src/FileManager/UI/file_manager_window.cpp 
     src/FileManager/UI/tree_sidebar.cpp
     src/Engine/Config/config.cpp
+    src/Core/EventBus/event_bus.cpp
     src/Platform/Compositor/compositor_manager.cpp
     src/Platform/Compositor/hyprland_ipc.cpp
     src/Platform/Compositor/sway_ipc.cpp
