@@ -558,6 +558,7 @@ void SpotlightSearch::on_search_changed(GtkEntry*, gpointer) {
         GtkWidget* title = gtk_label_new(item.title.c_str());
         gtk_widget_add_css_class(title, "spotlight-item-title");
         gtk_widget_set_halign(title, GTK_ALIGN_START);
+        gtk_label_set_ellipsize(GTK_LABEL(title), PANGO_ELLIPSIZE_END);
 
         GtkWidget* sub = gtk_label_new(item.subtitle.c_str());
         gtk_widget_add_css_class(sub, "spotlight-item-sub");

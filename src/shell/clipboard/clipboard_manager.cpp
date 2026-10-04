@@ -332,6 +332,7 @@ void ClipboardManager::hide() {
 
 void ClipboardManager::add_item(const std::string& text, const std::string& timestamp) {
     if (text.empty() || text == last_copied) return;
+    if (text.size() > 250000) return; // Prevent multi-megabyte items from exhausting memory and crashing Cairo
 
     // Deduplicate identical items
     history.erase(std::remove_if(history.begin(), history.end(), [&](const ClipItem& item) {
@@ -443,8 +444,8 @@ void ClipboardManager::render_list(const std::string& filter_text) {
         GtkWidget* icon = gtk_label_new(icon_char);
         gtk_widget_add_css_class(icon, "clip-icon");
 
-        // Single line preview
-        std::string clean_preview = item.text;
+        // Single line preview (capped at 256 characters to avoid Cairo surface overflow)
+        std::string clean_preview = item.text.substr(0, 256);
         std::replace(clean_preview.begin(), clean_preview.end(), '\n', ' ');
         std::replace(clean_preview.begin(), clean_preview.end(), '\t', ' ');
 
