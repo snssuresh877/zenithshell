@@ -1,8 +1,8 @@
-#include "shell/files/file_manager_state.hpp"
-#include "shell/files/file_preferences_dialog.hpp"
-#include "shell/files/theme_settings.hpp"
-#include "shell/files/file_shortcuts.hpp"
-#include "shell/files/file_view_widget.hpp"
+#include "FileManager/Core/file_manager_state.hpp"
+#include "FileManager/Features/file_preferences_dialog.hpp"
+#include "FileManager/UI/theme_settings.hpp"
+#include "FileManager/Core/file_shortcuts.hpp"
+#include "FileManager/UI/file_view_widget.hpp"
 #include "gtk3_compat.hpp"
 #include <vector>
 #include <iostream>

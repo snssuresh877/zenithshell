@@ -1,6 +1,6 @@
 #include <sys/wait.h>
-#include "shell/files/file_operations.hpp"
-#include "shell/files/undo_manager.hpp"
+#include "FileManager/Core/file_operations.hpp"
+#include "FileManager/Core/undo_manager.hpp"
 #include "gtk3_compat.hpp"
 #include <gio/gio.h>
 #include <gio/gdesktopappinfo.h>

@@ -1,9 +1,9 @@
 #include "app/app.hpp"
 #include "cli/zenithctl.hpp"
-#include "shell/files/file_manager_window.hpp"
+#include "FileManager/UI/file_manager_window.hpp"
 #include "theme/theme_engine.hpp"
 #include "theme/css_manager.hpp"
-#include "shell/files/theme_settings.hpp"
+#include "FileManager/UI/theme_settings.hpp"
 #include <gtk/gtk.h>
 #include <string>
 

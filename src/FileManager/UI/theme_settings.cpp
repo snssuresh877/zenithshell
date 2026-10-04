@@ -1,4 +1,4 @@
-#include "shell/files/theme_settings.hpp"
+#include "FileManager/UI/theme_settings.hpp"
 #include <fstream>
 #include <filesystem>
 #include <glib.h>

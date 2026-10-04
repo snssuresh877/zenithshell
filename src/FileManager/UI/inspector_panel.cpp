@@ -1,5 +1,5 @@
-#include "shell/files/inspector_panel.hpp"
-#include "shell/files/file_item.hpp"
+#include "FileManager/UI/inspector_panel.hpp"
+#include "FileManager/Core/file_item.hpp"
 #include <sys/stat.h>
 #include <pwd.h>
 #include <grp.h>

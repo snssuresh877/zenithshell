@@ -1,4 +1,4 @@
-#include "shell/files/duplicate_finder_dialog.hpp"
+#include "FileManager/Features/duplicate_finder_dialog.hpp"
 #include <thread>
 #include <vector>
 #include <string>

@@ -54,26 +54,26 @@ link_directories(
 set(SOURCES
     src/main.cpp
     src/app/app.cpp
-    src/shell/files/file_item.cpp 
-    src/shell/files/undo_manager.cpp
-    src/shell/files/transfer_history_dialog.cpp
-    src/shell/files/file_operations.cpp
-    src/shell/files/checksum_dialog.cpp
-    src/shell/files/duplicate_finder_dialog.cpp
-    src/shell/files/disk_analyzer_dialog.cpp 
-    src/shell/files/file_shortcuts.cpp 
-    src/shell/files/custom_actions.cpp 
-    src/shell/files/command_palette.cpp 
-    src/shell/files/bulk_rename_dialog.cpp 
-    src/shell/files/inspector_panel.cpp 
-    src/shell/files/quick_preview.cpp 
-    src/shell/files/file_preferences_dialog.cpp
-    src/shell/files/theme_settings.cpp 
-    src/shell/files/path_bar_widget.cpp 
-    src/shell/files/places_sidebar.cpp 
-    src/shell/files/file_view_widget.cpp 
-    src/shell/files/file_manager_window.cpp 
-    src/shell/files/tree_sidebar.cpp
+    src/FileManager/Core/file_item.cpp 
+    src/FileManager/Core/undo_manager.cpp
+    src/FileManager/Features/transfer_history_dialog.cpp
+    src/FileManager/Core/file_operations.cpp
+    src/FileManager/Features/checksum_dialog.cpp
+    src/FileManager/Features/duplicate_finder_dialog.cpp
+    src/FileManager/Features/disk_analyzer_dialog.cpp 
+    src/FileManager/Core/file_shortcuts.cpp 
+    src/FileManager/Core/custom_actions.cpp 
+    src/FileManager/Features/command_palette.cpp 
+    src/FileManager/Features/bulk_rename_dialog.cpp 
+    src/FileManager/UI/inspector_panel.cpp 
+    src/FileManager/Features/quick_preview.cpp 
+    src/FileManager/Features/file_preferences_dialog.cpp
+    src/FileManager/UI/theme_settings.cpp 
+    src/FileManager/UI/path_bar_widget.cpp 
+    src/FileManager/UI/places_sidebar.cpp 
+    src/FileManager/UI/file_view_widget.cpp 
+    src/FileManager/UI/file_manager_window.cpp 
+    src/FileManager/UI/tree_sidebar.cpp
     src/config/config.cpp
     src/compositors/hyprland_ipc.cpp
     src/dbus/dbus_service.cpp

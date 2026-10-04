@@ -1,4 +1,4 @@
-#include "shell/files/file_item.hpp"
+#include "FileManager/Core/file_item.hpp"
 #include <gtk/gtk.h>
 #include <iomanip>
 #include <sstream>

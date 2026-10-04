@@ -1,5 +1,5 @@
-#include "shell/files/quick_preview.hpp"
-#include "shell/files/file_item.hpp"
+#include "FileManager/Features/quick_preview.hpp"
+#include "FileManager/Core/file_item.hpp"
 #include "gtk3_compat.hpp"
 #include <gio/gio.h>
 #include <filesystem>

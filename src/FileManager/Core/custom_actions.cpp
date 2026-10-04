@@ -1,4 +1,4 @@
-#include "shell/files/custom_actions.hpp"
+#include "FileManager/Core/custom_actions.hpp"
 #include <nlohmann/json.hpp>
 #include <fstream>
 #include <iostream>

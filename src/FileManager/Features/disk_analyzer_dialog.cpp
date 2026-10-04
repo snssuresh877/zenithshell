@@ -1,4 +1,4 @@
-#include "shell/files/disk_analyzer_dialog.hpp"
+#include "FileManager/Features/disk_analyzer_dialog.hpp"
 #include <thread>
 #include <vector>
 #include <string>

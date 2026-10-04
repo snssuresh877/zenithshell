@@ -1,4 +1,4 @@
-#include "shell/files/path_bar_widget.hpp"
+#include "FileManager/UI/path_bar_widget.hpp"
 #include "gtk3_compat.hpp"
 #include <filesystem>
 #include <vector>

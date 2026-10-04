@@ -1,4 +1,4 @@
-#include "shell/files/file_shortcuts.hpp"
+#include "FileManager/Core/file_shortcuts.hpp"
 #include <nlohmann/json.hpp>
 #include <filesystem>
 #include <fstream>

@@ -1,4 +1,4 @@
-#include "shell/files/bulk_rename_dialog.hpp"
+#include "FileManager/Features/bulk_rename_dialog.hpp"
 #include <gio/gio.h>
 #include <glib/gstdio.h>
 #include <filesystem>

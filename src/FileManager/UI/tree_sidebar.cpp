@@ -1,4 +1,4 @@
-#include "shell/files/tree_sidebar.hpp"
+#include "FileManager/UI/tree_sidebar.hpp"
 #include <gio/gio.h>
 
 namespace zenith {

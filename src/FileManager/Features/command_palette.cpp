@@ -1,5 +1,5 @@
-#include "shell/files/command_palette.hpp"
-#include "shell/files/file_shortcuts.hpp"
+#include "FileManager/Features/command_palette.hpp"
+#include "FileManager/Core/file_shortcuts.hpp"
 #include "gtk3_compat.hpp"
 #include <algorithm>
 #include <iostream>

@@ -1,4 +1,4 @@
-#include "shell/files/checksum_dialog.hpp"
+#include "FileManager/Features/checksum_dialog.hpp"
 #include <thread>
 #include <fstream>
 #include <vector>

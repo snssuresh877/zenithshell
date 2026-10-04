@@ -1,4 +1,4 @@
-#include "shell/files/places_sidebar.hpp"
+#include "FileManager/UI/places_sidebar.hpp"
 #include "gtk3_compat.hpp"
 #include <gio/gio.h>
 #include <nlohmann/json.hpp>
