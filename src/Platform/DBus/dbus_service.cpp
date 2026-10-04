@@ -9,6 +9,7 @@
 #include "Desktop/Keybinds/keybinds_overlay.hpp"
 #include "Services/Network/wifi_manager.hpp"
 #include "Desktop/PowerMenu/power_menu.hpp"
+#include "Platform/Compositor/compositor_manager.hpp"
 #include "Engine/Theme/theme_engine.hpp"
 #include "Engine/Theme/css_manager.hpp"
 #include "Services/Monitor/sys_monitor.hpp"
@@ -532,6 +533,7 @@ void DBusService::handle_method_call(GDBusConnection*,
         int vol = AudioManager::get_volume();
         int bri = BacklightManager::get_brightness_percent();
         std::string theme = ThemeEngine::get_current_theme_name();
+        std::string compositor = CompositorManager::instance().get_name();
 
         std::ostringstream ss;
         ss << "{"
@@ -541,7 +543,8 @@ void DBusService::handle_method_call(GDBusConnection*,
            << "\"battery_percent\":" << stats.battery_percent << ","
            << "\"volume\":" << vol << ","
            << "\"brightness\":" << bri << ","
-           << "\"theme\":\"" << theme << "\""
+           << "\"theme\":\"" << theme << "\","
+           << "\"compositor\":\"" << compositor << "\""
            << "}";
 
         std::string json = ss.str();

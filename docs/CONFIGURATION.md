@@ -187,11 +187,40 @@ bindl = , XF86AudioNext, exec, zenithctl media next
 bindl = , XF86AudioPrev, exec, zenithctl media prev
 ```
 
-### Autostarting ZenithShell
-In your `hyprland.conf`:
+### Hyprland Configuration (`~/.config/hypr/hyprland.conf`)
 ```ini
+# Autostart
 exec-once = zenithshell
+
+# Keybindings
+bind = SUPER, SPACE, exec, zenithctl launcher
+bind = SUPER, V, exec, zenithctl clipboard
+bind = SUPER, C, exec, zenithctl control-center
+bind = SUPER, N, exec, zenithctl notifications
+bind = SUPER, K, exec, zenithctl keybinds
+bind = SUPER, R, exec, zenithctl reminders
+bind = SUPER, TAB, exec, zenithctl active-apps
+bind = SUPER, E, exec, zenithctl files
 ```
+
+### Sway Configuration (`~/.config/sway/config`)
+```ini
+# Autostart
+exec zenithshell
+
+# Keybindings
+bindsym $mod+space exec zenithctl launcher
+bindsym $mod+v exec zenithctl clipboard
+bindsym $mod+c exec zenithctl control-center
+bindsym $mod+n exec zenithctl notifications
+bindsym $mod+k exec zenithctl keybinds
+bindsym $mod+r exec zenithctl reminders
+bindsym $mod+Tab exec zenithctl active-apps
+bindsym $mod+e exec zenithctl files
+```
+
+### COSMIC & Generic Wayland (`~/.config/autostart/zenithshell.desktop`)
+ZenithShell auto-detects COSMIC (`cosmic-comp`) and generic Wayland compositors automatically. You can add ZenithShell to your desktop's autostart or bind any global shortcuts directly to `zenithctl` commands.
 
 ---
 

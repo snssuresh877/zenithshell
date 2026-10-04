@@ -3,6 +3,7 @@
 #include "Services/Audio/audio_manager.hpp"
 #include "Services/Brightness/backlight_manager.hpp"
 #include "Engine/Theme/theme_engine.hpp"
+#include "Platform/Compositor/compositor_manager.hpp"
 #include "Platform/Compositor/hyprland_ipc.hpp"
 #include "Services/Notifications/notification_manager.hpp"
 #include "gtk3_compat.hpp"
@@ -566,8 +567,8 @@ GtkWidget* ControlCenter::create_main_page() {
         g_signal_connect(btn, "clicked", G_CALLBACK(+[](GtkButton*, gpointer data) {
             char* c = static_cast<char*>(data);
             if (c) {
-                if (strstr(c, "dispatch exit") != nullptr) {
-                    HyprlandIPC::exit();
+                if (strstr(c, "dispatch exit") != nullptr || strstr(c, "logout") != nullptr) {
+                    CompositorManager::instance().exit_session();
                 } else {
                     system(c);
                 }
@@ -580,7 +581,7 @@ GtkWidget* ControlCenter::create_main_page() {
     };
 
     GtkWidget* p_lock = create_pwr_btn("", "Lock", "pwr-lock", "Lock Screen (hyprlock)", "loginctl lock-session 2>/dev/null || hyprlock 2>/dev/null &");
-    GtkWidget* p_logout = create_pwr_btn("󰍃", "Logout", "pwr-logout", "Exit Hyprland", "hyprctl dispatch exit 2>/dev/null &");
+    GtkWidget* p_logout = create_pwr_btn("󰍃", "Logout", "pwr-logout", "Exit Session", "dispatch exit");
     GtkWidget* p_reboot = create_pwr_btn("󰜉", "Reboot", "pwr-reboot", "Restart System", "systemctl reboot 2>/dev/null &");
     GtkWidget* p_power = create_pwr_btn("", "Power", "pwr-shutdown", "Power Off PC", "systemctl poweroff 2>/dev/null &");
 

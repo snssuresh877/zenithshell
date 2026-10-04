@@ -8,16 +8,16 @@
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg?style=for-the-badge)](LICENSE)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/snssuresh877/zenithshell/ci.yml?branch=main&style=for-the-badge&label=Build)](https://github.com/snssuresh877/zenithshell/actions)
 
-**An ultra-fast, native C++20 desktop shell & widget suite for Wayland / Hyprland.**  
+**An ultra-fast, native C++20 desktop shell & widget suite for all Wayland compositors (COSMIC, Sway, Hyprland, Wayfire, River, Labwc).**  
 *Status Bar • Spotlight App Launcher • Control Center • Notification Daemon • Theme Engine • Reminders • Clipboard*
 
 </div>
 
 ---
 
-An ultra-low-footprint, pro-grade desktop shell and widget suite written natively in **C++20** with **GTK3**, **gtk-layer-shell**, **Cairo**, and direct non-polling **Hyprland UNIX Sockets**.
+An ultra-low-footprint, pro-grade desktop shell and widget suite written natively in **C++20** with **GTK3**, **gtk-layer-shell**, **Cairo**, and a **Compositor Abstraction Layer** with zero-overhead async IPC backends.
 
-Designed as a high-performance, aesthetically refined replacement for heavy web/QML/JS-based desktop bars, ZenithShell delivers a sub-**30MB RAM** footprint, **0.0% idle CPU** load, and instant sub-40ms startup while providing deep dynamic theming and native Wayland integration.
+Designed as a high-performance, aesthetically refined replacement for heavy web/QML/JS-based desktop bars, ZenithShell delivers a sub-**25MB RAM** footprint, **0.0% idle CPU** load, and instant sub-40ms startup while providing deep dynamic theming and universal Wayland integration across **COSMIC**, **Sway**, **Hyprland**, and more.
 
 > [!IMPORTANT]
 > **🚀 Performance Recommendation: Use as Standalone (No Waybar / Rofi / SwayNC Needed)**
@@ -212,9 +212,10 @@ zenithshell/
 
 ## ✨ Core Features
 
-### 1. 🚀 Native Wayland & Hyprland Integration
-- **Direct UNIX Domain Socket (`.socket2.sock`)**: Listens asynchronously for workspace shifts and window focus without timer polling loops.
-- **Layer Shell Overlay**: Configured via `gtk-layer-shell` for true floating cards, customizable anchor points, exclusive screen margins, and click-outside dismissal.
+### 1. 🚀 Universal Wayland Compositor Engine
+- **Compositor-Agnostic Abstraction Layer (CAL)**: Runs seamlessly on **COSMIC (`cosmic-comp`)**, **Sway**, **Hyprland**, **Wayfire**, **River**, and **Labwc** with automatic runtime detection.
+- **Direct UNIX Domain Sockets**: Employs non-polling event listeners on Hyprland (`.socket2.sock`) and Sway (`$SWAYSOCK` with binary `i3-ipc` framing) with automatic fallback to universal logind session management.
+- **Layer Shell Overlay**: Configured via `gtk-layer-shell` for true floating cards, customizable anchor points, exclusive screen margins, and click-outside dismissal, with graceful toplevel fallbacks.
 
 ### 2. 🎨 Adaptive Theme Engine
 - **23 Built-in Color Palettes**: Includes **Zenith Obsidian**, **Everforest**, **Nord**, **Kanagawa**, **Tokyo Night**, **Catppuccin Mocha**, **Gruvbox**, **Hackerman**, **Matte Black**, **Lumon**, and more.

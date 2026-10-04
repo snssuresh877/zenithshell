@@ -75,7 +75,10 @@ set(SOURCES
     src/FileManager/UI/file_manager_window.cpp 
     src/FileManager/UI/tree_sidebar.cpp
     src/Engine/Config/config.cpp
+    src/Platform/Compositor/compositor_manager.cpp
     src/Platform/Compositor/hyprland_ipc.cpp
+    src/Platform/Compositor/sway_ipc.cpp
+    src/Platform/Compositor/generic_compositor.cpp
     src/Platform/DBus/dbus_service.cpp
     src/Services/Notifications/notification_manager.cpp
     src/Services/Media/mpris_player.cpp

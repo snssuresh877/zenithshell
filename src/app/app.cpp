@@ -3,6 +3,7 @@
 #include "Engine/Theme/theme_engine.hpp"
 #include "Services/Notifications/notification_manager.hpp"
 #include "Platform/DBus/dbus_service.hpp"
+#include "Platform/Compositor/compositor_manager.hpp"
 #include "Platform/Compositor/hyprland_ipc.hpp"
 #include "Services/Monitor/sys_monitor.hpp"
 #include "Services/Audio/audio_manager.hpp"
@@ -85,8 +86,8 @@ void App::on_activate(GtkApplication* app, gpointer user_data) {
     SysMonitor::init();
     AudioManager::init();
 
-    // Initialize Hyprland Socket Listeners
-    HyprlandIPC::instance().init();
+    // Initialize Wayland Compositor Listeners (Hyprland / Sway / COSMIC / Generic)
+    CompositorManager::instance().init();
 
     // Initialize Central DBus Service (dev.zenith.Shell)
     DBusService::instance().init();

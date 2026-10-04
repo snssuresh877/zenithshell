@@ -96,7 +96,7 @@ void print_help() {
     std::cout << "  " << C_GREEN << "notifications" << C_RESET << " | " << C_GREEN << "nc" << C_RESET << "        Toggle Notification History Center\n";
     std::cout << "  " << C_GREEN << "reminders" << C_RESET << "               Toggle Reminders Manager\n";
     std::cout << "  " << C_GREEN << "active-apps" << C_RESET << "             Toggle Active Applications Drawer\n";
-    std::cout << "  " << C_GREEN << "keybinds" << C_RESET << "                Toggle Hyprland Cheatsheet Overlay\n";
+    std::cout << "  " << C_GREEN << "keybinds" << C_RESET << "                Toggle Desktop Cheatsheet Overlay\n";
     std::cout << "  " << C_GREEN << "network" << C_RESET << "                 Open Network / Wi-Fi modal\n";
     std::cout << "  " << C_GREEN << "audio" << C_RESET << "                   Open Audio control modal\n";
     std::cout << "  " << C_GREEN << "power" << C_RESET << "                   Open Power & Session menu\n\n";
@@ -942,6 +942,7 @@ int ZenithCtl::run(int argc, char** argv) {
                     std::cout << "  " << C_BOLD << "Volume:" << C_RESET << "          " << j.value("volume", 0) << "%\n";
                     std::cout << "  " << C_BOLD << "Brightness:" << C_RESET << "      " << j.value("brightness", 0) << "%\n";
                     std::cout << "  " << C_BOLD << "Active Theme:" << C_RESET << "    " << C_GREEN << j.value("theme", "N/A") << C_RESET << "\n";
+                    std::cout << "  " << C_BOLD << "Compositor:" << C_RESET << "      " << C_CYAN << j.value("compositor", "Generic Wayland") << C_RESET << "\n";
                 } catch (...) {
                     std::cout << json_str << "\n";
                 }

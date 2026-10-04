@@ -1,6 +1,8 @@
 #include "Desktop/ActiveApps/active_apps_drawer.hpp"
 #include "gtk3_compat.hpp"
+#include "Platform/Compositor/compositor_manager.hpp"
 #include "Platform/Compositor/hyprland_ipc.hpp"
+#include <nlohmann/json.hpp>
 #include <gtk-layer-shell/gtk-layer-shell.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkkeysyms.h>
@@ -156,8 +158,8 @@ void ActiveAppsDrawer::load_desktop_apps_cache() {
 std::vector<AppClientInfo> ActiveAppsDrawer::fetch_clients() {
     std::vector<AppClientInfo> clients;
 
-    std::string json_str = HyprlandIPC::get_clients_json();
-    if (json_str.empty()) {
+    std::string json_str = CompositorManager::instance().get_clients_json();
+    if (json_str.empty() && CompositorManager::instance().get_type() == CompositorType::Hyprland) {
         std::unique_ptr<FILE, decltype(&pclose)> pipe(popen("hyprctl clients -j 2>/dev/null", "r"), pclose);
         if (pipe) {
             char buffer[512];
@@ -166,7 +168,44 @@ std::vector<AppClientInfo> ActiveAppsDrawer::fetch_clients() {
             }
         }
     }
-    if (json_str.empty()) return clients;
+    if (json_str.empty() || json_str == "[]") return clients;
+
+    // Sway / i3 tree format parsing
+    if (json_str.find("\"nodes\":") != std::string::npos) {
+        try {
+            auto j = nlohmann::json::parse(json_str);
+            std::function<void(const nlohmann::json&)> traverse = [&](const nlohmann::json& node) {
+                if (node.is_object()) {
+                    if (node.contains("type") && (node["type"] == "con" || node["type"] == "floating_con")) {
+                        std::string name = node.value("name", "");
+                        std::string app_id = node.value("app_id", "");
+                        if (app_id.empty() && node.contains("window_properties")) {
+                            app_id = node["window_properties"].value("class", "");
+                        }
+                        int id = node.value("id", 0);
+                        if (!name.empty() && id > 0 && !app_id.empty()) {
+                            AppClientInfo c;
+                            c.address = std::to_string(id);
+                            c.title = name;
+                            c.app_class = app_id;
+                            c.workspace_id = 1;
+                            c.pid = node.value("pid", 0);
+                            c.is_focused = node.value("focused", false);
+                            clients.push_back(c);
+                        }
+                    }
+                    if (node.contains("nodes") && node["nodes"].is_array()) {
+                        for (const auto& child : node["nodes"]) traverse(child);
+                    }
+                    if (node.contains("floating_nodes") && node["floating_nodes"].is_array()) {
+                        for (const auto& child : node["floating_nodes"]) traverse(child);
+                    }
+                }
+            };
+            traverse(j);
+            return clients;
+        } catch (...) {}
+    }
 
     size_t pos = 0;
     while ((pos = json_str.find("\"address\":", pos)) != std::string::npos) {

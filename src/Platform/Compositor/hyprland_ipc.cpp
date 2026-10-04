@@ -14,46 +14,41 @@ using json = nlohmann::json;
 
 namespace zenith {
 
-HyprlandIPC& HyprlandIPC::instance() {
-    static HyprlandIPC inst;
-    return inst;
-}
+HyprlandBackend::HyprlandBackend() = default;
 
-HyprlandIPC::~HyprlandIPC() {
+HyprlandBackend::~HyprlandBackend() {
     running = false;
     if (ipc_thread.joinable()) {
         ipc_thread.detach();
     }
 }
 
-void HyprlandIPC::init() {
+void HyprlandBackend::init() {
     if (running) return;
 
     const char* his = std::getenv("HYPRLAND_INSTANCE_SIGNATURE");
     const char* xdg_runtime = std::getenv("XDG_RUNTIME_DIR");
 
     if (!his || !xdg_runtime) {
-        std::cerr << "[HyprlandIPC] HYPRLAND_INSTANCE_SIGNATURE or XDG_RUNTIME_DIR not found. IPC disabled.\n";
+        std::cerr << "[HyprlandBackend] HYPRLAND_INSTANCE_SIGNATURE or XDG_RUNTIME_DIR not found. IPC disabled.\n";
         return;
     }
 
     event_socket_path = std::string(xdg_runtime) + "/hypr/" + his + "/.socket2.sock";
     req_socket_path = std::string(xdg_runtime) + "/hypr/" + his + "/.socket.sock";
     running = true;
-    ipc_thread = std::thread(&HyprlandIPC::listen_loop, this);
-    std::cout << "[HyprlandIPC] Connected to Hyprland event socket at " << event_socket_path << std::endl;
+    ipc_thread = std::thread(&HyprlandBackend::listen_loop, this);
+    std::cout << "[HyprlandBackend] Connected to Hyprland event socket at " << event_socket_path << std::endl;
 
-    // Query initial active workspace directly via request socket (zero subprocesses)
+    // Query initial active workspace directly via request socket
     g_idle_add([](gpointer) -> gboolean {
-        int ws_id = HyprlandIPC::get_active_workspace_id();
-        for (const auto& cb : HyprlandIPC::instance().workspace_cbs) {
-            if (cb) cb(ws_id);
-        }
+        int ws_id = HyprlandBackend::get_active_workspace_id_static();
+        CompositorManager::instance().notify_workspace(ws_id);
         return FALSE;
     }, nullptr);
 }
 
-std::string HyprlandIPC::request(const std::string& cmd) {
+std::string HyprlandBackend::request(const std::string& cmd) {
     const char* his = std::getenv("HYPRLAND_INSTANCE_SIGNATURE");
     const char* xdg_runtime = std::getenv("XDG_RUNTIME_DIR");
     if (!his || !xdg_runtime) return "";
@@ -95,74 +90,61 @@ std::string HyprlandIPC::request(const std::string& cmd) {
     return response;
 }
 
-std::string HyprlandIPC::query_json(const std::string& endpoint) {
+std::string HyprlandBackend::query_json(const std::string& endpoint) {
     return request("j/" + endpoint);
 }
 
-bool HyprlandIPC::dispatch(const std::string& cmd) {
+bool HyprlandBackend::dispatch(const std::string& cmd) {
     std::string resp = request("dispatch " + cmd);
     return resp.find("ok") != std::string::npos;
 }
 
-void HyprlandIPC::switch_workspace(int id) {
-    // 1. Try Lua dispatcher
+void HyprlandBackend::switch_workspace(int id) {
     if (dispatch("hl.dsp.focus({workspace=\"" + std::to_string(id) + "\"})")) return;
-    // 2. Try standard Hyprland dispatcher
     if (dispatch("workspace " + std::to_string(id))) return;
-    // 3. Fallback
     std::string cmd = "hyprctl dispatch workspace " + std::to_string(id);
     g_spawn_command_line_async(cmd.c_str(), nullptr);
 }
 
-void HyprlandIPC::switch_workspace_relative(int delta) {
+void HyprlandBackend::switch_workspace_relative(int delta) {
     std::string delta_str = (delta > 0) ? "e+1" : "e-1";
-    // 1. Try Lua dispatcher
     if (dispatch("hl.dsp.focus({workspace=\"" + delta_str + "\"})")) return;
-    // 2. Try standard Hyprland dispatcher
     if (dispatch("workspace " + delta_str)) return;
-    // 3. Fallback
     std::string cmd = "hyprctl dispatch workspace " + delta_str;
     g_spawn_command_line_async(cmd.c_str(), nullptr);
 }
 
-void HyprlandIPC::focus_window(const std::string& target) {
+void HyprlandBackend::focus_window(const std::string& target) {
     if (target.empty()) return;
-    // 1. Try Lua dispatcher
     if (dispatch("hl.dsp.focus({window=\"" + target + "\"})")) return;
-    // 2. Try standard Hyprland dispatcher
     if (dispatch("focuswindow " + target)) return;
-    // 3. Fallback
     std::string cmd = "hyprctl dispatch focuswindow " + target;
     g_spawn_command_line_async(cmd.c_str(), nullptr);
 }
 
-void HyprlandIPC::close_window(const std::string& address) {
+void HyprlandBackend::close_window(const std::string& address) {
     if (address.empty()) return;
-    // 1. Try Lua dispatcher
     if (dispatch("hl.dsp.window.close({address=\"" + address + "\"})")) return;
-    // 2. Try standard Hyprland dispatcher
     if (dispatch("closewindow address:" + address)) return;
-    // 3. Fallback
     std::string cmd = "hyprctl dispatch closewindow address:" + address;
     g_spawn_command_line_async(cmd.c_str(), nullptr);
 }
 
-void HyprlandIPC::exit() {
-    // 1. Try Lua dispatcher
+void HyprlandBackend::exit_session_static() {
     if (dispatch("hl.dsp.exit()")) return;
-    // 2. Try standard Hyprland dispatcher
     if (dispatch("exit")) return;
-    // 3. Fallback
     g_spawn_command_line_async("hyprctl dispatch exit", nullptr);
 }
 
-bool HyprlandIPC::send_command(const std::string& cmd) {
+void HyprlandBackend::exit_session() {
+    exit_session_static();
+}
+
+bool HyprlandBackend::send_command(const std::string& cmd) {
     std::string c = cmd;
-    // Strip leading "hyprctl " if present
     if (c.rfind("hyprctl ", 0) == 0) {
         c = c.substr(8);
     }
-    // Trim trailing background & redirects
     size_t amp = c.find('&');
     if (amp != std::string::npos) c = c.substr(0, amp);
     while (!c.empty() && (c.back() == ' ' || c.back() == '\t')) c.pop_back();
@@ -172,7 +154,7 @@ bool HyprlandIPC::send_command(const std::string& cmd) {
     }
 
     if (c == "dispatch exit" || c == "exit") {
-        exit();
+        exit_session_static();
         return true;
     }
 
@@ -185,7 +167,7 @@ bool HyprlandIPC::send_command(const std::string& cmd) {
     return !resp.empty();
 }
 
-int HyprlandIPC::get_active_workspace_id() {
+int HyprlandBackend::get_active_workspace_id_static() {
     std::string res = query_json("activeworkspace");
     if (!res.empty()) {
         try {
@@ -196,23 +178,19 @@ int HyprlandIPC::get_active_workspace_id() {
     return 1;
 }
 
-std::string HyprlandIPC::get_clients_json() {
+int HyprlandBackend::get_active_workspace_id() {
+    return get_active_workspace_id_static();
+}
+
+std::string HyprlandBackend::get_clients_json_static() {
     return query_json("clients");
 }
 
-void HyprlandIPC::add_workspace_callback(WorkspaceCallback cb) {
-    workspace_cbs.push_back(cb);
+std::string HyprlandBackend::get_clients_json() {
+    return get_clients_json_static();
 }
 
-void HyprlandIPC::add_window_title_callback(WindowTitleCallback cb) {
-    window_title_cbs.push_back(cb);
-}
-
-void HyprlandIPC::add_window_event_callback(WindowEventCallback cb) {
-    window_event_cbs.push_back(cb);
-}
-
-void HyprlandIPC::listen_loop() {
+void HyprlandBackend::listen_loop() {
     while (running) {
         int sock = socket(AF_UNIX, SOCK_STREAM, 0);
         if (sock < 0) {
@@ -256,7 +234,7 @@ void HyprlandIPC::listen_loop() {
 
 static guint window_event_debounce_source = 0;
 
-void HyprlandIPC::handle_event(const std::string& event_line) {
+void HyprlandBackend::handle_event(const std::string& event_line) {
     bool is_window_or_ws_event = false;
 
     if (event_line.rfind("workspace>>", 0) == 0 || event_line.rfind("focusedmon>>", 0) == 0) {
@@ -274,9 +252,7 @@ void HyprlandIPC::handle_event(const std::string& event_line) {
             int ws = std::stoi(val);
             g_idle_add([](gpointer data) -> gboolean {
                 int id = GPOINTER_TO_INT(data);
-                for (const auto& cb : HyprlandIPC::instance().workspace_cbs) {
-                    if (cb) cb(id);
-                }
+                CompositorManager::instance().notify_workspace(id);
                 return FALSE;
             }, GINT_TO_POINTER(ws));
         } catch (...) {}
@@ -289,9 +265,7 @@ void HyprlandIPC::handle_event(const std::string& event_line) {
         std::string* title_copy = new std::string(title);
         g_idle_add([](gpointer data) -> gboolean {
             auto* t = static_cast<std::string*>(data);
-            for (const auto& cb : HyprlandIPC::instance().window_title_cbs) {
-                if (cb) cb(*t);
-            }
+            CompositorManager::instance().notify_window_title(*t);
             delete t;
             return FALSE;
         }, title_copy);
@@ -307,13 +281,11 @@ void HyprlandIPC::handle_event(const std::string& event_line) {
         is_window_or_ws_event = true;
     }
 
-    if (is_window_or_ws_event && !window_event_cbs.empty()) {
+    if (is_window_or_ws_event) {
         if (window_event_debounce_source == 0) {
             window_event_debounce_source = g_timeout_add(30, [](gpointer) -> gboolean {
                 window_event_debounce_source = 0;
-                for (const auto& cb : HyprlandIPC::instance().window_event_cbs) {
-                    if (cb) cb();
-                }
+                CompositorManager::instance().notify_window_event();
                 return FALSE;
             }, nullptr);
         }

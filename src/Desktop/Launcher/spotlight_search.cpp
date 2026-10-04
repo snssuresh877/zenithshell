@@ -1,4 +1,5 @@
 #include "Desktop/Launcher/spotlight_search.hpp"
+#include "Platform/Compositor/compositor_manager.hpp"
 #include "Platform/Compositor/hyprland_ipc.hpp"
 #include "Desktop/Clipboard/clipboard_manager.hpp"
 #include "Services/Notifications/notification_manager.hpp"
@@ -391,9 +392,9 @@ void SpotlightSearch::on_search_changed(GtkEntry*, gpointer) {
                     res.icon_name = "system-suspend";
                     res.action_cmd = "systemctl suspend";
                 } else if (query == "logout" || query == "exit") {
-                    res.subtitle = "Exit current Hyprland graphical session";
+                    res.subtitle = "Exit current Wayland desktop session";
                     res.icon_name = "system-log-out";
-                    res.action_cmd = "hyprctl dispatch exit";
+                    res.action_cmd = "exit_session";
                 } else {
                     res.subtitle = "Power off system computer";
                     res.icon_name = "system-shutdown";
@@ -644,8 +645,8 @@ void SpotlightSearch::execute_result(const SearchResult& result) {
             }
         }
     } else if (result.type == SearchResult::SYSTEM) {
-        if (result.action_cmd == "hyprctl dispatch exit") {
-            HyprlandIPC::exit();
+        if (result.action_cmd == "hyprctl dispatch exit" || result.action_cmd == "exit_session") {
+            CompositorManager::instance().exit_session();
         } else if (!result.action_cmd.empty()) {
             std::string cmd = result.action_cmd + " &";
             system(cmd.c_str());

@@ -1,6 +1,6 @@
 #include "Desktop/TopBar/workspace_widget.hpp"
 #include "gtk3_compat.hpp"
-#include "Platform/Compositor/hyprland_ipc.hpp"
+#include "Platform/Compositor/compositor_manager.hpp"
 #include <iostream>
 #include <string>
 
@@ -21,7 +21,7 @@ GtkWidget* WorkspaceWidget::create(int count) {
     GtkWidget* lbl_prev = gtk_label_new("❮");
     gtk_container_add(GTK_CONTAINER(btn_prev), lbl_prev);
     g_signal_connect(btn_prev, "clicked", G_CALLBACK(+[](GtkButton*, gpointer) {
-        HyprlandIPC::switch_workspace_relative(-1);
+        CompositorManager::instance().switch_workspace_relative(-1);
     }), nullptr);
     gtk_box_pack_start(GTK_BOX(box), btn_prev, FALSE, FALSE, 0);
 
@@ -34,10 +34,10 @@ GtkWidget* WorkspaceWidget::create(int count) {
     gtk_widget_add_events(btn, GDK_SCROLL_MASK);
     g_signal_connect(btn, "scroll-event", G_CALLBACK(+[](GtkWidget*, GdkEventScroll* event, gpointer) -> gboolean {
         if (event->direction == GDK_SCROLL_UP || event->delta_y < 0) {
-            HyprlandIPC::switch_workspace_relative(-1);
+            CompositorManager::instance().switch_workspace_relative(-1);
             return TRUE;
         } else if (event->direction == GDK_SCROLL_DOWN || event->delta_y > 0) {
-            HyprlandIPC::switch_workspace_relative(1);
+            CompositorManager::instance().switch_workspace_relative(1);
             return TRUE;
         }
         return FALSE;
@@ -51,11 +51,11 @@ GtkWidget* WorkspaceWidget::create(int count) {
     GtkWidget* lbl_next = gtk_label_new("❯");
     gtk_container_add(GTK_CONTAINER(btn_next), lbl_next);
     g_signal_connect(btn_next, "clicked", G_CALLBACK(+[](GtkButton*, gpointer) {
-        HyprlandIPC::switch_workspace_relative(1);
+        CompositorManager::instance().switch_workspace_relative(1);
     }), nullptr);
     gtk_box_pack_start(GTK_BOX(box), btn_next, FALSE, FALSE, 0);
 
-    HyprlandIPC::instance().set_workspace_callback([](int active_id) {
+    CompositorManager::instance().set_workspace_callback([](int active_id) {
         update_active(active_id);
     });
 

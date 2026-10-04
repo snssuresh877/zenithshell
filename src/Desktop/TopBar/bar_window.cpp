@@ -12,6 +12,7 @@
 #include "Desktop/NotificationCenter/notification_panel.hpp"
 #include "Desktop/ActiveApps/active_apps_drawer.hpp"
 #include "Desktop/SystemTray/system_tray_manager.hpp"
+#include "Platform/Compositor/compositor_manager.hpp"
 #include "Platform/Compositor/hyprland_ipc.hpp"
 #include "Services/Monitor/sys_monitor.hpp"
 #include "Services/Audio/audio_manager.hpp"
@@ -30,22 +31,26 @@ GtkWidget* BarWindow::create(GtkApplication* app, const Config& config) {
     window = gtk_application_window_new(app);
     gtk_widget_add_css_class(window, "zenith-bar");
 
-    // Init Layer Shell (Top anchor, margin top 6, left 12, right 12, height 40)
-    gtk_layer_init_for_window(GTK_WINDOW(window));
-    gtk_layer_set_layer(GTK_WINDOW(window), GTK_LAYER_SHELL_LAYER_TOP);
+    if (gtk_layer_is_supported()) {
+        gtk_layer_init_for_window(GTK_WINDOW(window));
+        gtk_layer_set_layer(GTK_WINDOW(window), GTK_LAYER_SHELL_LAYER_TOP);
 
-    if (config.exclusive_zone) {
-        gtk_layer_auto_exclusive_zone_enable(GTK_WINDOW(window));
+        if (config.exclusive_zone) {
+            gtk_layer_auto_exclusive_zone_enable(GTK_WINDOW(window));
+        }
+
+        gtk_layer_set_anchor(GTK_WINDOW(window), GTK_LAYER_SHELL_EDGE_TOP, TRUE);
+        gtk_layer_set_anchor(GTK_WINDOW(window), GTK_LAYER_SHELL_EDGE_BOTTOM, FALSE);
+        gtk_layer_set_anchor(GTK_WINDOW(window), GTK_LAYER_SHELL_EDGE_LEFT, TRUE);
+        gtk_layer_set_anchor(GTK_WINDOW(window), GTK_LAYER_SHELL_EDGE_RIGHT, TRUE);
+
+        gtk_layer_set_margin(GTK_WINDOW(window), GTK_LAYER_SHELL_EDGE_TOP, 3);
+        gtk_layer_set_margin(GTK_WINDOW(window), GTK_LAYER_SHELL_EDGE_LEFT, 10);
+        gtk_layer_set_margin(GTK_WINDOW(window), GTK_LAYER_SHELL_EDGE_RIGHT, 10);
+    } else {
+        gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
+        gtk_window_set_keep_above(GTK_WINDOW(window), TRUE);
     }
-
-    gtk_layer_set_anchor(GTK_WINDOW(window), GTK_LAYER_SHELL_EDGE_TOP, TRUE);
-    gtk_layer_set_anchor(GTK_WINDOW(window), GTK_LAYER_SHELL_EDGE_BOTTOM, FALSE);
-    gtk_layer_set_anchor(GTK_WINDOW(window), GTK_LAYER_SHELL_EDGE_LEFT, TRUE);
-    gtk_layer_set_anchor(GTK_WINDOW(window), GTK_LAYER_SHELL_EDGE_RIGHT, TRUE);
-
-    gtk_layer_set_margin(GTK_WINDOW(window), GTK_LAYER_SHELL_EDGE_TOP, 3);
-    gtk_layer_set_margin(GTK_WINDOW(window), GTK_LAYER_SHELL_EDGE_LEFT, 10);
-    gtk_layer_set_margin(GTK_WINDOW(window), GTK_LAYER_SHELL_EDGE_RIGHT, 10);
 
     // Outer Bar Frame (100% Transparent, compact height 28px)
     GtkWidget* main_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
@@ -91,7 +96,7 @@ GtkWidget* BarWindow::create(GtkApplication* app, const Config& config) {
     GtkWidget* active_apps_btn = ActiveAppsDrawer::create_topbar_button();
     gtk_box_pack_start(GTK_BOX(left_box), active_apps_btn, FALSE, FALSE, 0);
 
-    HyprlandIPC::instance().set_window_title_callback([](const std::string& title) {
+    CompositorManager::instance().set_window_title_callback([](const std::string& title) {
         if (active_title_label) {
             gtk_label_set_text(GTK_LABEL(active_title_label), title.empty() ? "Desktop" : title.c_str());
         }

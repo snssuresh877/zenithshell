@@ -1,4 +1,5 @@
 #include "Desktop/PowerMenu/power_menu.hpp"
+#include "Platform/Compositor/compositor_manager.hpp"
 #include "Platform/Compositor/hyprland_ipc.hpp"
 #include "gtk3_compat.hpp"
 #include <gtk-layer-shell/gtk-layer-shell.h>
@@ -27,7 +28,7 @@ void PowerMenu::setup_actions() {
     actions = {
         {"lock", "󰌾", "Lock", "Secure Session", "L", "tile-lock", "loginctl lock-session 2>/dev/null || hyprlock 2>/dev/null &"},
         {"suspend", "󰤄", "Sleep", "Suspend to RAM", "S", "tile-suspend", "loginctl lock-session; systemctl suspend 2>/dev/null &"},
-        {"logout", "󰍃", "Logout", "Exit Hyprland", "E", "tile-logout", "hyprctl dispatch exit 2>/dev/null &"},
+        {"logout", "󰍃", "Logout", "Exit Session", "E", "tile-logout", ""},
         {"reboot", "󰜉", "Restart", "Reboot System", "R", "tile-reboot", "systemctl reboot 2>/dev/null &"},
         {"poweroff", "󰐥", "Shut Down", "Power Off PC", "P", "tile-power", "systemctl poweroff 2>/dev/null &"}
     };
@@ -52,7 +53,7 @@ void PowerMenu::execute_action(size_t index) {
     if (index >= actions.size()) return;
     hide();
     if (actions[index].id == "logout") {
-        HyprlandIPC::exit();
+        CompositorManager::instance().exit_session();
         return;
     }
     std::string cmd = actions[index].command;
