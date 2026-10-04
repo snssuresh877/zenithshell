@@ -17,6 +17,18 @@ void CssManager::init(const std::string& css_path) {
     const char* home = g_get_home_dir();
     std::string user_cfg_path = std::string(home) + "/.config/zenithshell/style.css";
 
+    if (!fs::exists(user_cfg_path)) {
+        std::error_code ec;
+        fs::create_directories(std::string(home) + "/.config/zenithshell", ec);
+        if (fs::exists("style.css")) {
+            fs::copy_file("style.css", user_cfg_path, fs::copy_options::overwrite_existing, ec);
+            std::cout << "[ZenithCSS] Auto-scaffolded default style.css to " << user_cfg_path << std::endl;
+        } else if (fs::exists("/usr/share/zenithshell/style.css")) {
+            fs::copy_file("/usr/share/zenithshell/style.css", user_cfg_path, fs::copy_options::overwrite_existing, ec);
+            std::cout << "[ZenithCSS] Auto-scaffolded system style.css to " << user_cfg_path << std::endl;
+        }
+    }
+
     if (!fs::exists(current_css_path)) {
         if (fs::exists(user_cfg_path)) {
             current_css_path = user_cfg_path;

@@ -3,6 +3,7 @@
 #include "Engine/Theme/theme_engine.hpp"
 #include "Services/Audio/audio_manager.hpp"
 #include "Services/Media/mpris_player.hpp"
+#include "Engine/Config/config.hpp"
 #include <gio/gio.h>
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -107,6 +108,11 @@ void print_help() {
     std::cout << "  " << C_GREEN << "stats" << C_RESET << "                   Print live CPU, RAM, Battery, and Network metrics\n";
     std::cout << "  " << C_GREEN << "stats --json" << C_RESET << "            Output live metrics in raw JSON\n";
     std::cout << "  " << C_GREEN << "reload" << C_RESET << "                  Reload stylesheet and configuration\n";
+    std::cout << "  " << C_GREEN << "config init" << C_RESET << "             Initialize/reset default ~/.config/zenithshell dotfiles\n";
+    std::cout << "  " << C_GREEN << "config edit" << C_RESET << "             Open config.json in default $EDITOR\n";
+    std::cout << "  " << C_GREEN << "config style" << C_RESET << "            Open style.css in default $EDITOR\n";
+    std::cout << "  " << C_GREEN << "config path" << C_RESET << "             Print active configuration directory path\n";
+    std::cout << "  " << C_GREEN << "config manual" << C_RESET << "           Display full configuration manual & CSS token reference\n";
     std::cout << "  " << C_GREEN << "help" << C_RESET << "                    Display this help manual\n\n";
 }
 
@@ -952,6 +958,69 @@ int ZenithCtl::run(int argc, char** argv) {
         g_variant_unref(res);
         std::cout << C_GREEN << "✔ " << C_RESET << "ZenithShell configuration and styles reloaded\n";
         return 0;
+    }
+
+    // --- Configuration & Dotfile Management ---
+    if (target == "config") {
+        std::string sub = (args.size() > 1) ? args[1] : "path";
+        std::string user_dir = std::string(g_get_user_config_dir()) + "/zenithshell";
+        std::string cfg_path = user_dir + "/config.json";
+        std::string css_path = user_dir + "/style.css";
+
+        if (sub == "path" || sub == "dir") {
+            std::cout << user_dir << "\n";
+            return 0;
+        } else if (sub == "init" || sub == "reset") {
+            std::error_code ec;
+            fs::create_directories(user_dir, ec);
+            fs::create_directories(user_dir + "/themes", ec);
+            Config::ensure_default_config();
+            if (fs::exists("style.css")) {
+                fs::copy_file("style.css", css_path, fs::copy_options::overwrite_existing, ec);
+            } else if (fs::exists("/usr/share/zenithshell/style.css")) {
+                fs::copy_file("/usr/share/zenithshell/style.css", css_path, fs::copy_options::overwrite_existing, ec);
+            }
+            std::cout << C_GREEN << "✔ " << C_RESET << "Initialized ZenithShell dotfiles in: " << C_BOLD << user_dir << C_RESET << "\n";
+            std::cout << "  - Config: " << cfg_path << "\n";
+            std::cout << "  - Style:  " << css_path << "\n";
+            return 0;
+        } else if (sub == "edit") {
+            const char* editor = getenv("EDITOR");
+            if (!editor || !*editor) editor = "nano";
+            std::string cmd = std::string(editor) + " \"" + cfg_path + "\"";
+            return system(cmd.c_str());
+        } else if (sub == "style" || sub == "css") {
+            const char* editor = getenv("EDITOR");
+            if (!editor || !*editor) editor = "nano";
+            std::string cmd = std::string(editor) + " \"" + css_path + "\"";
+            return system(cmd.c_str());
+        } else if (sub == "manual" || sub == "docs") {
+            std::cout << C_BOLD << C_CYAN << "ZenithShell Configuration & Dotfile Manual" << C_RESET << "\n";
+            std::cout << C_DIM << "Central Config: ~/.config/zenithshell/config.json\n"
+                      << "GTK Stylesheet: ~/.config/zenithshell/style.css\n\n" << C_RESET;
+            std::cout << C_BOLD << "KEY CONFIGURATION OPTIONS (config.json):\n" << C_RESET;
+            std::cout << "  " << C_GREEN << "\"position\"" << C_RESET << "               Bar position: \"top\" or \"bottom\"\n";
+            std::cout << "  " << C_GREEN << "\"height\"" << C_RESET << "                 Bar height in pixels (default: 28)\n";
+            std::cout << "  " << C_GREEN << "\"margin_top\"" << C_RESET << "             Margin above the bar (default: 4)\n";
+            std::cout << "  " << C_GREEN << "\"margin_left/right\"" << C_RESET << "       Outer margins (default: 12)\n";
+            std::cout << "  " << C_GREEN << "\"exclusive_zone\"" << C_RESET << "         Reserve screen space so windows don't overlap (true/false)\n";
+            std::cout << "  " << C_GREEN << "\"workspaces.count\"" << C_RESET << "       Number of workspace pills (default: 10)\n";
+            std::cout << "  " << C_GREEN << "\"clock.format\"" << C_RESET << "            Strftime format: e.g. \"📅 %a %b %d  🕒 %H:%M\"\n";
+            std::cout << "  " << C_GREEN << "\"wallpaper_dir\"" << C_RESET << "           Custom wallpaper folder (default: \"~/Pictures/wallpapers\")\n\n";
+            std::cout << C_BOLD << "THEME STYLESHEET (style.css) CSS VARIABLES:\n" << C_RESET;
+            std::cout << "  " << C_CYAN << "@zenith_bg" << C_RESET << "              Window / Card base background\n";
+            std::cout << "  " << C_CYAN << "@zenith_surface" << C_RESET << "         Card & inner container surfaces\n";
+            std::cout << "  " << C_CYAN << "@zenith_accent" << C_RESET << "          Dynamic theme accent (derived from active palette or Pywal)\n";
+            std::cout << "  " << C_CYAN << "@zenith_text_primary" << C_RESET << "    Main text color (WCAG AAA contrast)\n";
+            std::cout << "  " << C_CYAN << "@zenith_text_secondary" << C_RESET << "  Muted / metadata text color\n\n";
+            std::cout << C_DIM << "Run 'zenithctl config edit' to edit config.json\n"
+                      << "Run 'zenithctl reload' to live-apply changes without restarting\n" << C_RESET;
+            return 0;
+        } else {
+            std::cerr << C_RED << "Unknown config subcommand: " << C_RESET << sub << "\n";
+            std::cerr << "Usage: zenithctl config [init|edit|style|path|manual]\n";
+            return 1;
+        }
     }
 
     // --- File Manager ---

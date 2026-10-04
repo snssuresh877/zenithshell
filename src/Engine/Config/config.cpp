@@ -10,7 +10,47 @@ namespace fs = std::filesystem;
 
 namespace zenith {
 
+void Config::ensure_default_config() {
+    std::string user_dir = std::string(g_get_user_config_dir()) + "/zenithshell";
+    std::error_code ec;
+    fs::create_directories(user_dir, ec);
+    fs::create_directories(user_dir + "/themes", ec);
+
+    std::string cfg_file = user_dir + "/config.json";
+    if (!fs::exists(cfg_file)) {
+        std::ofstream out(cfg_file);
+        if (out.is_open()) {
+            out << "{\n"
+                << "    \"position\": \"top\",\n"
+                << "    \"height\": 28,\n"
+                << "    \"margin_top\": 4,\n"
+                << "    \"margin_bottom\": 0,\n"
+                << "    \"margin_left\": 12,\n"
+                << "    \"margin_right\": 12,\n"
+                << "    \"exclusive_zone\": true,\n"
+                << "    \"workspaces\": {\n"
+                << "        \"count\": 10,\n"
+                << "        \"show_icons\": true\n"
+                << "    },\n"
+                << "    \"clock\": {\n"
+                << "        \"format\": \"📅 %a %b %d  🕒 %H:%M\"\n"
+                << "    },\n"
+                << "    \"sys_info\": {\n"
+                << "        \"update_interval_ms\": 1500,\n"
+                << "        \"show_cpu\": true,\n"
+                << "        \"show_ram\": true,\n"
+                << "        \"show_battery\": true\n"
+                << "    },\n"
+                << "    \"wallpaper_dir\": \"~/Pictures/wallpapers\"\n"
+                << "}\n";
+            std::cout << "[ZenithConfig] Initialized default configuration at " << cfg_file << std::endl;
+        }
+    }
+}
+
 Config Config::load(const std::string& path) {
+    ensure_default_config();
+
     Config cfg;
     std::string resolved_path = path;
 

@@ -53,6 +53,7 @@ _zenithctl() {
                 'audio:Open Audio control modal'
                 'power:Open Power & Session menu'
                 'stats:Display live system performance metrics'
+                'config:Configuration & dotfiles management suite'
                 'reload:Reload CSS stylesheets and configuration'
                 'help:Show command help manual'
                 'version:Show version'
@@ -108,6 +109,10 @@ _zenithctl() {
                 stats)
                     _arguments \
                         '--json[Output raw JSON metrics]'
+                    ;;
+                config)
+                    _arguments \
+                        '1: :(path init edit style manual)'
                     ;;
             esac
             ;;

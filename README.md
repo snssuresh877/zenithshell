@@ -263,7 +263,30 @@ ZenithShell strictly implements the **Pro-Grade Design Standard** practiced by t
 
 ---
 
-## ⚙️ Configuration Guide (`config.json`)
+## ⚙️ Configuration & Dotfiles Manual
+
+ZenithShell features a **Zero-Setup Philosophy**: on its very first run, it automatically scaffolds all required configuration files and stylesheets into `~/.config/zenithshell/` so everything works out of the box with zero manual hassle.
+
+You can inspect, edit, or reset your configurations instantly using `zenithctl`:
+
+```bash
+# Display dotfiles path
+zenithctl config path
+
+# Edit configuration in $EDITOR
+zenithctl config edit
+
+# Edit GTK3 stylesheet in $EDITOR
+zenithctl config style
+
+# Display full dotfiles manual
+zenithctl config manual
+
+# Hot-reload configuration & styles live without restart
+zenithctl reload
+```
+
+For complete schema documentation, dynamic CSS variables (`@zenith_accent`, `@zenith_bg`), and custom theme guides, see the comprehensive [ZenithShell Configuration Manual](docs/CONFIGURATION.md).
 
 The central configuration file is located at `~/.config/zenithshell/config.json`:
 

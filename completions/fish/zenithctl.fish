@@ -42,6 +42,7 @@ for cmd in zenithctl zenithshell
     complete -c $cmd -n "__fish_use_subcommand" -a audio -d "Open Audio control modal"
     complete -c $cmd -n "__fish_use_subcommand" -a power -d "Open Power & Session menu"
     complete -c $cmd -n "__fish_use_subcommand" -a stats -d "Display live system performance metrics"
+    complete -c $cmd -n "__fish_use_subcommand" -a config -d "Configuration & dotfiles management suite"
     complete -c $cmd -n "__fish_use_subcommand" -a reload -d "Reload CSS stylesheets and configuration"
     complete -c $cmd -n "__fish_use_subcommand" -a help -d "Show command help manual"
     complete -c $cmd -n "__fish_use_subcommand" -a version -d "Show version"
@@ -107,6 +108,13 @@ for cmd in zenithctl zenithshell
     # --- Clipboard Subcommands ---
     complete -c $cmd -n "__fish_seen_subcommand_from clipboard clip" -a clear -d "Wipe clipboard history"
     complete -c $cmd -n "__fish_seen_subcommand_from clipboard clip" -a store -d "Save stdin to clipboard history"
+
+    # --- Config Subcommands ---
+    complete -c $cmd -n "__fish_seen_subcommand_from config" -a path -d "Print configuration directory path"
+    complete -c $cmd -n "__fish_seen_subcommand_from config" -a init -d "Initialize / scaffold dotfiles"
+    complete -c $cmd -n "__fish_seen_subcommand_from config" -a edit -d "Edit config.json in default editor"
+    complete -c $cmd -n "__fish_seen_subcommand_from config" -a style -d "Edit style.css in default editor"
+    complete -c $cmd -n "__fish_seen_subcommand_from config" -a manual -d "Display configuration manual"
 
     # --- Toggle Subcommands ---
     complete -c $cmd -n "__fish_seen_subcommand_from toggle" -a "(__zenithctl_modules)"

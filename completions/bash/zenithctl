@@ -4,7 +4,7 @@ _zenithctl_completions() {
     local cur prev words cword
     _init_completion || return
 
-    local commands="wallpaper wp theme brightness bri volume vol mic media mpris dnd reminder reminders clipboard clip toggle bar launcher spotlight control-center cc notifications nc active-apps keybinds network audio power stats reload help version"
+    local commands="wallpaper wp theme brightness bri volume vol mic media mpris dnd reminder reminders clipboard clip toggle bar launcher spotlight control-center cc notifications nc active-apps keybinds network audio power stats config reload help version"
 
     if [[ $cword -eq 1 ]]; then
         COMPREPLY=($(compgen -W "$commands" -- "$cur"))
@@ -75,6 +75,11 @@ _zenithctl_completions() {
         stats)
             if [[ $cword -eq 2 ]]; then
                 COMPREPLY=($(compgen -W "--json" -- "$cur"))
+            fi
+            ;;
+        config)
+            if [[ $cword -eq 2 ]]; then
+                COMPREPLY=($(compgen -W "path init edit style manual" -- "$cur"))
             fi
             ;;
     esac
