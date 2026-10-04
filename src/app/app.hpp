@@ -3,7 +3,7 @@
 #include <gtk/gtk.h>
 #include <string>
 #include <memory>
-#include "config/config.hpp"
+#include "Engine/Config/config.hpp"
 
 namespace zenith {
 
