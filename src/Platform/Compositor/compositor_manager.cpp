@@ -86,11 +86,6 @@ void CompositorManager::add_window_title_callback(WindowTitleCallback cb) {
     });
 }
 
-void CompositorManager::add_window_event_callback(WindowEventCallback cb) {
-    std::lock_guard<std::mutex> lock(cb_mutex);
-    window_event_cbs.push_back(cb);
-}
-
 void CompositorManager::switch_workspace(int id) {
     if (backend) backend->switch_workspace(id);
 }
@@ -134,15 +129,6 @@ void CompositorManager::notify_window_title(const std::string& title) {
 void CompositorManager::notify_window_event() {
     if (event_bus_) {
         event_bus_->publish(WindowListChangedEvent{});
-    }
-
-    std::vector<WindowEventCallback> cbs;
-    {
-        std::lock_guard<std::mutex> lock(cb_mutex);
-        cbs = window_event_cbs;
-    }
-    for (const auto& cb : cbs) {
-        if (cb) cb();
     }
 }
 

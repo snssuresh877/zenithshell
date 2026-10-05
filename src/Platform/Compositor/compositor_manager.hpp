@@ -36,7 +36,6 @@ class CompositorManager {
 public:
     using WorkspaceCallback = std::function<void(int active_id)>;
     using WindowTitleCallback = std::function<void(const std::string& title)>;
-    using WindowEventCallback = std::function<void()>;
 
     static CompositorManager& instance();
 
@@ -46,11 +45,9 @@ public:
 
     void add_workspace_callback(WorkspaceCallback cb);
     void add_window_title_callback(WindowTitleCallback cb);
-    void add_window_event_callback(WindowEventCallback cb);
 
     void set_workspace_callback(WorkspaceCallback cb) { add_workspace_callback(cb); }
     void set_window_title_callback(WindowTitleCallback cb) { add_window_title_callback(cb); }
-    void set_window_event_callback(WindowEventCallback cb) { add_window_event_callback(cb); }
 
     // EventBus integration
     std::shared_ptr<EventBus> get_event_bus() const { return event_bus_; }
@@ -79,9 +76,6 @@ private:
     CompositorType current_type = CompositorType::Generic;
     std::unique_ptr<ICompositorBackend> backend;
     std::shared_ptr<EventBus> event_bus_;
-    std::mutex cb_mutex;
-
-    std::vector<WindowEventCallback> window_event_cbs;
 
     void detect_and_setup_backend();
 };
