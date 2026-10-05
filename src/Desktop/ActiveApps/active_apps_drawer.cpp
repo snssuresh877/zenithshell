@@ -31,6 +31,15 @@ GtkWidget* ActiveAppsDrawer::topbar_btn = nullptr;
 GtkWidget* ActiveAppsDrawer::topbar_label = nullptr;
 GtkWidget* ActiveAppsDrawer::topbar_arrow = nullptr;
 guint ActiveAppsDrawer::live_timer_id = 0;
+std::shared_ptr<EventBus> ActiveAppsDrawer::event_bus_ = nullptr;
+SubscriptionId ActiveAppsDrawer::window_subscription_id_ = INVALID_SUBSCRIPTION_ID;
+
+void ActiveAppsDrawer::cleanup() {
+    if (event_bus_ && window_subscription_id_ != INVALID_SUBSCRIPTION_ID) {
+        event_bus_->unsubscribe<WindowTitleChangedEvent>(window_subscription_id_);
+        window_subscription_id_ = INVALID_SUBSCRIPTION_ID;
+    }
+}
 
 std::unordered_map<std::string, DesktopAppMeta> ActiveAppsDrawer::desktop_apps_cache;
 
@@ -494,11 +503,24 @@ void ActiveAppsDrawer::create_window(GtkApplication* app) {
     gtk_widget_hide(window);
 }
 
-GtkWidget* ActiveAppsDrawer::create_topbar_button() {
+GtkWidget* ActiveAppsDrawer::create_topbar_button(std::shared_ptr<EventBus> event_bus) {
+    cleanup();
+
+    if (!event_bus_) {
+        event_bus_ = std::move(event_bus);
+    }
+    if (!event_bus_) {
+        event_bus_ = CompositorManager::instance().get_event_bus();
+    }
+
     topbar_btn = gtk_button_new();
     gtk_widget_add_css_class(topbar_btn, "pill-widget");
     gtk_widget_add_css_class(topbar_btn, "active-apps-pill");
     gtk_widget_set_size_request(topbar_btn, -1, 24);
+
+    g_signal_connect(topbar_btn, "destroy", G_CALLBACK(+[](GtkWidget*, gpointer) {
+        ActiveAppsDrawer::cleanup();
+    }), nullptr);
 
     GtkWidget* box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
 
@@ -544,10 +566,14 @@ GtkWidget* ActiveAppsDrawer::create_topbar_button() {
 
     update_state();
 
-    // 1. Waybar-like instant event-driven sync from Hyprland IPC socket2
-    HyprlandIPC::instance().add_window_event_callback([update_state]() {
-        update_state();
-    });
+    // 1. Waybar-like instant event-driven sync from EventBus
+    if (event_bus_) {
+        window_subscription_id_ = event_bus_->subscribe<WindowTitleChangedEvent>(
+            [update_state](const WindowTitleChangedEvent&) {
+                update_state();
+            }
+        );
+    }
 
     // 2. btop-like fallback ticker for memory & background process changes
     g_timeout_add(1500, [](gpointer data) -> gboolean {

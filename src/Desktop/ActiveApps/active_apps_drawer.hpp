@@ -4,7 +4,10 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <memory>
 #include "Desktop/SystemTray/system_tray_manager.hpp"
+#include "Core/EventBus/event_bus.hpp"
+#include "Core/Events/compositor_events.hpp"
 
 namespace zenith {
 
@@ -42,7 +45,8 @@ public:
     static void hide();
     static void refresh();
 
-    static GtkWidget* create_topbar_button();
+    static GtkWidget* create_topbar_button(std::shared_ptr<EventBus> event_bus = nullptr);
+    static void cleanup();
     static std::vector<AppClientInfo> fetch_clients();
     static std::vector<BackgroundProcessInfo> fetch_background_processes(std::vector<AppClientInfo>& active_clients);
     static void kill_process(pid_t pid);
@@ -58,6 +62,9 @@ private:
     static GtkWidget* topbar_label;
     static GtkWidget* topbar_arrow;
     static guint live_timer_id;
+
+    static std::shared_ptr<EventBus> event_bus_;
+    static SubscriptionId window_subscription_id_;
 
     static std::unordered_map<std::string, DesktopAppMeta> desktop_apps_cache;
     static void load_desktop_apps_cache();
