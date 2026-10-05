@@ -32,12 +32,19 @@ GtkWidget* ActiveAppsDrawer::topbar_label = nullptr;
 GtkWidget* ActiveAppsDrawer::topbar_arrow = nullptr;
 guint ActiveAppsDrawer::live_timer_id = 0;
 std::shared_ptr<EventBus> ActiveAppsDrawer::event_bus_ = nullptr;
-SubscriptionId ActiveAppsDrawer::window_subscription_id_ = INVALID_SUBSCRIPTION_ID;
+SubscriptionId ActiveAppsDrawer::window_title_sub_id_ = INVALID_SUBSCRIPTION_ID;
+SubscriptionId ActiveAppsDrawer::window_list_sub_id_ = INVALID_SUBSCRIPTION_ID;
 
 void ActiveAppsDrawer::cleanup() {
-    if (event_bus_ && window_subscription_id_ != INVALID_SUBSCRIPTION_ID) {
-        event_bus_->unsubscribe<WindowTitleChangedEvent>(window_subscription_id_);
-        window_subscription_id_ = INVALID_SUBSCRIPTION_ID;
+    if (event_bus_) {
+        if (window_title_sub_id_ != INVALID_SUBSCRIPTION_ID) {
+            event_bus_->unsubscribe<WindowTitleChangedEvent>(window_title_sub_id_);
+            window_title_sub_id_ = INVALID_SUBSCRIPTION_ID;
+        }
+        if (window_list_sub_id_ != INVALID_SUBSCRIPTION_ID) {
+            event_bus_->unsubscribe<WindowListChangedEvent>(window_list_sub_id_);
+            window_list_sub_id_ = INVALID_SUBSCRIPTION_ID;
+        }
     }
 }
 
@@ -568,8 +575,13 @@ GtkWidget* ActiveAppsDrawer::create_topbar_button(std::shared_ptr<EventBus> even
 
     // 1. Waybar-like instant event-driven sync from EventBus
     if (event_bus_) {
-        window_subscription_id_ = event_bus_->subscribe<WindowTitleChangedEvent>(
+        window_title_sub_id_ = event_bus_->subscribe<WindowTitleChangedEvent>(
             [update_state](const WindowTitleChangedEvent&) {
+                update_state();
+            }
+        );
+        window_list_sub_id_ = event_bus_->subscribe<WindowListChangedEvent>(
+            [update_state](const WindowListChangedEvent&) {
                 update_state();
             }
         );

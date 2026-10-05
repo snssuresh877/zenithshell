@@ -12,4 +12,6 @@ struct WindowTitleChangedEvent {
     std::string title;
 };
 
+struct WindowListChangedEvent {};
+
 } // namespace zenith

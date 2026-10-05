@@ -64,7 +64,8 @@ private:
     static guint live_timer_id;
 
     static std::shared_ptr<EventBus> event_bus_;
-    static SubscriptionId window_subscription_id_;
+    static SubscriptionId window_title_sub_id_;
+    static SubscriptionId window_list_sub_id_;
 
     static std::unordered_map<std::string, DesktopAppMeta> desktop_apps_cache;
     static void load_desktop_apps_cache();

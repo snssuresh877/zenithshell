@@ -209,6 +209,21 @@ void run_tests() {
         std::cout << "  ✔ Test 11 passed: backward-compatible add_window_title_callback\n";
     }
 
+    // Test 12: CompositorManager::notify_window_event() publishes WindowListChangedEvent to EventBus
+    {
+        auto bus = std::make_shared<zenith::EventBus>();
+        zenith::CompositorManager::instance().set_event_bus(bus);
+
+        bool event_received = false;
+        bus->subscribe<zenith::WindowListChangedEvent>([&](const zenith::WindowListChangedEvent&) {
+            event_received = true;
+        });
+
+        zenith::CompositorManager::instance().notify_window_event();
+        assert(event_received);
+        std::cout << "  ✔ Test 12 passed: CompositorManager -> WindowListChangedEvent\n";
+    }
+
     std::cout << "[TestEventBus] ALL TESTS PASSED SUCCESSFULLY! ✔\n";
 }
 

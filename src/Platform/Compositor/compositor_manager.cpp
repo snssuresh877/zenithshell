@@ -132,6 +132,10 @@ void CompositorManager::notify_window_title(const std::string& title) {
 }
 
 void CompositorManager::notify_window_event() {
+    if (event_bus_) {
+        event_bus_->publish(WindowListChangedEvent{});
+    }
+
     std::vector<WindowEventCallback> cbs;
     {
         std::lock_guard<std::mutex> lock(cb_mutex);
