@@ -35,7 +35,6 @@ public:
 class CompositorManager {
 public:
     using WorkspaceCallback = std::function<void(int active_id)>;
-    using WindowTitleCallback = std::function<void(const std::string& title)>;
 
     static CompositorManager& instance();
 
@@ -44,10 +43,8 @@ public:
     std::string get_name() const;
 
     void add_workspace_callback(WorkspaceCallback cb);
-    void add_window_title_callback(WindowTitleCallback cb);
 
     void set_workspace_callback(WorkspaceCallback cb) { add_workspace_callback(cb); }
-    void set_window_title_callback(WindowTitleCallback cb) { add_window_title_callback(cb); }
 
     // EventBus integration
     std::shared_ptr<EventBus> get_event_bus() const { return event_bus_; }

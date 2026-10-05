@@ -79,13 +79,6 @@ void CompositorManager::add_workspace_callback(WorkspaceCallback cb) {
     });
 }
 
-void CompositorManager::add_window_title_callback(WindowTitleCallback cb) {
-    if (!cb || !event_bus_) return;
-    event_bus_->subscribe<WindowTitleChangedEvent>([cb = std::move(cb)](const WindowTitleChangedEvent& ev) {
-        cb(ev.title);
-    });
-}
-
 void CompositorManager::switch_workspace(int id) {
     if (backend) backend->switch_workspace(id);
 }
