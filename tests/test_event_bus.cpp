@@ -179,22 +179,7 @@ void run_tests() {
         std::cout << "  ✔ Test 9 passed: CompositorManager -> WindowTitleChangedEvent\n";
     }
 
-    // Test 10: Backward-compatible add_workspace_callback routes through EventBus
-    {
-        auto bus = std::make_shared<zenith::EventBus>();
-        zenith::CompositorManager::instance().set_event_bus(bus);
-
-        int legacy_ws = -1;
-        zenith::CompositorManager::instance().add_workspace_callback([&](int ws) {
-            legacy_ws = ws;
-        });
-
-        zenith::CompositorManager::instance().notify_workspace(7);
-        assert(legacy_ws == 7);
-        std::cout << "  ✔ Test 10 passed: backward-compatible add_workspace_callback\n";
-    }
-
-    // Test 11: CompositorManager::notify_window_event() publishes WindowListChangedEvent to EventBus
+    // Test 10: CompositorManager::notify_window_event() publishes WindowListChangedEvent to EventBus
     {
         auto bus = std::make_shared<zenith::EventBus>();
         zenith::CompositorManager::instance().set_event_bus(bus);
@@ -206,7 +191,7 @@ void run_tests() {
 
         zenith::CompositorManager::instance().notify_window_event();
         assert(event_received);
-        std::cout << "  ✔ Test 11 passed: CompositorManager -> WindowListChangedEvent\n";
+        std::cout << "  ✔ Test 10 passed: CompositorManager -> WindowListChangedEvent\n";
     }
 
     std::cout << "[TestEventBus] ALL TESTS PASSED SUCCESSFULLY! ✔\n";

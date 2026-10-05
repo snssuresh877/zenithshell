@@ -45,17 +45,12 @@ private:
 // Backward-compatible façade that routes through CompositorManager
 class HyprlandIPC {
 public:
-    using WorkspaceCallback = CompositorManager::WorkspaceCallback;
-
     static HyprlandIPC& instance() {
         static HyprlandIPC inst;
         return inst;
     }
 
     void init() { CompositorManager::instance().init(); }
-    void add_workspace_callback(WorkspaceCallback cb) { CompositorManager::instance().add_workspace_callback(cb); }
-
-    void set_workspace_callback(WorkspaceCallback cb) { add_workspace_callback(cb); }
 
     static std::string request(const std::string& cmd) { return HyprlandBackend::request(cmd); }
     static std::string query_json(const std::string& endpoint) { return HyprlandBackend::query_json(endpoint); }

@@ -34,17 +34,11 @@ public:
 
 class CompositorManager {
 public:
-    using WorkspaceCallback = std::function<void(int active_id)>;
-
     static CompositorManager& instance();
 
     void init();
     CompositorType get_type() const { return current_type; }
     std::string get_name() const;
-
-    void add_workspace_callback(WorkspaceCallback cb);
-
-    void set_workspace_callback(WorkspaceCallback cb) { add_workspace_callback(cb); }
 
     // EventBus integration
     std::shared_ptr<EventBus> get_event_bus() const { return event_bus_; }

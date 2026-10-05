@@ -72,13 +72,6 @@ void CompositorManager::init() {
     }
 }
 
-void CompositorManager::add_workspace_callback(WorkspaceCallback cb) {
-    if (!cb || !event_bus_) return;
-    event_bus_->subscribe<WorkspaceChangedEvent>([cb = std::move(cb)](const WorkspaceChangedEvent& ev) {
-        cb(ev.workspace_id);
-    });
-}
-
 void CompositorManager::switch_workspace(int id) {
     if (backend) backend->switch_workspace(id);
 }
