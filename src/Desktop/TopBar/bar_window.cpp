@@ -26,10 +26,39 @@ namespace zenith {
 GtkWidget* BarWindow::window = nullptr;
 GtkWidget* BarWindow::active_app_icon = nullptr;
 GtkWidget* BarWindow::active_title_label = nullptr;
+std::shared_ptr<EventBus> BarWindow::event_bus_ = nullptr;
+SubscriptionId BarWindow::title_subscription_id_ = INVALID_SUBSCRIPTION_ID;
 
-GtkWidget* BarWindow::create(GtkApplication* app, const Config& config) {
+void BarWindow::cleanup() {
+    if (event_bus_ && title_subscription_id_ != INVALID_SUBSCRIPTION_ID) {
+        event_bus_->unsubscribe<WindowTitleChangedEvent>(title_subscription_id_);
+        title_subscription_id_ = INVALID_SUBSCRIPTION_ID;
+    }
+    window = nullptr;
+    active_app_icon = nullptr;
+    active_title_label = nullptr;
+}
+
+void BarWindow::update_title(const std::string& title) {
+    if (active_title_label) {
+        gtk_label_set_text(GTK_LABEL(active_title_label), title.empty() ? "Desktop" : title.c_str());
+    }
+}
+
+GtkWidget* BarWindow::create(GtkApplication* app, const Config& config, std::shared_ptr<EventBus> event_bus) {
+    cleanup();
+
+    event_bus_ = std::move(event_bus);
+    if (!event_bus_) {
+        event_bus_ = CompositorManager::instance().get_event_bus();
+    }
+
     window = gtk_application_window_new(app);
     gtk_widget_add_css_class(window, "zenith-bar");
+
+    g_signal_connect(window, "destroy", G_CALLBACK(+[](GtkWidget*, gpointer) {
+        BarWindow::cleanup();
+    }), nullptr);
 
     if (gtk_layer_is_supported()) {
         gtk_layer_init_for_window(GTK_WINDOW(window));
@@ -96,11 +125,13 @@ GtkWidget* BarWindow::create(GtkApplication* app, const Config& config) {
     GtkWidget* active_apps_btn = ActiveAppsDrawer::create_topbar_button();
     gtk_box_pack_start(GTK_BOX(left_box), active_apps_btn, FALSE, FALSE, 0);
 
-    CompositorManager::instance().set_window_title_callback([](const std::string& title) {
-        if (active_title_label) {
-            gtk_label_set_text(GTK_LABEL(active_title_label), title.empty() ? "Desktop" : title.c_str());
-        }
-    });
+    if (event_bus_) {
+        title_subscription_id_ = event_bus_->subscribe<WindowTitleChangedEvent>(
+            [](const WindowTitleChangedEvent& event) {
+                update_title(event.title);
+            }
+        );
+    }
 
     // ─────────────────────────────────────────────────────────────
     // CENTER SECTION: Workspaces (5 slots) + ClockWidget (Perfect Center)
