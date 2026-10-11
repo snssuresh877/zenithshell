@@ -1,0 +1,77 @@
+
+@import "~/.cache/wal/colors-rofi-dark.rasi"
+@import "colors.rasi"
+
+
+configuration {
+    modi: "drun,window,run,combi";
+    show-icons: true;
+    icon-theme: "Papirus";
+    combi-modi: "drun,window,run";
+    font: "JetBrainsMono Nerd Font 11";
+}
+
+window {
+    width: 30%;
+    border-radius: 16px;
+    border: 2px;
+    padding: 18px;
+    background-color: @bg;
+    border-color: @border;
+}
+
+mainbox {
+    children: [ inputbar, listview ];
+    spacing: 12px;
+}
+
+inputbar {
+    background-color: @bg-alt;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+prompt {
+    enabled: false;
+}
+
+entry {
+    text-color: @fg;
+    placeholder: "Search apps, windows, commands…";
+}
+
+listview {
+    lines: 8;
+    spacing: 8px;
+    fixed-height: false;
+    scrollbar: false;
+    background-color: transparent;
+}
+
+element {
+    padding: 10px;
+    border-radius: 10px;
+    background-color: @bg-alt;
+    text-color: @fg;
+}
+
+element selected {
+    background-color: @accent-bg;
+    text-color: @fg;
+}
+
+element-text {
+    background-color: transparent;
+    text-color: inherit;
+}
+
+element-icon {
+    size: 20px;
+    margin: 0 10px 0 0;
+}
+
+/* 🔥 THIS KILLS STRIPES */
+element alternate {
+    background-color: @bg-alt;
+}
+

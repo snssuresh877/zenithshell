@@ -1,0 +1,150 @@
+/* ==========================================================
+   WAYBAR — EXECUTIVE GLASS MODE STYLING
+   ========================================================== */
+
+@import url("../../.cache/wal/colors-waybar.css");
+
+@define-color bg rgba(18, 18, 22, 0.75);
+@define-color bg-hover rgba(255, 255, 255, 0.12);
+
+@define-color fg @color7;
+@define-color accent @color4;
+@define-color warning @color3;
+@define-color critical @color1;
+@define-color muted @color8;
+
+* {
+    font-family: "JetBrainsMono Nerd Font";
+    font-size: 9pt;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+}
+
+window#waybar {
+    background: transparent;
+    color: @fg;
+}
+
+.modules-left,
+.modules-center,
+.modules-right {
+    margin: 3px 6px;
+}
+
+#clock,
+#cpu,
+#memory,
+#network,
+#pulseaudio,
+#battery,
+#tray,
+#mpris,
+#custom-notification,
+#custom-drawer_icon,
+#custom-updates,
+#custom-power {
+    background: @bg;
+    margin: 0 3px;
+    padding: 2px 10px;
+    border-radius: 10px;
+    transition: background-color 180ms ease, color 180ms ease;
+}
+
+#clock:hover,
+#cpu:hover,
+#memory:hover,
+#network:hover,
+#pulseaudio:hover,
+#battery:hover,
+#mpris:hover,
+#custom-notification:hover,
+#custom-drawer_icon:hover,
+#custom-updates:hover,
+#custom-power:hover {
+    background: @bg-hover;
+}
+
+#workspaces {
+    background: @bg;
+    margin-left: 2px;
+    padding: 0 3px;
+    border-radius: 10px;
+}
+
+#workspaces button {
+    padding: 0 8px;
+    margin: 2px 2px;
+    color: @muted;
+    font-size: 11pt;
+    border-radius: 8px;
+    transition: all 180ms ease-in-out;
+}
+
+#workspaces button:hover {
+    color: @fg;
+    background: rgba(255, 255, 255, 0.16);
+}
+
+#workspaces button.active {
+    color: #181825;
+    background: @accent;
+    font-weight: bold;
+}
+
+#workspaces button.urgent {
+    color: #181825;
+    background: @critical;
+}
+
+#custom-drawer_icon {
+    color: @accent;
+    font-size: 11pt;
+    padding: 1px 8px;
+}
+
+#mpris {
+    color: @accent;
+}
+
+#custom-notification {
+    color: @accent;
+}
+
+#battery.warning {
+    color: @warning;
+}
+
+#battery.critical {
+    color: @critical;
+}
+
+#custom-updates {
+    color: @accent;
+}
+
+#custom-power {
+    color: @critical;
+    padding-right: 10px;
+}
+
+#custom-power:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: @critical;
+}
+
+#tray {
+    padding: 1px 8px;
+}
+
+tooltip {
+    background: rgba(20, 20, 24, 0.96);
+    color: @fg;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+}
+
+tooltip label {
+    color: @fg;
+    padding: 2px 4px;
+}

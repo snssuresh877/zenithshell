@@ -1,0 +1,53 @@
+"$schema" = "https://starship.rs/config-schema.json"
+
+# Performance & Speed
+add_newline = false
+scan_timeout = 10
+command_timeout = 300
+
+format = """
+$directory\
+$git_branch\
+$git_status\
+$fill\
+$cmd_duration\
+$line_break\
+$character"""
+
+[directory]
+truncation_length = 3
+truncate_to_repo = true
+fish_style_pwd_dir_length = 1
+style = "bold cyan"
+
+[git_branch]
+symbol = " "
+style = "bold purple"
+
+[git_status]
+style = "yellow"
+
+[cmd_duration]
+min_time = 1000
+format = "[$duration]($style)"
+style = "dimmed white"
+
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
+vimcmd_symbol = "[❮](bold blue)"
+
+[fill]
+symbol = " "
+
+[lua]
+format = "🌙 "
+
+[rust]
+format = "🦀 "
+
+[python]
+format = "🐍 "
+
+[nodejs]
+format = "📦 "

@@ -1,0 +1,51 @@
+#pragma once
+
+#include <gio/gio.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
+#include <string>
+#include <memory>
+#include <ctime>
+
+namespace zenith {
+
+struct FileItem {
+    std::string path;
+    std::string name;
+    std::string display_name;
+    std::string mime_type;
+    uint64_t size{0};
+    time_t mtime{0};
+    bool is_directory{false};
+    bool is_hidden{false};
+    bool is_symlink{false};
+    std::string symlink_target;
+
+    std::string git_status;
+    std::string git_branch;
+
+    GIcon* gicon{nullptr};
+    GdkPixbuf* pixbuf_small{nullptr};
+    GdkPixbuf* pixbuf_large{nullptr};
+
+    FileItem() = default;
+    ~FileItem();
+
+    // Move semantics
+    FileItem(FileItem&& other) noexcept;
+    FileItem& operator=(FileItem&& other) noexcept;
+
+    // Disallow simple copy to avoid dangling GObject pointers
+    FileItem(const FileItem&) = delete;
+    FileItem& operator=(const FileItem&) = delete;
+
+    static std::shared_ptr<FileItem> from_file_info(GFile* file, GFileInfo* info, int large_icon_size = 48, int small_icon_size = 20);
+    static std::string format_size(uint64_t bytes);
+    static std::string format_timestamp(time_t t);
+
+    // Async thumbnail loader — safe to call from a non-GTK worker thread.
+    // Returns a new GdkPixbuf* (caller owns it) or nullptr if not an image.
+    static GdkPixbuf* load_thumbnail(const std::string& path, 
+                                      const std::string& mime_type, int size);
+};
+
+} // namespace zenith

@@ -1,0 +1,51 @@
+
+@import "~/.cache/wal/colors-rofi-dark.rasi"
+@import "colors.rasi"
+
+configuration {
+    show-icons: false;
+    font: "JetBrainsMono Nerd Font 11";
+
+    width: 42;
+    lines: 10;
+    padding: 10;
+
+    hide-scrollbar: true;
+    separator-style: "none";
+}
+
+/* ================= WINDOW ================= */
+window {
+    width: 576px;
+    background-color: @bg;
+    border-radius: 16px;
+    padding: 14px;
+}
+
+/* ================= LIST ================= */
+listview {
+    spacing: 6px;
+    fixed-height: true;
+}
+
+/* ================= ITEMS ================= */
+element {
+    background-color: @bg;
+    text-color: @fg;
+    padding: 8px 12px;
+    border-radius: 10px;
+}
+
+element selected {
+    background-color: @background;
+    text-color: @background;
+}
+
+/* Prevent alternate row color */
+element alternate {
+    background-color: @bg;
+}
+
+/* ================= CLEAN ================= */
+scrollbar { width: 0px; }
+prompt { enabled: false; }

@@ -1,0 +1,122 @@
+#compdef zenithctl zenithshell
+
+_zenithctl_themes() {
+    local -a themes
+    themes=(${(f)"$(zenithctl __complete themes 2>/dev/null)"})
+    _describe -t themes 'themes' themes
+}
+
+_zenithctl_modules() {
+    local -a modules
+    modules=(${(f)"$(zenithctl __complete modules 2>/dev/null)"})
+    _describe -t modules 'modules' modules
+}
+
+_zenithctl() {
+    local curcontext="$curcontext" state line
+    typeset -A opt_args
+
+    _arguments -C \
+        '1: :->command' \
+        '*:: :->args'
+
+    case $state in
+        command)
+            local -a subcommands
+            subcommands=(
+                'wallpaper:Wallpaper management & 60fps crossfade'
+                'wp:Wallpaper management (shorthand)'
+                'theme:Theming engine & color extraction'
+                'brightness:Hardware screen backlight control'
+                'bri:Hardware screen backlight control (shorthand)'
+                'volume:Audio volume & PipeWire control'
+                'vol:Audio volume (shorthand)'
+                'mic:Microphone mute toggle'
+                'media:Native D-Bus MPRIS media playback control'
+                'mpris:Native D-Bus MPRIS media playback control (shorthand)'
+                'dnd:Toggle Do Not Disturb mode'
+                'reminder:Reminders manager & timer CLI'
+                'clipboard:Clipboard history & overlay'
+                'clip:Clipboard history (shorthand)'
+                'toggle:Toggle shell modules & overlays'
+                'bar:Toggle top status bar'
+                'launcher:Toggle Spotlight app launcher'
+                'spotlight:Toggle Spotlight app launcher'
+                'control-center:Toggle Quick Settings / Control Center'
+                'cc:Toggle Quick Settings / Control Center (shorthand)'
+                'notifications:Toggle notification history center'
+                'nc:Toggle notification history center (shorthand)'
+                'reminders:Toggle reminders manager'
+                'active-apps:Toggle active applications drawer'
+                'keybinds:Toggle Hyprland cheatsheet overlay'
+                'network:Open Wi-Fi / Network dialog'
+                'audio:Open Audio control modal'
+                'power:Open Power & Session menu'
+                'stats:Display live system performance metrics'
+                'config:Configuration & dotfiles management suite'
+                'reload:Reload CSS stylesheets and configuration'
+                'help:Show command help manual'
+                'version:Show version'
+            )
+            _describe -t subcommands 'command' subcommands
+            ;;
+        args)
+            case $words[1] in
+                wallpaper|wp)
+                    _arguments \
+                        '1: :(cycle next set current dir)' \
+                        '2: :_files'
+                    ;;
+                theme)
+                    if [[ $words[2] == "set" ]]; then
+                        _zenithctl_themes
+                    else
+                        _arguments \
+                            '1: :(set next current list)'
+                    fi
+                    ;;
+                brightness|bri)
+                    _arguments \
+                        '1: :(set up down current)'
+                    ;;
+                volume|vol)
+                    _arguments \
+                        '1: :(set up down mute current)'
+                    ;;
+                mic)
+                    _arguments \
+                        '1: :(mute)'
+                    ;;
+                media|mpris)
+                    _arguments \
+                        '1: :(play-pause toggle next prev previous play pause stop status info current)'
+                    ;;
+                dnd)
+                    _arguments \
+                        '1: :(toggle on off status enable disable get)'
+                    ;;
+                reminder|reminders)
+                    _arguments \
+                        '1: :(list add clear toggle)'
+                    ;;
+                clipboard|clip)
+                    _arguments \
+                        '1: :(clear store)'
+                    ;;
+                toggle)
+                    _zenithctl_modules
+                    ;;
+                stats)
+                    _arguments \
+                        '--json[Output raw JSON metrics]'
+                    ;;
+                config)
+                    _arguments \
+                        '1: :(path init edit style manual)'
+                    ;;
+            esac
+            ;;
+    esac
+}
+
+_zenithctl "$@"

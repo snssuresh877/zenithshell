@@ -1,0 +1,419 @@
+#include "FileManager/Core/file_manager_state.hpp"
+#include "FileManager/Features/file_preferences_dialog.hpp"
+#include "FileManager/UI/theme_settings.hpp"
+#include "FileManager/Core/file_shortcuts.hpp"
+#include "FileManager/UI/file_view_widget.hpp"
+#include "gtk3_compat.hpp"
+#include <vector>
+#include <iostream>
+
+namespace zenith {
+
+// Forward declaration of internal state
+
+
+
+static void show_rebind_dialog(GtkWindow* parent, const ShortcutDef& def, std::function<void()> on_rebound) {
+    GtkWidget* dialog = gtk_dialog_new_with_buttons(
+        "Rebind Shortcut",
+        parent,
+        static_cast<GtkDialogFlags>(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
+        "_Cancel", GTK_RESPONSE_CANCEL,
+        nullptr
+    );
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 380, 180);
+    gtk_widget_add_css_class(dialog, "zenith-files-dialog");
+
+    GtkWidget* content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    gtk_container_set_border_width(GTK_CONTAINER(content), 20);
+    gtk_box_set_spacing(GTK_BOX(content), 12);
+
+    GtkWidget* title = gtk_label_new(("Rebind: <b>" + def.label + "</b>").c_str());
+    gtk_label_set_use_markup(GTK_LABEL(title), TRUE);
+    gtk_widget_add_css_class(title, "files-prop-title");
+    gtk_box_pack_start(GTK_BOX(content), title, FALSE, FALSE, 0);
+
+    GtkWidget* prompt = gtk_label_new("Press the new key combination now…\n(e.g. Ctrl+Alt+T, F4, Space, etc.)");
+    gtk_label_set_xalign(GTK_LABEL(prompt), 0.5f);
+    gtk_label_set_justify(GTK_LABEL(prompt), GTK_JUSTIFY_CENTER);
+    gtk_widget_add_css_class(prompt, "files-prop-subtitle");
+    gtk_box_pack_start(GTK_BOX(content), prompt, FALSE, FALSE, 8);
+
+    struct KeyCaptureCtx {
+        std::string action_id;
+        GtkWidget* dialog;
+        std::function<void()> callback;
+    };
+    auto* ctx = new KeyCaptureCtx{def.id, dialog, std::move(on_rebound)};
+
+    g_signal_connect(dialog, "key-press-event", G_CALLBACK(+[](GtkWidget*, GdkEventKey* event, gpointer user_data) -> gboolean {
+        auto* c = static_cast<KeyCaptureCtx*>(user_data);
+        guint key = event->keyval;
+        guint state = event->state & gtk_accelerator_get_default_mod_mask();
+
+        // Ignore standalone modifier presses
+        if (key == GDK_KEY_Control_L || key == GDK_KEY_Control_R ||
+            key == GDK_KEY_Alt_L || key == GDK_KEY_Alt_R ||
+            key == GDK_KEY_Shift_L || key == GDK_KEY_Shift_R ||
+            key == GDK_KEY_Super_L || key == GDK_KEY_Super_R) {
+            return TRUE;
+        }
+
+        if (key == GDK_KEY_Escape) {
+            gtk_widget_destroy(c->dialog);
+            delete c;
+            return TRUE;
+        }
+
+        FileShortcuts::update_shortcut(c->action_id, key, state);
+        if (c->callback) c->callback();
+
+        gtk_widget_destroy(c->dialog);
+        delete c;
+        return TRUE;
+    }), ctx);
+
+    gtk_widget_show_all(dialog);
+}
+
+void FilePreferencesDialog::show(FileManagerState* state) {
+    if (!state || !state->window) return;
+
+    GtkWidget* dialog = gtk_dialog_new_with_buttons(
+        "Zenith Files — Preferences & Configuration",
+        GTK_WINDOW(state->window),
+        static_cast<GtkDialogFlags>(GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT),
+        "_Close", GTK_RESPONSE_CLOSE,
+        nullptr
+    );
+    gtk_window_set_default_size(GTK_WINDOW(dialog), 660, 540);
+    gtk_widget_add_css_class(dialog, "zenith-files-dialog");
+
+    GtkWidget* content = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+    gtk_container_set_border_width(GTK_CONTAINER(content), 16);
+    gtk_box_set_spacing(GTK_BOX(content), 12);
+
+    GtkWidget* notebook = gtk_notebook_new();
+    gtk_widget_add_css_class(notebook, "files-settings-notebook");
+
+    // ── 1. General Tab ────────────────────────────────────────────────────────
+    {
+        GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 14);
+        gtk_container_set_border_width(GTK_CONTAINER(vbox), 16);
+
+        GtkWidget* sec1 = gtk_label_new("<b>Startup &amp; Behavior</b>");
+        gtk_label_set_use_markup(GTK_LABEL(sec1), TRUE);
+        gtk_label_set_xalign(GTK_LABEL(sec1), 0.0f);
+        gtk_widget_add_css_class(sec1, "files-prop-title");
+        gtk_box_pack_start(GTK_BOX(vbox), sec1, FALSE, FALSE, 0);
+
+        GtkWidget* chk_del = gtk_check_button_new_with_label("Ask confirmation before permanently deleting files (Shift+Del)");
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_del), TRUE);
+        gtk_box_pack_start(GTK_BOX(vbox), chk_del, FALSE, FALSE, 0);
+
+        GtkWidget* chk_folder_first = gtk_check_button_new_with_label("Sort folders before regular files");
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_folder_first), TRUE);
+        gtk_box_pack_start(GTK_BOX(vbox), chk_folder_first, FALSE, FALSE, 0);
+
+        gtk_box_pack_start(GTK_BOX(vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 4);
+
+        GtkWidget* sec2 = gtk_label_new("<b>Terminal Integration</b>");
+        gtk_label_set_use_markup(GTK_LABEL(sec2), TRUE);
+        gtk_label_set_xalign(GTK_LABEL(sec2), 0.0f);
+        gtk_widget_add_css_class(sec2, "files-prop-title");
+        gtk_box_pack_start(GTK_BOX(vbox), sec2, FALSE, FALSE, 0);
+
+        GtkWidget* term_desc = gtk_label_new("Default terminal emulator command for 'Open Terminal Here' (F4):");
+        gtk_label_set_xalign(GTK_LABEL(term_desc), 0.0f);
+        gtk_widget_add_css_class(term_desc, "files-prop-subtitle");
+        gtk_box_pack_start(GTK_BOX(vbox), term_desc, FALSE, FALSE, 0);
+
+        GtkWidget* term_entry = gtk_entry_new();
+        gtk_entry_set_text(GTK_ENTRY(term_entry), "foot --working-directory=\"%d\"");
+        gtk_box_pack_start(GTK_BOX(vbox), term_entry, FALSE, FALSE, 0);
+
+        gtk_notebook_append_page(GTK_NOTEBOOK(notebook), vbox, gtk_label_new("General"));
+    }
+
+    // ── 2. Appearance & Sizing Tab ────────────────────────────────────────────
+    {
+        GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 14);
+        gtk_container_set_border_width(GTK_CONTAINER(vbox), 16);
+
+        GtkWidget* size_header = gtk_label_new("<b>Grid View Folder &amp; Icon Size</b>");
+        gtk_label_set_use_markup(GTK_LABEL(size_header), TRUE);
+        gtk_label_set_xalign(GTK_LABEL(size_header), 0.0f);
+        gtk_widget_add_css_class(size_header, "files-prop-title");
+        gtk_box_pack_start(GTK_BOX(vbox), size_header, FALSE, FALSE, 0);
+
+        GtkWidget* size_desc = gtk_label_new("Adjust size dynamically (also Ctrl+ScrollWheel, Ctrl++ / Ctrl+-):");
+        gtk_label_set_xalign(GTK_LABEL(size_desc), 0.0f);
+        gtk_widget_add_css_class(size_desc, "files-prop-subtitle");
+        gtk_box_pack_start(GTK_BOX(vbox), size_desc, FALSE, FALSE, 0);
+
+        int cur_size = 96;
+        if (state->active_tab && state->active_tab->active_pane) {
+            cur_size = FileViewWidget::get_icon_size(state->active_tab->active_pane->file_view);
+        }
+
+        GtkWidget* scale = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 48, 192, 16);
+        gtk_scale_set_value_pos(GTK_SCALE(scale), GTK_POS_RIGHT);
+        gtk_scale_set_digits(GTK_SCALE(scale), 0);
+        gtk_range_set_value(GTK_RANGE(scale), cur_size);
+        gtk_scale_add_mark(GTK_SCALE(scale), 48, GTK_POS_BOTTOM, "Small (48px)");
+        gtk_scale_add_mark(GTK_SCALE(scale), 64, GTK_POS_BOTTOM, "Medium (64px)");
+        gtk_scale_add_mark(GTK_SCALE(scale), 96, GTK_POS_BOTTOM, "Normal (96px)");
+        gtk_scale_add_mark(GTK_SCALE(scale), 128, GTK_POS_BOTTOM, "Large (128px)");
+        gtk_scale_add_mark(GTK_SCALE(scale), 160, GTK_POS_BOTTOM, "Huge (160px)");
+
+        g_signal_connect(scale, "value-changed", G_CALLBACK(+[](GtkRange* r, gpointer user_data) {
+            auto* s = static_cast<FileManagerState*>(user_data);
+            int sz = static_cast<int>(gtk_range_get_value(r));
+            for (auto& tab : s->tabs) {
+                FileViewWidget::set_icon_size(tab->left_pane.file_view, sz);
+                if (tab->is_dual) FileViewWidget::set_icon_size(tab->right_pane.file_view, sz);
+            }
+        }), state);
+        gtk_box_pack_start(GTK_BOX(vbox), scale, FALSE, FALSE, 6);
+
+        // Zoom buttons row
+        GtkWidget* zoom_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+        GtkWidget* btn_smaller = gtk_button_new_with_label("➖ Smaller (Ctrl+-)");
+        gtk_widget_add_css_class(btn_smaller, "files-btn-tool");
+        g_signal_connect_swapped(btn_smaller, "clicked", G_CALLBACK(+[](FileManagerState* s) {
+            for (auto& tab : s->tabs) {
+                FileViewWidget::zoom_out(tab->left_pane.file_view);
+                if (tab->is_dual) FileViewWidget::zoom_out(tab->right_pane.file_view);
+            }
+        }), state);
+        gtk_box_pack_start(GTK_BOX(zoom_box), btn_smaller, FALSE, FALSE, 0);
+
+        GtkWidget* btn_reset = gtk_button_new_with_label("↺ Reset (Ctrl+0)");
+        gtk_widget_add_css_class(btn_reset, "files-btn-tool");
+        g_signal_connect_swapped(btn_reset, "clicked", G_CALLBACK(+[](FileManagerState* s) {
+            for (auto& tab : s->tabs) {
+                FileViewWidget::zoom_reset(tab->left_pane.file_view);
+                if (tab->is_dual) FileViewWidget::zoom_reset(tab->right_pane.file_view);
+            }
+        }), state);
+        gtk_box_pack_start(GTK_BOX(zoom_box), btn_reset, FALSE, FALSE, 0);
+
+        GtkWidget* btn_larger = gtk_button_new_with_label("➕ Larger (Ctrl++)");
+        gtk_widget_add_css_class(btn_larger, "files-btn-tool");
+        g_signal_connect_swapped(btn_larger, "clicked", G_CALLBACK(+[](FileManagerState* s) {
+            for (auto& tab : s->tabs) {
+                FileViewWidget::zoom_in(tab->left_pane.file_view);
+                if (tab->is_dual) FileViewWidget::zoom_in(tab->right_pane.file_view);
+            }
+        }), state);
+        gtk_box_pack_start(GTK_BOX(zoom_box), btn_larger, FALSE, FALSE, 0);
+        gtk_box_pack_start(GTK_BOX(vbox), zoom_box, FALSE, FALSE, 0);
+
+        gtk_box_pack_start(GTK_BOX(vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 6);
+
+        GtkWidget* chk_hidden = gtk_check_button_new_with_label("Show hidden files and folders by default (Ctrl+H)");
+        if (state->active_tab && state->active_tab->active_pane) {
+            gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_hidden),
+                FileViewWidget::get_show_hidden(state->active_tab->active_pane->file_view));
+        }
+        g_signal_connect(chk_hidden, "toggled", G_CALLBACK(+[](GtkToggleButton* btn, gpointer user_data) {
+            auto* s = static_cast<FileManagerState*>(user_data);
+            gboolean act = gtk_toggle_button_get_active(btn);
+            gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(s->view_hidden_check), act);
+            for (auto& tab : s->tabs) {
+                FileViewWidget::set_show_hidden(tab->left_pane.file_view, act);
+                if (tab->is_dual) FileViewWidget::set_show_hidden(tab->right_pane.file_view, act);
+            }
+        }), state);
+        gtk_box_pack_start(GTK_BOX(vbox), chk_hidden, FALSE, FALSE, 0);
+
+
+        gtk_box_pack_start(GTK_BOX(vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 8);
+        
+        GtkWidget* theme_hdr = gtk_label_new("<b>Visual Polish & Theme</b>");
+        gtk_label_set_use_markup(GTK_LABEL(theme_hdr), TRUE);
+        gtk_label_set_xalign(GTK_LABEL(theme_hdr), 0.0f);
+        gtk_widget_add_css_class(theme_hdr, "files-prop-title");
+        gtk_box_pack_start(GTK_BOX(vbox), theme_hdr, FALSE, FALSE, 0);
+        
+        GtkWidget* chk_trans = gtk_check_button_new_with_label("Enable Window Blur / Transparency");
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_trans), ThemeSettings::config.transparent);
+        g_signal_connect(chk_trans, "toggled", G_CALLBACK(+[](GtkToggleButton* btn, gpointer) {
+            ThemeSettings::config.transparent = gtk_toggle_button_get_active(btn);
+            ThemeSettings::save();
+        }), nullptr);
+        gtk_box_pack_start(GTK_BOX(vbox), chk_trans, FALSE, FALSE, 0);
+        
+        GtkWidget* color_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+        gtk_box_pack_start(GTK_BOX(vbox), color_box, FALSE, FALSE, 0);
+        GtkWidget* color_lbl = gtk_label_new("Accent Color:");
+        gtk_box_pack_start(GTK_BOX(color_box), color_lbl, FALSE, FALSE, 0);
+        
+        GtkWidget* combo_color = gtk_combo_box_text_new();
+        const char* colors[] = {"Blue", "Purple", "Green", "Red", "Orange", "Mango"};
+        const char* hexs[] = {"#5294e2", "#b671d4", "#6db664", "#e25252", "#e29452", "#ffb347"};
+        int active_idx = 0;
+        for (int i=0; i<6; i++) {
+            gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo_color), colors[i]);
+            if (ThemeSettings::config.accent_color == hexs[i]) active_idx = i;
+        }
+        gtk_combo_box_set_active(GTK_COMBO_BOX(combo_color), active_idx);
+
+        auto on_color_changed = +[](GtkComboBox* cb, gpointer) {
+            int idx = gtk_combo_box_get_active(cb);
+            if (idx == 0) ThemeSettings::config.accent_color = "#5294e2";
+            else if (idx == 1) ThemeSettings::config.accent_color = "#b671d4";
+            else if (idx == 2) ThemeSettings::config.accent_color = "#6db664";
+            else if (idx == 3) ThemeSettings::config.accent_color = "#e25252";
+            else if (idx == 4) ThemeSettings::config.accent_color = "#e29452";
+            else if (idx == 5) ThemeSettings::config.accent_color = "#ffb347";
+            if (idx >= 0 && idx < 6) ThemeSettings::save();
+        };
+        g_signal_connect(combo_color, "changed", G_CALLBACK(on_color_changed), nullptr);
+
+        gtk_box_pack_start(GTK_BOX(color_box), combo_color, FALSE, FALSE, 0);
+        
+        GtkWidget* width_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+        gtk_box_pack_start(GTK_BOX(vbox), width_box, FALSE, FALSE, 0);
+        GtkWidget* width_lbl = gtk_label_new("Sidebar Width (px):");
+        gtk_box_pack_start(GTK_BOX(width_box), width_lbl, FALSE, FALSE, 0);
+        
+        GtkWidget* scale_width = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL, 150, 450, 10);
+        gtk_range_set_value(GTK_RANGE(scale_width), ThemeSettings::config.sidebar_width);
+        gtk_widget_set_size_request(scale_width, 150, -1);
+        g_signal_connect(scale_width, "value-changed", G_CALLBACK(+[](GtkRange* r, gpointer) {
+            ThemeSettings::config.sidebar_width = (int)gtk_range_get_value(r);
+            ThemeSettings::save();
+        }), nullptr);
+        gtk_box_pack_start(GTK_BOX(width_box), scale_width, FALSE, FALSE, 0);
+
+        gtk_notebook_append_page(GTK_NOTEBOOK(notebook), vbox, gtk_label_new("Appearance"));
+
+    }
+
+    // ── 3. Performance Tab ────────────────────────────────────────────────────
+    {
+        GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 14);
+        gtk_container_set_border_width(GTK_CONTAINER(vbox), 16);
+
+        GtkWidget* perf_hdr = gtk_label_new("<b>Performance &amp; Background Services</b>");
+        gtk_label_set_use_markup(GTK_LABEL(perf_hdr), TRUE);
+        gtk_label_set_xalign(GTK_LABEL(perf_hdr), 0.0f);
+        gtk_widget_add_css_class(perf_hdr, "files-prop-title");
+        gtk_box_pack_start(GTK_BOX(vbox), perf_hdr, FALSE, FALSE, 0);
+
+        GtkWidget* chk_thumbs = gtk_check_button_new_with_label("Enable multi-threaded background thumbnail generation (Freedesktop Cache)");
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_thumbs), TRUE);
+        gtk_box_pack_start(GTK_BOX(vbox), chk_thumbs, FALSE, FALSE, 0);
+
+        GtkWidget* chk_monitor = gtk_check_button_new_with_label("Real-time live directory monitoring (GFileMonitor)");
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_monitor), TRUE);
+        gtk_box_pack_start(GTK_BOX(vbox), chk_monitor, FALSE, FALSE, 0);
+
+        GtkWidget* chk_anim = gtk_check_button_new_with_label("Smooth UI transitions and cross-fades");
+        gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(chk_anim), TRUE);
+        gtk_box_pack_start(GTK_BOX(vbox), chk_anim, FALSE, FALSE, 0);
+
+        gtk_notebook_append_page(GTK_NOTEBOOK(notebook), vbox, gtk_label_new("Performance"));
+    }
+
+    // ── 4. Customizable Shortcuts Tab ─────────────────────────────────────────
+    {
+        GtkWidget* scroll = gtk_scrolled_window_new(nullptr, nullptr);
+        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+
+        GtkWidget* vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
+        gtk_container_set_border_width(GTK_CONTAINER(vbox), 16);
+
+        GtkWidget* tip = gtk_label_new("💡 Click on any shortcut below to rebind it to your preferred keys.");
+        gtk_label_set_xalign(GTK_LABEL(tip), 0.0f);
+        gtk_widget_add_css_class(tip, "files-prop-subtitle");
+        gtk_box_pack_start(GTK_BOX(vbox), tip, FALSE, FALSE, 0);
+
+        GtkWidget* list_container = gtk_box_new(GTK_ORIENTATION_VERTICAL, 8);
+        gtk_box_pack_start(GTK_BOX(vbox), list_container, TRUE, TRUE, 0);
+
+        static void (*populate_shortcuts_list)(GtkWidget*, GtkWidget*) = [](GtkWidget* list_container, GtkWidget* dialog) -> void {
+            GList* children = gtk_container_get_children(GTK_CONTAINER(list_container));
+            for (GList* it = children; it != nullptr; it = g_list_next(it)) {
+                gtk_widget_destroy(GTK_WIDGET(it->data));
+            }
+            g_list_free(children);
+
+            const auto& all = FileShortcuts::get_all();
+            std::string last_cat;
+
+            for (const auto& s : all) {
+                if (s.category != last_cat) {
+                    last_cat = s.category;
+                    GtkWidget* cat_hdr = gtk_label_new(("<b>" + last_cat + "</b>").c_str());
+                    gtk_label_set_use_markup(GTK_LABEL(cat_hdr), TRUE);
+                    gtk_label_set_xalign(GTK_LABEL(cat_hdr), 0.0f);
+                    gtk_widget_add_css_class(cat_hdr, "files-prop-title");
+                    gtk_box_pack_start(GTK_BOX(list_container), cat_hdr, FALSE, FALSE, 4);
+                }
+
+                GtkWidget* row_btn = gtk_button_new();
+                gtk_widget_add_css_class(row_btn, "files-btn-nav");
+
+                GtkWidget* box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
+                gtk_container_set_border_width(GTK_CONTAINER(box), 6);
+
+                GtkWidget* lbl = gtk_label_new(s.label.c_str());
+                gtk_label_set_xalign(GTK_LABEL(lbl), 0.0f);
+                gtk_widget_add_css_class(lbl, "files-prop-val");
+                gtk_box_pack_start(GTK_BOX(box), lbl, TRUE, TRUE, 0);
+
+                std::string badge = FileShortcuts::format_badge_markup(s.current_keyval(), s.current_modifiers());
+                GtkWidget* badge_lbl = gtk_label_new(nullptr);
+                gtk_label_set_markup(GTK_LABEL(badge_lbl), badge.c_str());
+                gtk_widget_add_css_class(badge_lbl, "files-prop-key");
+                gtk_box_pack_end(GTK_BOX(box), badge_lbl, FALSE, FALSE, 0);
+
+                gtk_container_add(GTK_CONTAINER(row_btn), box);
+
+                struct RebindBtnCtx {
+                    ShortcutDef s;
+                    GtkWindow* parent;
+                    std::function<void()> refresh_fn;
+                };
+                auto* cd = new RebindBtnCtx{s, GTK_WINDOW(dialog), [list_container, dialog]() { populate_shortcuts_list(list_container, dialog); }};
+                auto rebind_click_cb = +[](GtkButton*, gpointer user_data) {
+                    auto* c = static_cast<RebindBtnCtx*>(user_data);
+                    show_rebind_dialog(c->parent, c->s, c->refresh_fn);
+                };
+                g_signal_connect_data(row_btn, "clicked", G_CALLBACK(rebind_click_cb), cd, [](gpointer d, GClosure*) { delete static_cast<RebindBtnCtx*>(d); }, static_cast<GConnectFlags>(0));
+
+                gtk_box_pack_start(GTK_BOX(list_container), row_btn, FALSE, FALSE, 2);
+            }
+
+            // Reset defaults button
+            GtkWidget* reset_btn = gtk_button_new_with_label("↺ Reset All Shortcuts to Defaults");
+            gtk_widget_add_css_class(reset_btn, "files-btn-tool");
+            auto* refresh_ptr = new std::function<void()>([list_container, dialog]() { populate_shortcuts_list(list_container, dialog); });
+            auto reset_click_cb = +[](GtkButton*, gpointer user_data) {
+                auto* rp = static_cast<std::function<void()>*>(user_data);
+                FileShortcuts::reset_to_defaults();
+                if (*rp) (*rp)();
+            };
+            g_signal_connect_data(reset_btn, "clicked", G_CALLBACK(reset_click_cb), refresh_ptr, [](gpointer d, GClosure*) { delete static_cast<std::function<void()>*>(d); }, static_cast<GConnectFlags>(0));
+
+            gtk_box_pack_start(GTK_BOX(list_container), reset_btn, FALSE, FALSE, 12);
+            gtk_widget_show_all(list_container);
+        };
+
+        populate_shortcuts_list(list_container, dialog);
+
+        gtk_container_add(GTK_CONTAINER(scroll), vbox);
+        gtk_notebook_append_page(GTK_NOTEBOOK(notebook), scroll, gtk_label_new("Shortcuts"));
+    }
+
+    gtk_box_pack_start(GTK_BOX(content), notebook, TRUE, TRUE, 0);
+
+    g_signal_connect(dialog, "response", G_CALLBACK(+[](GtkDialog* d, gint response_id, gpointer) {
+        gtk_widget_destroy(GTK_WIDGET(d));
+    }), nullptr);
+    gtk_widget_show_all(dialog);
+}
+
+} // namespace zenith
