@@ -13,6 +13,7 @@
 #include <array>
 #include <unordered_set>
 #include <fstream>
+#include "Engine/Config/config.hpp"
 
 namespace fs = std::filesystem;
 
@@ -351,6 +352,11 @@ void ThemeEngine::scan_custom_wallpapers(const std::string& custom_dir) {
 
 void ThemeEngine::set_wallpaper_directory(const std::string& dir_path) {
     scan_custom_wallpapers(dir_path);
+    Config::save_wallpaper_dir(dir_path);
+}
+
+std::string ThemeEngine::get_active_wallpaper_dir() {
+    return active_wallpaper_dir;
 }
 
 std::vector<std::string> ThemeEngine::get_custom_wallpapers() {

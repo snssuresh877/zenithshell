@@ -21,6 +21,7 @@ struct Config {
 
   static Config load(const std::string &path);
   static void ensure_default_config();
+  static void save_wallpaper_dir(const std::string &dir);
 };
 
 } // namespace zenith

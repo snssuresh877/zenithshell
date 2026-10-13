@@ -88,4 +88,30 @@ Config Config::load(const std::string& path) {
     return cfg;
 }
 
+void Config::save_wallpaper_dir(const std::string& dir) {
+    ensure_default_config();
+    std::string user_cfg = std::string(g_get_user_config_dir()) + "/zenithshell/config.json";
+
+    json j;
+    std::ifstream in(user_cfg);
+    if (in.is_open()) {
+        try {
+            in >> j;
+        } catch (...) {
+            j = json::object();
+        }
+        in.close();
+    }
+
+    j["wallpaper_dir"] = dir;
+
+    std::ofstream out(user_cfg);
+    if (out.is_open()) {
+        out << j.dump(4) << "\n";
+        std::cout << "[ZenithConfig] Saved wallpaper_dir to " << user_cfg << ": " << dir << std::endl;
+    } else {
+        std::cerr << "[ZenithConfig] Failed to write wallpaper_dir to " << user_cfg << std::endl;
+    }
+}
+
 } // namespace zenith

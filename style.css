@@ -828,6 +828,37 @@ window.control-center-window,
     font-weight: 500;
 }
 
+.cc-wp-loc-row {
+    background-color: rgba(0, 0, 0, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 4px 8px;
+    margin-top: 4px;
+}
+
+.cc-wp-dir-lbl {
+    color: #a6adc8;
+    font-size: 10px;
+    font-family: monospace;
+}
+
+.cc-browse-btn {
+    background-color: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #f8f8f2;
+    transition: all 120ms ease-in-out;
+}
+
+.cc-browse-btn:hover {
+    background-color: @zenith_accent_soft;
+    border-color: @zenith_accent;
+    color: @zenith_accent;
+}
+
 /* Theme Drill-Down Page & Scrolled Window */
 .cc-theme-scrolled-win {
     background-color: transparent;

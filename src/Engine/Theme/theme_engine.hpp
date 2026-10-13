@@ -39,6 +39,7 @@ public:
     static std::string get_current_wallpaper_path();
     static void set_wallpaper(const std::string& path);
     static void set_wallpaper_directory(const std::string& dir_path);
+    static std::string get_active_wallpaper_dir();
     static std::vector<std::string> get_custom_wallpapers();
     static void scan_custom_wallpapers(const std::string& custom_dir = "");
 

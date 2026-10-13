@@ -67,6 +67,7 @@ GtkWidget* ControlCenter::nc_state_lbl = nullptr;
 
 // Theme Drill-Down Detail Widgets
 GtkWidget* ControlCenter::theme_grid_container = nullptr;
+GtkWidget* ControlCenter::wp_dir_lbl = nullptr;
 
 static std::string exec_cmd_read(const char* cmd) {
     std::array<char, 128> buffer;
@@ -975,10 +976,11 @@ GtkWidget* ControlCenter::create_theme_page() {
     gtk_box_pack_start(GTK_BOX(header_box), title, TRUE, TRUE, 0);
     gtk_box_pack_start(GTK_BOX(theme_vbox), header_box, FALSE, FALSE, 0);
 
-    // 2. Wallpaper Quick Switcher Card
-    GtkWidget* wp_bar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
+    // 2. Wallpaper Quick Switcher & Source Location Card
+    GtkWidget* wp_bar = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
     gtk_widget_add_css_class(wp_bar, "cc-wp-bar-card");
 
+    GtkWidget* wp_top = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
     GtkWidget* wp_left = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
     GtkWidget* wp_ic = gtk_label_new("󰸉");
     gtk_widget_add_css_class(wp_ic, "cc-wp-icon");
@@ -1000,8 +1002,61 @@ GtkWidget* ControlCenter::create_theme_page() {
         ThemeEngine::cycle_wallpaper();
     }), nullptr);
 
-    gtk_box_pack_start(GTK_BOX(wp_bar), wp_left, TRUE, TRUE, 0);
-    gtk_box_pack_end(GTK_BOX(wp_bar), next_wp_btn, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(wp_top), wp_left, TRUE, TRUE, 0);
+    gtk_box_pack_end(GTK_BOX(wp_top), next_wp_btn, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(wp_bar), wp_top, FALSE, FALSE, 0);
+
+    // Wallpaper Location Feed Row (Directory path display & Browse folder button)
+    GtkWidget* wp_loc_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
+    gtk_widget_add_css_class(wp_loc_row, "cc-wp-loc-row");
+
+    std::string cur_dir = ThemeEngine::get_active_wallpaper_dir();
+    if (cur_dir.empty()) cur_dir = "~/Pictures/wallpapers";
+
+    wp_dir_lbl = gtk_label_new(("📁 " + cur_dir).c_str());
+    gtk_widget_add_css_class(wp_dir_lbl, "cc-wp-dir-lbl");
+    gtk_label_set_ellipsize(GTK_LABEL(wp_dir_lbl), PANGO_ELLIPSIZE_START);
+    gtk_widget_set_halign(wp_dir_lbl, GTK_ALIGN_START);
+    gtk_widget_set_hexpand(wp_dir_lbl, TRUE);
+
+    GtkWidget* browse_btn = gtk_button_new_with_label("󰉋 Browse");
+    gtk_widget_add_css_class(browse_btn, "cc-browse-btn");
+    g_signal_connect(browse_btn, "clicked", G_CALLBACK(+[](GtkButton* b, gpointer) {
+        GtkWidget* parent = gtk_widget_get_toplevel(GTK_WIDGET(b));
+        GtkWindow* win = GTK_IS_WINDOW(parent) ? GTK_WINDOW(parent) : nullptr;
+        GtkFileChooserNative* native = gtk_file_chooser_native_new(
+            "Select Wallpaper Folder",
+            win,
+            GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
+            "Select",
+            "Cancel"
+        );
+
+        std::string cur = ThemeEngine::get_active_wallpaper_dir();
+        if (!cur.empty()) {
+            gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(native), cur.c_str());
+        }
+
+        gint res = gtk_native_dialog_run(GTK_NATIVE_DIALOG(native));
+        if (res == GTK_RESPONSE_ACCEPT) {
+            char* folder = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(native));
+            if (folder) {
+                std::string chosen(folder);
+                g_free(folder);
+                ThemeEngine::set_wallpaper_directory(chosen);
+                if (wp_dir_lbl) {
+                    gtk_label_set_text(GTK_LABEL(wp_dir_lbl), ("📁 " + chosen).c_str());
+                }
+                ThemeEngine::cycle_wallpaper();
+            }
+        }
+        g_object_unref(native);
+    }), nullptr);
+
+    gtk_box_pack_start(GTK_BOX(wp_loc_row), wp_dir_lbl, TRUE, TRUE, 0);
+    gtk_box_pack_end(GTK_BOX(wp_loc_row), browse_btn, FALSE, FALSE, 0);
+    gtk_box_pack_start(GTK_BOX(wp_bar), wp_loc_row, FALSE, FALSE, 0);
+
     gtk_box_pack_start(GTK_BOX(theme_vbox), wp_bar, FALSE, FALSE, 0);
 
     // 3. Section Header
@@ -1108,6 +1163,12 @@ void ControlCenter::refresh_theme_page() {
     }
 
     gtk_widget_show_all(theme_grid_container);
+
+    if (wp_dir_lbl) {
+        std::string cur_dir = ThemeEngine::get_active_wallpaper_dir();
+        if (cur_dir.empty()) cur_dir = "~/Pictures/wallpapers";
+        gtk_label_set_text(GTK_LABEL(wp_dir_lbl), ("📁 " + cur_dir).c_str());
+    }
 }
 
 void ControlCenter::refresh_audio_page() {

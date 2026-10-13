@@ -78,6 +78,7 @@ private:
 
     // Theme Detail Drill-Down Widgets
     static GtkWidget* theme_grid_container;
+    static GtkWidget* wp_dir_lbl;
 
     static void init_popup();
     static GtkWidget* create_main_page();
