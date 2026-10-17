@@ -47,26 +47,10 @@ public:
         return false;
     }
 
-    void publish(const Event& event) {
-        if (entries.empty()) return;
-
-        // Snapshot copy: ensures iteration is never invalidated
-        // if callbacks subscribe or unsubscribe during execution.
-        auto snapshot = entries;
-
-        for (const auto& entry : snapshot) {
-            // Verify listener was not unsubscribed earlier during this dispatch
-            if (is_active(entry.id)) {
-                entry.callback(event);
-            }
-        }
+    std::vector<Entry> get_snapshot() const {
+        return entries;
     }
 
-    size_t size() const override {
-        return entries.size();
-    }
-
-private:
     bool is_active(SubscriptionId id) const {
         for (const auto& entry : entries) {
             if (entry.id == id) return true;
@@ -74,6 +58,11 @@ private:
         return false;
     }
 
+    size_t size() const override {
+        return entries.size();
+    }
+
+private:
     std::vector<Entry> entries;
 };
 
@@ -116,11 +105,31 @@ public:
 
     template <typename Event>
     void publish(const Event& event) {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
-        auto it = subscribers_.find(std::type_index(typeid(Event)));
-        if (it != subscribers_.end()) {
-            auto* list = static_cast<detail::SubscriberList<Event>*>(it->second.get());
-            list->publish(event);
+        std::vector<typename detail::SubscriberList<Event>::Entry> snapshot;
+        detail::SubscriberList<Event>* list = nullptr;
+        {
+            std::lock_guard<std::recursive_mutex> lock(mutex_);
+            auto it = subscribers_.find(std::type_index(typeid(Event)));
+            if (it == subscribers_.end()) return;
+            list = static_cast<detail::SubscriberList<Event>*>(it->second.get());
+            snapshot = list->get_snapshot();
+        }
+
+        if (snapshot.empty()) return;
+
+        for (const auto& entry : snapshot) {
+            bool active = false;
+            {
+                std::lock_guard<std::recursive_mutex> lock(mutex_);
+                auto it = subscribers_.find(std::type_index(typeid(Event)));
+                if (it != subscribers_.end() && it->second.get() == list) {
+                    active = list->is_active(entry.id);
+                }
+            }
+
+            if (active) {
+                entry.callback(event);
+            }
         }
     }
 

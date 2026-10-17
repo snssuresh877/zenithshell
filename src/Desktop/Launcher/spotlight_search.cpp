@@ -26,9 +26,10 @@ GtkWidget* SpotlightSearch::window = nullptr;
 GtkWidget* SpotlightSearch::search_entry = nullptr;
 GtkWidget* SpotlightSearch::results_listbox = nullptr;
 std::vector<SearchResult> SpotlightSearch::current_results;
-std::vector<GAppInfo*> SpotlightSearch::installed_apps;
+std::vector<IndexedApp> SpotlightSearch::indexed_apps;
 AppCategory SpotlightSearch::current_category = AppCategory::ALL;
 std::vector<GtkWidget*> SpotlightSearch::category_buttons;
+guint SpotlightSearch::search_debounce_id = 0;
 
 void SpotlightSearch::init(GtkApplication* app) {
     load_apps();
@@ -197,76 +198,138 @@ void SpotlightSearch::set_category(AppCategory cat) {
             gtk_widget_remove_css_class(category_buttons[i], "active");
         }
     }
-    if (search_entry) {
-        on_search_changed(GTK_ENTRY(search_entry), nullptr);
-    }
+    flush_search();
 }
 
-bool SpotlightSearch::app_matches_category(GAppInfo* app, AppCategory cat) {
-    if (cat == AppCategory::ALL) return true;
-
-    std::string categories_str = "";
-    std::string id_str = g_app_info_get_id(app) ? g_app_info_get_id(app) : "";
-    std::string name_str = g_app_info_get_name(app) ? g_app_info_get_name(app) : "";
-    std::string exec_str = g_app_info_get_executable(app) ? g_app_info_get_executable(app) : "";
-
-    std::transform(id_str.begin(), id_str.end(), id_str.begin(), ::tolower);
-    std::transform(name_str.begin(), name_str.end(), name_str.begin(), ::tolower);
-    std::transform(exec_str.begin(), exec_str.end(), exec_str.begin(), ::tolower);
-
-    if (G_IS_DESKTOP_APP_INFO(app)) {
-        GDesktopAppInfo* dinfo = G_DESKTOP_APP_INFO(app);
-        const char* cats = g_desktop_app_info_get_categories(dinfo);
-        if (cats) {
-            categories_str = cats;
-            std::transform(categories_str.begin(), categories_str.end(), categories_str.begin(), ::tolower);
-        }
-    }
+uint16_t SpotlightSearch::compute_category_mask(const IndexedApp& app) {
+    uint16_t mask = (1 << static_cast<int>(AppCategory::ALL));
 
     auto has = [&](const std::string& key) {
-        return categories_str.find(key) != std::string::npos ||
-               id_str.find(key) != std::string::npos ||
-               name_str.find(key) != std::string::npos ||
-               exec_str.find(key) != std::string::npos;
+        return app.categories_lower.find(key) != std::string::npos ||
+               app.id_lower.find(key) != std::string::npos ||
+               app.name_lower.find(key) != std::string::npos ||
+               app.exec_lower.find(key) != std::string::npos ||
+               app.keywords_lower.find(key) != std::string::npos;
     };
 
-    switch (cat) {
-        case AppCategory::WEB:
-            return has("network") || has("webbrowser") || has("browser") || has("firefox") || has("zen") || has("qutebrowser") || has("chat") || has("telegram") || has("wechat") || has("email") || has("vpn") || has("proton") || has("localsend") || has("kdeconnect");
-        case AppCategory::MULTIMEDIA:
-            return has("audiovideo") || has("audio") || has("video") || has("player") || has("music") || has("media") || has("mpv") || has("handbrake") || has("ghb") || has("sound") || has("volume") || has("pavucontrol");
-        case AppCategory::DEVELOPMENT:
-            return has("development") || has("ide") || has("texteditor") || has("editor") || has("zed") || has("nvim") || has("vim") || has("neovim") || has("code") || has("cmake") || has("debugger") || has("antigravity");
-        case AppCategory::GRAPHICS:
-            return has("graphics") || has("2dgraphics") || has("rastergraphics") || has("vectorgraphics") || has("photography") || has("gimp") || has("krita") || has("inkscape") || has("loupe") || has("image") || has("draw") || has("scan");
-        case AppCategory::OFFICE:
-            return has("office") || has("spreadsheet") || has("wordprocessor") || has("presentation") || has("viewer") || has("calc") || has("writer") || has("impress") || has("libreoffice") || has("onlyoffice") || has("obsidian") || has("planify") || has("evince") || has("document") || has("pdf");
-        case AppCategory::SYSTEM:
-            return has("system") || has("monitor") || has("terminalemulator") || has("terminal") || has("foot") || has("kitty") || has("btop") || has("htop") || has("nvtop") || has("timeshift") || has("yazi") || has("systemmonitor");
-        case AppCategory::SETTINGS:
-            return has("settings") || has("desktopsettings") || has("hardwaresettings") || has("preferences") || has("configuration") || has("nwg-look") || has("nwg-displays") || has("qt5ct") || has("qt6ct") || has("blueman") || has("kvantum") || has("cups") || has("controlpanel") || has("solaar");
-        case AppCategory::FILES:
-            return has("filemanager") || has("files") || has("archiving") || has("compression") || has("file-roller") || has("thunar") || has("cosmic-files") || has("yazi") || has("bulk-rename");
-        default:
-            return true;
+    if (has("network") || has("webbrowser") || has("browser") || has("firefox") || has("zen") || has("qutebrowser") || has("chat") || has("telegram") || has("wechat") || has("email") || has("vpn") || has("proton") || has("localsend") || has("kdeconnect")) {
+        mask |= (1 << static_cast<int>(AppCategory::WEB));
     }
+    if (has("audiovideo") || has("audio") || has("video") || has("player") || has("music") || has("media") || has("mpv") || has("handbrake") || has("ghb") || has("sound") || has("volume") || has("pavucontrol")) {
+        mask |= (1 << static_cast<int>(AppCategory::MULTIMEDIA));
+    }
+    if (has("development") || has("ide") || has("texteditor") || has("editor") || has("zed") || has("nvim") || has("vim") || has("neovim") || has("code") || has("cmake") || has("debugger") || has("antigravity")) {
+        mask |= (1 << static_cast<int>(AppCategory::DEVELOPMENT));
+    }
+    if (has("graphics") || has("2dgraphics") || has("rastergraphics") || has("vectorgraphics") || has("photography") || has("gimp") || has("krita") || has("inkscape") || has("loupe") || has("image") || has("draw") || has("scan")) {
+        mask |= (1 << static_cast<int>(AppCategory::GRAPHICS));
+    }
+    if (has("office") || has("spreadsheet") || has("wordprocessor") || has("presentation") || has("viewer") || has("calc") || has("writer") || has("impress") || has("libreoffice") || has("onlyoffice") || has("obsidian") || has("planify") || has("evince") || has("document") || has("pdf")) {
+        mask |= (1 << static_cast<int>(AppCategory::OFFICE));
+    }
+    if (has("system") || has("monitor") || has("terminalemulator") || has("terminal") || has("foot") || has("kitty") || has("btop") || has("htop") || has("nvtop") || has("timeshift") || has("yazi") || has("systemmonitor")) {
+        mask |= (1 << static_cast<int>(AppCategory::SYSTEM));
+    }
+    if (has("settings") || has("desktopsettings") || has("hardwaresettings") || has("preferences") || has("configuration") || has("nwg-look") || has("nwg-displays") || has("qt5ct") || has("qt6ct") || has("blueman") || has("kvantum") || has("cups") || has("controlpanel") || has("solaar")) {
+        mask |= (1 << static_cast<int>(AppCategory::SETTINGS));
+    }
+    if (has("filemanager") || has("files") || has("archiving") || has("compression") || has("file-roller") || has("thunar") || has("cosmic-files") || has("yazi") || has("bulk-rename")) {
+        mask |= (1 << static_cast<int>(AppCategory::FILES));
+    }
+
+    return mask;
+}
+
+bool SpotlightSearch::app_matches_category(const IndexedApp& app, AppCategory cat) {
+    if (cat == AppCategory::ALL) return true;
+    return (app.category_mask & (1 << static_cast<int>(cat))) != 0;
 }
 
 void SpotlightSearch::load_apps() {
-    installed_apps.clear();
+    for (auto& item : indexed_apps) {
+        if (item.app) {
+            g_object_unref(item.app);
+            item.app = nullptr;
+        }
+    }
+    indexed_apps.clear();
     std::unordered_set<std::string> seen_ids;
+
+    auto index_app_info = [&](GAppInfo* info) {
+        if (!info) return;
+        if (!g_app_info_should_show(info)) {
+            g_object_unref(info);
+            return;
+        }
+
+        const char* id_cstr = g_app_info_get_id(info);
+        std::string id = id_cstr ? id_cstr : "";
+        if (!id.empty() && seen_ids.find(id) != seen_ids.end()) {
+            g_object_unref(info);
+            return;
+        }
+
+        if (!id.empty()) seen_ids.insert(id);
+
+        IndexedApp item;
+        item.app = info; // Ownership retained in item.app
+
+        const char* name_cstr = g_app_info_get_name(info);
+        const char* desc_cstr = g_app_info_get_description(info);
+        const char* exec_cstr = g_app_info_get_executable(info);
+
+        item.name = name_cstr ? name_cstr : "Application";
+        item.desc = desc_cstr ? desc_cstr : "";
+        item.exec = exec_cstr ? exec_cstr : "";
+        item.id = id;
+
+        item.name_lower = item.name;
+        item.desc_lower = item.desc;
+        item.exec_lower = item.exec;
+        item.id_lower = item.id;
+
+        std::transform(item.name_lower.begin(), item.name_lower.end(), item.name_lower.begin(), ::tolower);
+        std::transform(item.desc_lower.begin(), item.desc_lower.end(), item.desc_lower.begin(), ::tolower);
+        std::transform(item.exec_lower.begin(), item.exec_lower.end(), item.exec_lower.begin(), ::tolower);
+        std::transform(item.id_lower.begin(), item.id_lower.end(), item.id_lower.begin(), ::tolower);
+
+        if (G_IS_DESKTOP_APP_INFO(info)) {
+            GDesktopAppInfo* dinfo = G_DESKTOP_APP_INFO(info);
+            const char* gen = g_desktop_app_info_get_generic_name(dinfo);
+            if (gen) {
+                item.generic_name = gen;
+                item.generic_name_lower = gen;
+                std::transform(item.generic_name_lower.begin(), item.generic_name_lower.end(), item.generic_name_lower.begin(), ::tolower);
+            }
+            const char* cats = g_desktop_app_info_get_categories(dinfo);
+            if (cats) {
+                item.categories = cats;
+                item.categories_lower = cats;
+                std::transform(item.categories_lower.begin(), item.categories_lower.end(), item.categories_lower.begin(), ::tolower);
+            }
+            const char* const* kw = g_desktop_app_info_get_keywords(dinfo);
+            if (kw) {
+                for (int i = 0; kw[i] != nullptr; ++i) {
+                    item.keywords += kw[i];
+                    item.keywords += " ";
+                }
+                item.keywords_lower = item.keywords;
+                std::transform(item.keywords_lower.begin(), item.keywords_lower.end(), item.keywords_lower.begin(), ::tolower);
+            }
+        }
+
+        item.category_mask = compute_category_mask(item);
+        indexed_apps.push_back(std::move(item));
+    };
 
     // 1. Standard Gio AppInfo
     GList* list = g_app_info_get_all();
     for (GList* l = list; l != nullptr; l = l->next) {
         GAppInfo* info = G_APP_INFO(l->data);
-        if (g_app_info_should_show(info)) {
-            const char* id = g_app_info_get_id(info);
-            if (id && seen_ids.find(id) == seen_ids.end()) {
-                seen_ids.insert(id);
-                installed_apps.push_back(info);
-            }
-        }
+        index_app_info(info);
+    }
+    if (list) {
+        g_list_free(list);
     }
 
     // 2. Extra Desktop Dirs (Flatpak, Local)
@@ -289,13 +352,7 @@ void SpotlightSearch::load_apps() {
                     if (seen_ids.find(filename) == seen_ids.end()) {
                         GDesktopAppInfo* dinfo = g_desktop_app_info_new_from_filename(path_str.c_str());
                         if (dinfo) {
-                            GAppInfo* app_info = G_APP_INFO(dinfo);
-                            if (g_app_info_should_show(app_info)) {
-                                seen_ids.insert(filename);
-                                installed_apps.push_back(app_info);
-                            } else {
-                                g_object_unref(dinfo);
-                            }
+                            index_app_info(G_APP_INFO(dinfo));
                         }
                     }
                 }
@@ -315,22 +372,56 @@ void SpotlightSearch::toggle() {
 
 void SpotlightSearch::show() {
     if (!window) return;
-    load_apps();
+    if (indexed_apps.empty()) {
+        load_apps();
+    }
     set_category(AppCategory::ALL);
     gtk_layer_set_keyboard_mode(GTK_WINDOW(window), GTK_LAYER_SHELL_KEYBOARD_MODE_EXCLUSIVE);
     gtk_entry_set_text(GTK_ENTRY(search_entry), "");
-    on_search_changed(GTK_ENTRY(search_entry), nullptr);
+    flush_search();
     gtk_widget_show_all(window);
     gtk_widget_grab_focus(search_entry);
 }
 
 void SpotlightSearch::hide() {
     if (!window) return;
+    if (search_debounce_id != 0) {
+        g_source_remove(search_debounce_id);
+        search_debounce_id = 0;
+    }
     gtk_layer_set_keyboard_mode(GTK_WINDOW(window), GTK_LAYER_SHELL_KEYBOARD_MODE_NONE);
     gtk_widget_hide(window);
 }
 
+void SpotlightSearch::flush_search() {
+    if (search_debounce_id != 0) {
+        g_source_remove(search_debounce_id);
+        search_debounce_id = 0;
+    }
+    perform_search();
+}
+
 void SpotlightSearch::on_search_changed(GtkEntry*, gpointer) {
+    if (!search_entry) return;
+    const char* text_ptr = gtk_entry_get_text(GTK_ENTRY(search_entry));
+    if (!text_ptr || text_ptr[0] == '\0') {
+        flush_search();
+        return;
+    }
+
+    if (search_debounce_id != 0) {
+        g_source_remove(search_debounce_id);
+    }
+    search_debounce_id = g_timeout_add(30, G_SOURCE_FUNC(+[](gpointer) -> gboolean {
+        search_debounce_id = 0;
+        SpotlightSearch::perform_search();
+        return G_SOURCE_REMOVE;
+    }), nullptr);
+}
+
+void SpotlightSearch::perform_search() {
+    if (!search_entry || !results_listbox) return;
+
     const char* text_ptr = gtk_entry_get_text(GTK_ENTRY(search_entry));
     std::string query = text_ptr ? text_ptr : "";
     std::transform(query.begin(), query.end(), query.begin(), ::tolower);
@@ -345,18 +436,16 @@ void SpotlightSearch::on_search_changed(GtkEntry*, gpointer) {
 
     if (query.empty()) {
         int count = 0;
-        for (GAppInfo* app : installed_apps) {
+        for (const auto& app : indexed_apps) {
             if (!app_matches_category(app, current_category)) continue;
             if (count++ >= 10) break;
-            const char* name = g_app_info_get_name(app);
-            const char* desc = g_app_info_get_description(app);
 
             SearchResult res;
-            res.title = name ? name : "Application";
-            res.subtitle = desc ? desc : "Application";
-            res.icon = g_app_info_get_icon(app);
+            res.title = app.name;
+            res.subtitle = app.desc.empty() ? (app.generic_name.empty() ? "Application" : app.generic_name) : app.desc;
+            res.icon = g_app_info_get_icon(app.app);
             res.type = SearchResult::APP;
-            res.app_info = app;
+            res.app_info = app.app;
             current_results.push_back(res);
         }
     } else {
@@ -411,95 +500,49 @@ void SpotlightSearch::on_search_changed(GtkEntry*, gpointer) {
         };
         std::vector<ScoredApp> scored_list;
 
-        for (GAppInfo* app : installed_apps) {
+        for (const auto& app : indexed_apps) {
             if (!app_matches_category(app, current_category)) continue;
-
-            const char* name_cstr = g_app_info_get_name(app);
-            const char* desc_cstr = g_app_info_get_description(app);
-            const char* exec_cstr = g_app_info_get_executable(app);
-            const char* id_cstr = g_app_info_get_id(app);
-
-            std::string name = name_cstr ? name_cstr : "";
-            std::string desc = desc_cstr ? desc_cstr : "";
-            std::string exec = exec_cstr ? exec_cstr : "";
-            std::string id = id_cstr ? id_cstr : "";
-
-            std::string name_lower = name;
-            std::string desc_lower = desc;
-            std::string exec_lower = exec;
-            std::string id_lower = id;
-
-            std::transform(name_lower.begin(), name_lower.end(), name_lower.begin(), ::tolower);
-            std::transform(desc_lower.begin(), desc_lower.end(), desc_lower.begin(), ::tolower);
-            std::transform(exec_lower.begin(), exec_lower.end(), exec_lower.begin(), ::tolower);
-            std::transform(id_lower.begin(), id_lower.end(), id_lower.begin(), ::tolower);
-
-            // Also check keywords & generic name & categories if desktop app
-            std::string keywords_str = "";
-            std::string generic_name_lower = "";
-            std::string categories_lower = "";
-            if (G_IS_DESKTOP_APP_INFO(app)) {
-                GDesktopAppInfo* dinfo = G_DESKTOP_APP_INFO(app);
-                const char* gen = g_desktop_app_info_get_generic_name(dinfo);
-                if (gen) {
-                    generic_name_lower = gen;
-                    std::transform(generic_name_lower.begin(), generic_name_lower.end(), generic_name_lower.begin(), ::tolower);
-                }
-                const char* cats = g_desktop_app_info_get_categories(dinfo);
-                if (cats) {
-                    categories_lower = cats;
-                    std::transform(categories_lower.begin(), categories_lower.end(), categories_lower.begin(), ::tolower);
-                }
-                const char* const* kw = g_desktop_app_info_get_keywords(dinfo);
-                if (kw) {
-                    for (int i = 0; kw[i] != nullptr; ++i) {
-                        keywords_str += kw[i];
-                        keywords_str += " ";
-                    }
-                    std::transform(keywords_str.begin(), keywords_str.end(), keywords_str.begin(), ::tolower);
-                }
-            }
 
             int score = 0;
 
             // Executable exact/prefix match (e.g. "gimp" -> "gimp-3.2", "zen" -> "zen-bin")
-            if (exec_lower == query) score += 130;
-            else if (exec_lower.rfind(query, 0) == 0) score += 110;
-            else if (exec_lower.find(query) != std::string::npos) score += 85;
+            if (app.exec_lower == query) score += 130;
+            else if (app.exec_lower.rfind(query, 0) == 0) score += 110;
+            else if (app.exec_lower.find(query) != std::string::npos) score += 85;
 
             // Name exact/prefix match (e.g. "Firefox", "Zed", "Foot")
-            if (name_lower == query) score += 120;
-            else if (name_lower.rfind(query, 0) == 0) score += 100;
-            else if (name_lower.find(query) != std::string::npos) score += 75;
+            if (app.name_lower == query) score += 120;
+            else if (app.name_lower.rfind(query, 0) == 0) score += 100;
+            else if (app.name_lower.find(query) != std::string::npos) score += 75;
 
             // Desktop ID match (e.g. "gimp.desktop", "zen.desktop")
-            if (id_lower.rfind(query, 0) == 0) score += 90;
-            else if (id_lower.find(query) != std::string::npos) score += 70;
+            if (app.id_lower.rfind(query, 0) == 0) score += 90;
+            else if (app.id_lower.find(query) != std::string::npos) score += 70;
 
             // Keywords match (e.g. "GIMP", "photo", "drawing", "pdf")
-            if (keywords_str.find(query) != std::string::npos) score += 65;
+            if (!app.keywords_lower.empty() && app.keywords_lower.find(query) != std::string::npos) score += 65;
 
             // Generic name match (e.g. "Image Editor", "Web Browser")
-            if (generic_name_lower.find(query) != std::string::npos) score += 55;
+            if (!app.generic_name_lower.empty() && app.generic_name_lower.find(query) != std::string::npos) score += 55;
 
             // Categories match (e.g. "Graphics", "Office", "AudioVideo")
-            if (categories_lower.find(query) != std::string::npos) score += 40;
+            if (!app.categories_lower.empty() && app.categories_lower.find(query) != std::string::npos) score += 40;
 
             // Description match
-            if (desc_lower.find(query) != std::string::npos) score += 30;
+            if (!app.desc_lower.empty() && app.desc_lower.find(query) != std::string::npos) score += 30;
 
             // Penalize keybind helper desktop entries slightly unless explicitly typed
-            if (name_lower.rfind("super +", 0) == 0 && query.rfind("super", 0) != 0) {
+            if (app.name_lower.rfind("super +", 0) == 0 && query.rfind("super", 0) != 0) {
                 score -= 30;
             }
 
             if (score > 0) {
                 SearchResult res;
-                res.title = name;
-                res.subtitle = desc.empty() ? (generic_name_lower.empty() ? "Application" : generic_name_lower) : desc;
-                res.icon = g_app_info_get_icon(app);
+                res.title = app.name;
+                res.subtitle = app.desc.empty() ? (app.generic_name.empty() ? "Application" : app.generic_name) : app.desc;
+                res.icon = g_app_info_get_icon(app.app);
                 res.type = SearchResult::APP;
-                res.app_info = app;
+                res.app_info = app.app;
                 scored_list.push_back({res, score});
             }
         }
@@ -599,6 +642,7 @@ gboolean SpotlightSearch::on_key_pressed(GtkWidget*, GdkEventKey* event, gpointe
         return TRUE;
     }
     if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter) {
+        flush_search();
         GtkListBoxRow* selected = gtk_list_box_get_selected_row(GTK_LIST_BOX(results_listbox));
         if (!selected) selected = gtk_list_box_get_row_at_index(GTK_LIST_BOX(results_listbox), 0);
         if (selected) {
@@ -607,6 +651,7 @@ gboolean SpotlightSearch::on_key_pressed(GtkWidget*, GdkEventKey* event, gpointe
         }
     }
     if (event->keyval == GDK_KEY_Down) {
+        flush_search();
         GtkListBoxRow* selected = gtk_list_box_get_selected_row(GTK_LIST_BOX(results_listbox));
         int cur_idx = selected ? gtk_list_box_row_get_index(selected) : -1;
         GtkListBoxRow* next_row = gtk_list_box_get_row_at_index(GTK_LIST_BOX(results_listbox), cur_idx + 1);
@@ -618,6 +663,7 @@ gboolean SpotlightSearch::on_key_pressed(GtkWidget*, GdkEventKey* event, gpointe
         return TRUE;
     }
     if (event->keyval == GDK_KEY_Up) {
+        flush_search();
         GtkListBoxRow* selected = gtk_list_box_get_selected_row(GTK_LIST_BOX(results_listbox));
         int cur_idx = selected ? gtk_list_box_row_get_index(selected) : 1;
         if (cur_idx > 0) {

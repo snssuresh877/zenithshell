@@ -3,6 +3,7 @@
 #include <gtk/gtk.h>
 #include <string>
 #include <memory>
+#include <atomic>
 #include "Core/EventBus/event_bus.hpp"
 #include "Core/Events/audio_events.hpp"
 #include "Core/Events/brightness_events.hpp"
@@ -20,6 +21,7 @@ public:
     static void show_popup();
     static void hide_popup();
     static void refresh_data();
+    static void refresh_data_async();
     static void switch_to_view(const char* view_name);
 
 private:
@@ -96,6 +98,12 @@ private:
     static std::string get_display_info();
     static bool is_night_light_active();
     static bool is_focus_dnd_active();
+
+    static std::string s_cached_wifi_ssid;
+    static bool s_cached_wifi_enabled;
+    static std::string s_cached_bt_status;
+    static bool s_cached_bt_enabled;
+    static std::atomic<bool> s_is_refreshing_async;
 };
 
 } // namespace zenith

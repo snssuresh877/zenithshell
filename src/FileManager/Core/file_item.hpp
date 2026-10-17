@@ -22,6 +22,7 @@ struct FileItem {
 
     std::string git_status;
     std::string git_branch;
+    std::string markup;
 
     GIcon* gicon{nullptr};
     GdkPixbuf* pixbuf_small{nullptr};
@@ -38,7 +39,11 @@ struct FileItem {
     FileItem(const FileItem&) = delete;
     FileItem& operator=(const FileItem&) = delete;
 
-    static std::shared_ptr<FileItem> from_file_info(GFile* file, GFileInfo* info, int large_icon_size = 48, int small_icon_size = 20);
+    void resolve_icons(int large_icon_size = 48, int small_icon_size = 20);
+    static GdkPixbuf* get_cached_pixbuf(GIcon* gicon, int size, bool is_directory);
+    static void clear_icon_cache();
+
+    static std::shared_ptr<FileItem> from_file_info(GFile* file, GFileInfo* info, int large_icon_size = 48, int small_icon_size = 20, bool resolve_icons_now = false);
     static std::string format_size(uint64_t bytes);
     static std::string format_timestamp(time_t t);
 

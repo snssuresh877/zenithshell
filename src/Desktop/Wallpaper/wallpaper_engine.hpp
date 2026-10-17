@@ -24,6 +24,9 @@ public:
 
     // Kill competing external daemons (awww, swww)
     static void terminate_external_daemons();
+
+    // Cleanup resources, surfaces, and monitors
+    static void cleanup();
 };
 
 } // namespace zenith

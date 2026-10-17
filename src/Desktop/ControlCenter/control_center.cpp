@@ -16,8 +16,15 @@
 #include <array>
 #include <algorithm>
 #include <glob.h>
+#include <thread>
 
 namespace zenith {
+
+std::string ControlCenter::s_cached_wifi_ssid = "Wi-Fi";
+bool ControlCenter::s_cached_wifi_enabled = true;
+std::string ControlCenter::s_cached_bt_status = "Ready";
+bool ControlCenter::s_cached_bt_enabled = false;
+std::atomic<bool> ControlCenter::s_is_refreshing_async{false};
 
 std::shared_ptr<EventBus> ControlCenter::s_event_bus = nullptr;
 SubscriptionId ControlCenter::s_volume_subscription_id = INVALID_SUBSCRIPTION_ID;
@@ -382,13 +389,13 @@ GtkWidget* ControlCenter::create_main_page() {
     gtk_box_pack_start(GTK_BOX(wifi_top), w_icon, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(wifi_top), w_title, FALSE, FALSE, 0);
 
-    wifi_ssid_lbl = gtk_label_new(get_active_wifi_ssid().c_str());
+    wifi_ssid_lbl = gtk_label_new(s_cached_wifi_ssid.c_str());
     gtk_widget_add_css_class(wifi_ssid_lbl, "cc-card-subtitle");
     gtk_label_set_ellipsize(GTK_LABEL(wifi_ssid_lbl), PANGO_ELLIPSIZE_END);
     gtk_widget_set_halign(wifi_ssid_lbl, GTK_ALIGN_START);
 
     GtkWidget* wifi_bot = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-    wifi_state_pill = gtk_label_new(is_wifi_enabled() ? "ON  ›" : "OFF  ›");
+    wifi_state_pill = gtk_label_new(s_cached_wifi_enabled ? "ON  ›" : "OFF  ›");
     gtk_widget_add_css_class(wifi_state_pill, "cc-card-pill");
     gtk_box_pack_start(GTK_BOX(wifi_bot), wifi_state_pill, FALSE, FALSE, 0);
 
@@ -415,13 +422,13 @@ GtkWidget* ControlCenter::create_main_page() {
     gtk_box_pack_start(GTK_BOX(bt_top), b_icon, FALSE, FALSE, 0);
     gtk_box_pack_start(GTK_BOX(bt_top), b_title, FALSE, FALSE, 0);
 
-    bt_status_lbl = gtk_label_new(get_bluetooth_status().c_str());
+    bt_status_lbl = gtk_label_new(s_cached_bt_status.c_str());
     gtk_widget_add_css_class(bt_status_lbl, "cc-card-subtitle");
     gtk_label_set_ellipsize(GTK_LABEL(bt_status_lbl), PANGO_ELLIPSIZE_END);
     gtk_widget_set_halign(bt_status_lbl, GTK_ALIGN_START);
 
     GtkWidget* bt_bot = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-    bt_state_pill = gtk_label_new(is_bluetooth_enabled() ? "ON  ›" : "OFF  ›");
+    bt_state_pill = gtk_label_new(s_cached_bt_enabled ? "ON  ›" : "OFF  ›");
     gtk_widget_add_css_class(bt_state_pill, "cc-card-pill");
     gtk_box_pack_start(GTK_BOX(bt_bot), bt_state_pill, FALSE, FALSE, 0);
 
@@ -1435,22 +1442,101 @@ void ControlCenter::toggle_theme_view() {
     switch_to_view("theme");
 }
 
+void ControlCenter::refresh_data_async() {
+    if (s_is_refreshing_async.exchange(true)) {
+        return;
+    }
+
+    std::thread([]() {
+        AudioManager::update();
+
+        std::string wifi_ssid = get_active_wifi_ssid();
+        bool wifi_enabled = is_wifi_enabled();
+
+        std::string bt_show = exec_cmd_read("bluetoothctl show 2>/dev/null");
+        bool bt_enabled = (bt_show.find("Powered: yes") != std::string::npos);
+        std::string bt_status = "Disabled";
+        if (bt_enabled) {
+            std::string bt_info = exec_cmd_read("bluetoothctl info 2>/dev/null | grep 'Name:' | cut -d' ' -f2-");
+            bt_status = bt_info.empty() ? "Ready" : bt_info;
+        }
+
+        struct AsyncResult {
+            std::string wifi_ssid;
+            bool wifi_enabled;
+            std::string bt_status;
+            bool bt_enabled;
+        };
+
+        auto* res = new AsyncResult{
+            std::move(wifi_ssid),
+            wifi_enabled,
+            std::move(bt_status),
+            bt_enabled
+        };
+
+        g_idle_add(+[](gpointer data) -> gboolean {
+            auto* r = static_cast<AsyncResult*>(data);
+            s_cached_wifi_ssid = r->wifi_ssid;
+            s_cached_wifi_enabled = r->wifi_enabled;
+            s_cached_bt_status = r->bt_status;
+            s_cached_bt_enabled = r->bt_enabled;
+
+            if (wifi_ssid_lbl) {
+                gtk_label_set_text(GTK_LABEL(wifi_ssid_lbl), s_cached_wifi_ssid.c_str());
+            }
+            if (wifi_state_pill) {
+                gtk_label_set_text(GTK_LABEL(wifi_state_pill), s_cached_wifi_enabled ? "ON  ›" : "OFF  ›");
+            }
+            if (bt_status_lbl) {
+                gtk_label_set_text(GTK_LABEL(bt_status_lbl), s_cached_bt_status.c_str());
+            }
+            if (bt_state_pill) {
+                gtk_label_set_text(GTK_LABEL(bt_state_pill), s_cached_bt_enabled ? "ON  ›" : "OFF  ›");
+            }
+
+            if (audio_sub_lbl) {
+                gtk_label_set_text(GTK_LABEL(audio_sub_lbl), AudioManager::get_default_sink_name().c_str());
+            }
+            if (volume_icon_btn) {
+                GtkWidget* lbl = gtk_bin_get_child(GTK_BIN(volume_icon_btn));
+                if (lbl) gtk_label_set_text(GTK_LABEL(lbl), AudioManager::is_muted() ? "󰖁" : "");
+            }
+            s_syncing_ui = true;
+            int v = AudioManager::get_volume();
+            if (audio_pill_lbl) {
+                gtk_label_set_text(GTK_LABEL(audio_pill_lbl), (std::to_string(v) + "%  ›").c_str());
+            }
+            if (volume_slider) {
+                gtk_range_set_value(GTK_RANGE(volume_slider), v);
+                if (volume_val_lbl) {
+                    gtk_label_set_text(GTK_LABEL(volume_val_lbl), (std::to_string(v) + "%").c_str());
+                }
+            }
+            s_syncing_ui = false;
+
+            delete r;
+            s_is_refreshing_async = false;
+            return G_SOURCE_REMOVE;
+        }, res);
+    }).detach();
+}
+
 void ControlCenter::refresh_data() {
-    AudioManager::update();
     if (battery_status_lbl) {
         gtk_label_set_text(GTK_LABEL(battery_status_lbl), get_battery_info().c_str());
     }
     if (wifi_ssid_lbl) {
-        gtk_label_set_text(GTK_LABEL(wifi_ssid_lbl), get_active_wifi_ssid().c_str());
+        gtk_label_set_text(GTK_LABEL(wifi_ssid_lbl), s_cached_wifi_ssid.c_str());
     }
     if (wifi_state_pill) {
-        gtk_label_set_text(GTK_LABEL(wifi_state_pill), is_wifi_enabled() ? "ON  ›" : "OFF  ›");
+        gtk_label_set_text(GTK_LABEL(wifi_state_pill), s_cached_wifi_enabled ? "ON  ›" : "OFF  ›");
     }
     if (bt_status_lbl) {
-        gtk_label_set_text(GTK_LABEL(bt_status_lbl), get_bluetooth_status().c_str());
+        gtk_label_set_text(GTK_LABEL(bt_status_lbl), s_cached_bt_status.c_str());
     }
     if (bt_state_pill) {
-        gtk_label_set_text(GTK_LABEL(bt_state_pill), is_bluetooth_enabled() ? "ON  ›" : "OFF  ›");
+        gtk_label_set_text(GTK_LABEL(bt_state_pill), s_cached_bt_enabled ? "ON  ›" : "OFF  ›");
     }
     if (audio_sub_lbl) {
         gtk_label_set_text(GTK_LABEL(audio_sub_lbl), AudioManager::get_default_sink_name().c_str());
@@ -1494,6 +1580,8 @@ void ControlCenter::refresh_data() {
         if (dnd) gtk_widget_add_css_class(focus_btn, "active");
         else gtk_widget_remove_css_class(focus_btn, "active");
     }
+
+    refresh_data_async();
 }
 
 void ControlCenter::show_popup() {

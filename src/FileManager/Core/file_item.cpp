@@ -5,10 +5,13 @@
 #include <cmath>
 #include <filesystem>
 #include <cstring>
+#include <unordered_map>
 
 namespace fs = std::filesystem;
 
 namespace zenith {
+
+static std::unordered_map<std::string, GdkPixbuf*> s_icon_cache;
 
 FileItem::~FileItem() {
     if (gicon) {
@@ -36,6 +39,9 @@ FileItem::FileItem(FileItem&& other) noexcept
       is_hidden(other.is_hidden),
       is_symlink(other.is_symlink),
       symlink_target(std::move(other.symlink_target)),
+      git_status(std::move(other.git_status)),
+      git_branch(std::move(other.git_branch)),
+      markup(std::move(other.markup)),
       gicon(other.gicon),
       pixbuf_small(other.pixbuf_small),
       pixbuf_large(other.pixbuf_large) {
@@ -60,6 +66,9 @@ FileItem& FileItem::operator=(FileItem&& other) noexcept {
         is_hidden = other.is_hidden;
         is_symlink = other.is_symlink;
         symlink_target = std::move(other.symlink_target);
+        git_status = std::move(other.git_status);
+        git_branch = std::move(other.git_branch);
+        markup = std::move(other.markup);
         gicon = other.gicon;
         pixbuf_small = other.pixbuf_small;
         pixbuf_large = other.pixbuf_large;
@@ -98,7 +107,69 @@ std::string FileItem::format_timestamp(time_t t) {
     return std::string(buf);
 }
 
-std::shared_ptr<FileItem> FileItem::from_file_info(GFile* file, GFileInfo* info, int large_icon_size, int small_icon_size) {
+void FileItem::clear_icon_cache() {
+    for (auto& [key, pb] : s_icon_cache) {
+        if (pb) g_object_unref(pb);
+    }
+    s_icon_cache.clear();
+}
+
+GdkPixbuf* FileItem::get_cached_pixbuf(GIcon* gicon, int size, bool is_directory) {
+    std::string key;
+    if (gicon) {
+        gchar* str = g_icon_to_string(gicon);
+        if (str) {
+            key = str;
+            g_free(str);
+        }
+    }
+    if (key.empty()) {
+        key = is_directory ? "folder" : "text-x-generic";
+    }
+    key += "@" + std::to_string(size);
+
+    auto it = s_icon_cache.find(key);
+    if (it != s_icon_cache.end() && it->second) {
+        return GDK_PIXBUF(g_object_ref(it->second));
+    }
+
+    GtkIconTheme* theme = gtk_icon_theme_get_default();
+    GdkPixbuf* pb = nullptr;
+
+    if (gicon && theme) {
+        GtkIconInfo* info = gtk_icon_theme_lookup_by_gicon(
+            theme, gicon, size,
+            static_cast<GtkIconLookupFlags>(GTK_ICON_LOOKUP_USE_BUILTIN | GTK_ICON_LOOKUP_FORCE_SIZE)
+        );
+        if (info) {
+            pb = gtk_icon_info_load_icon(info, nullptr);
+            g_object_unref(info);
+        }
+    }
+
+    if (!pb && theme) {
+        const char* fallback = is_directory ? "folder" : "text-x-generic";
+        pb = gtk_icon_theme_load_icon(theme, fallback, size, GTK_ICON_LOOKUP_FORCE_SIZE, nullptr);
+    }
+
+    if (pb) {
+        s_icon_cache[key] = GDK_PIXBUF(g_object_ref(pb)); // Keep cached copy
+        return pb;
+    }
+
+    return nullptr;
+}
+
+void FileItem::resolve_icons(int large_icon_size, int small_icon_size) {
+    if (!pixbuf_large) {
+        pixbuf_large = get_cached_pixbuf(gicon, large_icon_size, is_directory);
+    }
+    if (!pixbuf_small) {
+        pixbuf_small = get_cached_pixbuf(gicon, small_icon_size, is_directory);
+    }
+}
+
+std::shared_ptr<FileItem> FileItem::from_file_info(GFile* file, GFileInfo* info, int large_icon_size, int small_icon_size, bool resolve_icons_now) {
     auto item = std::make_shared<FileItem>();
 
     char* p = g_file_get_parse_name(file);
@@ -140,46 +211,15 @@ std::shared_ptr<FileItem> FileItem::from_file_info(GFile* file, GFileInfo* info,
         item->mtime = 0;
     }
 
-    // Resolve icons
+    // Retain GIcon in a thread-safe manner
     GIcon* icon = g_file_info_get_icon(info);
     if (icon) {
         item->gicon = G_ICON(g_object_ref(icon));
     }
 
-    GtkIconTheme* theme = gtk_icon_theme_get_default();
-    if (item->gicon && theme) {
-        GtkIconInfo* info_lg = gtk_icon_theme_lookup_by_gicon(
-            theme, item->gicon, large_icon_size,
-            static_cast<GtkIconLookupFlags>(GTK_ICON_LOOKUP_USE_BUILTIN | GTK_ICON_LOOKUP_FORCE_SIZE)
-        );
-        if (info_lg) {
-            item->pixbuf_large = gtk_icon_info_load_icon(info_lg, nullptr);
-            g_object_unref(info_lg);
-        }
-
-        GtkIconInfo* info_sm = gtk_icon_theme_lookup_by_gicon(
-            theme, item->gicon, small_icon_size,
-            static_cast<GtkIconLookupFlags>(GTK_ICON_LOOKUP_USE_BUILTIN | GTK_ICON_LOOKUP_FORCE_SIZE)
-        );
-        if (info_sm) {
-            item->pixbuf_small = gtk_icon_info_load_icon(info_sm, nullptr);
-            g_object_unref(info_sm);
-        }
+    if (resolve_icons_now) {
+        item->resolve_icons(large_icon_size, small_icon_size);
     }
-
-    // Fallbacks if icon lookup returned null
-    if (!item->pixbuf_large && theme) {
-        const char* fallback = item->is_directory ? "folder" : "text-x-generic";
-        item->pixbuf_large = gtk_icon_theme_load_icon(theme, fallback, large_icon_size, GTK_ICON_LOOKUP_FORCE_SIZE, nullptr);
-    }
-    if (!item->pixbuf_small && theme) {
-        const char* fallback = item->is_directory ? "folder" : "text-x-generic";
-        item->pixbuf_small = gtk_icon_theme_load_icon(theme, fallback, small_icon_size, GTK_ICON_LOOKUP_FORCE_SIZE, nullptr);
-    }
-
-    // NOTE: Image/video thumbnails are generated asynchronously by the
-    // ThumbnailLoader in file_view_widget.cpp after the directory is shown.
-    // This keeps load_directory() fast and non-blocking for any folder size.
 
     return item;
 }

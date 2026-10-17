@@ -206,8 +206,9 @@ static void repopulate_store(FileViewData* data) {
     // Populate GtkListStore
     GtkTreeIter iter;
     for (const auto& item : data->filtered_items) {
-        std::string markup = g_markup_escape_text(item->display_name.c_str(), -1);
-        std::cout << "Markup: " << markup << "\n";
+        gchar* escaped = g_markup_escape_text(item->display_name.c_str(), -1);
+        std::string markup = escaped ? escaped : item->display_name;
+        if (escaped) g_free(escaped);
         
         if (!item->git_branch.empty()) {
             markup += " <span foreground='gray' size='small'>[" + item->git_branch + "]</span>";
@@ -221,6 +222,8 @@ static void repopulate_store(FileViewData* data) {
             
             markup = "<span foreground='" + color + "'>" + markup + "</span>";
         }
+
+        item->markup = std::move(markup);
 
         gtk_list_store_append(data->store, &iter);
         gtk_list_store_set(data->store, &iter, COL_ITEM_PTR, item.get(), -1);
@@ -1129,16 +1132,8 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
             FileItem* item = nullptr;
             gtk_tree_model_get(model, iter, COL_ITEM_PTR, &item, -1);
             if (item) {
-                std::string m = g_markup_escape_text(item->display_name.c_str(), -1);
-                if (!item->git_branch.empty()) m += " <span foreground='gray' size='small'>[" + item->git_branch + "]</span>";
-                if (!item->git_status.empty()) {
-                    std::string c = "gray";
-                    if (item->git_status == "M " || item->git_status == " M") c = "#E5A50A";
-                    else if (item->git_status == "A " || item->git_status == "??") c = "#2ea043";
-                    else if (item->git_status == "D " || item->git_status == " D") c = "#da3633";
-                    m = "<span foreground='" + c + "'>" + m + "</span>";
-                }
-                g_object_set(cell, "markup", m.c_str(), nullptr);
+                const char* m = !item->markup.empty() ? item->markup.c_str() : item->display_name.c_str();
+                g_object_set(cell, "markup", m, nullptr);
             }
         }, nullptr, nullptr);
     g_object_set(txt_ren, "alignment", PANGO_ALIGN_CENTER, "wrap-mode", PANGO_WRAP_WORD_CHAR, "wrap-width", 90, "xalign", 0.5, "yalign", 0.0, nullptr);
@@ -1220,16 +1215,8 @@ GtkWidget* FileViewWidget::create(NavigateCallback on_navigate, StatusCallback o
                 FileItem* item = nullptr;
                 gtk_tree_model_get(model, iter, COL_ITEM_PTR, &item, -1);
                 if (item) {
-                    std::string m = g_markup_escape_text(item->display_name.c_str(), -1);
-                    if (!item->git_branch.empty()) m += " <span foreground='gray' size='small'>[" + item->git_branch + "]</span>";
-                    if (!item->git_status.empty()) {
-                        std::string c = "gray";
-                        if (item->git_status == "M " || item->git_status == " M") c = "#E5A50A";
-                        else if (item->git_status == "A " || item->git_status == "??") c = "#2ea043";
-                        else if (item->git_status == "D " || item->git_status == " D") c = "#da3633";
-                        m = "<span foreground='" + c + "'>" + m + "</span>";
-                    }
-                    g_object_set(cell, "markup", m.c_str(), nullptr);
+                    const char* m = !item->markup.empty() ? item->markup.c_str() : item->display_name.c_str();
+                    g_object_set(cell, "markup", m, nullptr);
                 }
             }, nullptr, nullptr);
 
@@ -1484,6 +1471,9 @@ void FileViewWidget::load_directory(GtkWidget* widget, const std::string& path) 
             auto* t = static_cast<DirLoadTask*>(u);
             auto* d = get_data(t->widget);
             if (d && d->thumb_generation == t->gen) {
+                for (auto& item : t->items) {
+                    if (item) item->resolve_icons(48, 20);
+                }
                 d->all_items = std::move(t->items);
                 setup_file_monitor(d, t->path);
                 repopulate_store(d);
@@ -1654,7 +1644,10 @@ static void run_search_job(gpointer job_data, gpointer) {
                 g_idle_add(+[](gpointer u) -> gboolean {
                     auto* b = static_cast<BatchData*>(u);
                     if (b->d->search_generation == b->g) {
-                        for (auto& i : b->items) b->d->all_items.push_back(i);
+                        for (auto& i : b->items) {
+                            if (i) i->resolve_icons(64, 24);
+                            b->d->all_items.push_back(i);
+                        }
                         repopulate_store(b->d);
                     }
                     delete b;
@@ -1675,7 +1668,10 @@ static void run_search_job(gpointer job_data, gpointer) {
         g_idle_add(+[](gpointer u) -> gboolean {
             auto* b = static_cast<BatchData*>(u);
             if (b->d->search_generation == b->g) {
-                for (auto& i : b->items) b->d->all_items.push_back(i);
+                for (auto& i : b->items) {
+                    if (i) i->resolve_icons(64, 24);
+                    b->d->all_items.push_back(i);
+                }
                 repopulate_store(b->d);
             }
             delete b;
@@ -2092,7 +2088,7 @@ void FileViewWidget::action_properties(GtkWidget* widget) {
         initial_mode = g_file_info_get_attribute_uint32(info, G_FILE_ATTRIBUTE_UNIX_MODE);
     }
 
-    auto item = FileItem::from_file_info(file, info, 64, 24);
+    auto item = FileItem::from_file_info(file, info, 64, 24, true);
     g_object_unref(info);
     g_object_unref(file);
 
